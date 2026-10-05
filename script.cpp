@@ -312,21 +312,23 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     // camp stays out as we want a customized slowed decay while at camp
     ctx.freezeActive = (missionBlock || minigameBlock || isFallingOrDead || isBathing || ctx.isSleeping);
 
-	WriteLog(LogLevel::Dev, "Gameplay state evaluated: allowDrainInMissions=" + std::to_string(localGeneralConfig.allowDrainInMissions) + ", allowDrainInMinigames=" + std::to_string(localGeneralConfig.allowDrainInMinigames));
+    if (g_CoreConfig.currentLogLevel == LogLevel::Dev) {
+        WriteLog(LogLevel::Dev, "Gameplay state evaluated: allowDrainInMissions=" + std::to_string(localGeneralConfig.allowDrainInMissions) + ", allowDrainInMinigames=" + std::to_string(localGeneralConfig.allowDrainInMinigames));
 
-    std::ostringstream message;
-    message << std::boolalpha
-        << "Gameplay state changed:"
-        << "missionBlock = " << missionBlock
-        << ", minigameBlock=" << minigameBlock
-        << ", isFallingOrDead=" << isFallingOrDead
-        << ", isBathing=" << isBathing
-        << ", isSleeping=" << ctx.isSleeping
-        << ", isAtCamp=" << ctx.isAtCamp
-        << ", isFreezeActive=" << ctx.freezeActive
-		<< ", isWeaponWheel=" << ctx.isWeaponWheel;
+        std::ostringstream message;
+        message << std::boolalpha
+            << "Gameplay state changed:"
+            << "missionBlock = " << missionBlock
+            << ", minigameBlock=" << minigameBlock
+            << ", isFallingOrDead=" << isFallingOrDead
+            << ", isBathing=" << isBathing
+            << ", isSleeping=" << ctx.isSleeping
+            << ", isAtCamp=" << ctx.isAtCamp
+            << ", isFreezeActive=" << ctx.freezeActive
+            << ", isWeaponWheel=" << ctx.isWeaponWheel;
 
-    WriteLog(LogLevel::Dev, message.str());
+        WriteLog(LogLevel::Dev, message.str());
+    }
 
     return ctx;
 }
