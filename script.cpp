@@ -11,13 +11,13 @@
 #include "Logger.h"
 #include "Config.h"
 
-#ifndef CLAMP_MAX
-#define CLAMP_MAX(value, floorLimit) ((value) > (floorLimit) ? (value) : (floorLimit))
-#endif // !CLAMP_MAX
+#ifndef MAX
+#define MAX(value, floorLimit) ((value) > (floorLimit) ? (value) : (floorLimit))
+#endif // !MAX
 
-#ifndef CLAMP_MIN
-#define CLAMP_MIN(value, ceilingLimit) ((value) < (ceilingLimit) ? (value) : (ceilingLimit))
-#endif // !CLAMP_MIN
+#ifndef MIN
+#define MIN(value, ceilingLimit) ((value) < (ceilingLimit) ? (value) : (ceilingLimit))
+#endif // !MIN
 
 const std::string VERSION = "v0.1-ALPHA";
 
@@ -92,6 +92,7 @@ std::mutex g_ConfigMutex;
 std::atomic<bool> g_ShouldReloadConfig(false);
 std::atomic<bool> g_RunWatcherThread(true);
 std::atomic<int> g_TickIntervalMs(1000);
+std::thread g_WatcherThread;
 std::string g_IniPath = "";
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {
@@ -165,31 +166,31 @@ void LoadConfiguration() {
 
     std::lock_guard<std::mutex> lock(g_ConfigMutex);
     
-	g_CoreConfig.mainLoopTickIntervalMs = CLAMP_MAX(GetIniInt("Performance", "MainLoopTickIntervalMs", 1000, g_IniPath.c_str()), 1000); // minimum 1 second tick interval
-	g_CoreConfig.logLevelRaw = CLAMP_MIN(CLAMP_MAX(GetIniInt("Logging", "LogLevel", 1, g_IniPath.c_str()), 0), 2); // clamp between 0 and 2 
-    g_GeneralConfig.nightStartHour = CLAMP_MIN(CLAMP_MAX(GetIniInt("General", "NightStartHour", 19, g_IniPath.c_str()), 0), 23); // clamp between 0 and 23
-    g_GeneralConfig.nightEndHour = CLAMP_MIN(CLAMP_MAX(GetIniInt("General", "NightEndHour", 7, g_IniPath.c_str()), 0), 23); // clamp between 0 and 23
+	g_CoreConfig.mainLoopTickIntervalMs = MAX(GetIniInt("Performance", "MainLoopTickIntervalMs", 1000, g_IniPath.c_str()), 1000); // minimum 1 second tick interval
+	g_CoreConfig.logLevelRaw = MIN(MAX(GetIniInt("Logging", "LogLevel", 1, g_IniPath.c_str()), 0), 2); // clamp between 0 and 2 
+    g_GeneralConfig.nightStartHour = MIN(MAX(GetIniInt("General", "NightStartHour", 19, g_IniPath.c_str()), 0), 23); // clamp between 0 and 23
+    g_GeneralConfig.nightEndHour = MIN(MAX(GetIniInt("General", "NightEndHour", 7, g_IniPath.c_str()), 0), 23); // clamp between 0 and 23
     g_GeneralConfig.allowDrainInMissions = GetIniBool("General", "AllowDrainInMissions", false, g_IniPath.c_str());
     g_GeneralConfig.allowDrainInMinigames = GetIniBool("General", "AllowDrainInMinigames", false, g_IniPath.c_str());
 
-    g_PlayerConfig.baseHealthDecay = CLAMP_MIN(CLAMP_MAX(GetIniFloat("BaseDecayAwake", "HealthDecayBase", 3.5f, g_IniPath.c_str()), 1.0f), 100.0f);
-    g_PlayerConfig.baseStaminaDecay = CLAMP_MIN(CLAMP_MAX(GetIniFloat("BaseDecayAwake", "StaminaDecayBase", 5.5f, g_IniPath.c_str()), 1.0f), 100.0f);
-    g_PlayerConfig.baseDeadEyeDecay = CLAMP_MIN(CLAMP_MAX(GetIniFloat("BaseDecayAwake", "DeadEyeDecayBase", 4.16f, g_IniPath.c_str()), 1.0f), 100.0f);
-    g_PlayerConfig.sleepHealthMultiplier = CLAMP_MIN(CLAMP_MAX(GetIniFloat("Modifiers", "SleepHealthMultiplier", 0.5f, g_IniPath.c_str()), 0.01f), 10.0f);
-    g_PlayerConfig.nightDeadEyeMultiplier = CLAMP_MIN(CLAMP_MAX(GetIniFloat("Modifiers", "NightDeadEyeMultiplier", 1.5f, g_IniPath.c_str()), 1.0f), 10.0f);
-    g_PlayerConfig.weaponWheelMultiplier = CLAMP_MIN(CLAMP_MAX(GetIniFloat("Modifiers", "WeaponWheelMultiplier", 0.05f, g_IniPath.c_str()), 0.01f), 10.0f);
-    g_PlayerConfig.campMultiplier = CLAMP_MIN(CLAMP_MAX(GetIniFloat("Modifiers", "CampMultiplier", 0.25f, g_IniPath.c_str()), 0.01f), 10.0f);
-    g_PlayerConfig.healthSleepFloor = CLAMP_MIN(CLAMP_MAX(GetIniFloat("Floors", "HealthSleepFloor", 15.0f, g_IniPath.c_str()), 1.0f), 10.0f);
-    g_PlayerConfig.healthAwakeFloor = CLAMP_MIN(CLAMP_MAX(GetIniFloat("Floors", "HealthAwakeFloor", 1.0f, g_IniPath.c_str()), 1.0f), 10.0f);
-    g_PlayerConfig.staminaFloor = CLAMP_MIN(CLAMP_MAX(GetIniFloat("Floors", "StaminaFloor", 1.0f, g_IniPath.c_str()), 1.0f), 10.0f);
-    g_PlayerConfig.deadEyeFloor = CLAMP_MIN(CLAMP_MAX(GetIniFloat("Floors", "DeadEyeFloor", 1.0f, g_IniPath.c_str()), 1.0f), 10.0f);
+    g_PlayerConfig.baseHealthDecay = MIN(MAX(GetIniFloat("BaseDecayAwake", "HealthDecayBase", 3.5f, g_IniPath.c_str()), 1.0f), 100.0f);
+    g_PlayerConfig.baseStaminaDecay = MIN(MAX(GetIniFloat("BaseDecayAwake", "StaminaDecayBase", 5.5f, g_IniPath.c_str()), 1.0f), 100.0f);
+    g_PlayerConfig.baseDeadEyeDecay = MIN(MAX(GetIniFloat("BaseDecayAwake", "DeadEyeDecayBase", 4.16f, g_IniPath.c_str()), 1.0f), 100.0f);
+    g_PlayerConfig.sleepHealthMultiplier = MIN(MAX(GetIniFloat("Modifiers", "SleepHealthMultiplier", 0.5f, g_IniPath.c_str()), 0.01f), 10.0f);
+    g_PlayerConfig.nightDeadEyeMultiplier = MIN(MAX(GetIniFloat("Modifiers", "NightDeadEyeMultiplier", 1.5f, g_IniPath.c_str()), 1.0f), 10.0f);
+    g_PlayerConfig.weaponWheelMultiplier = MIN(MAX(GetIniFloat("Modifiers", "WeaponWheelMultiplier", 0.05f, g_IniPath.c_str()), 0.01f), 10.0f);
+    g_PlayerConfig.campMultiplier = MIN(MAX(GetIniFloat("Modifiers", "CampMultiplier", 0.25f, g_IniPath.c_str()), 0.01f), 10.0f);
+    g_PlayerConfig.healthSleepFloor = MIN(MAX(GetIniFloat("Floors", "HealthSleepFloor", 15.0f, g_IniPath.c_str()), 1.0f), 10.0f);
+    g_PlayerConfig.healthAwakeFloor = MIN(MAX(GetIniFloat("Floors", "HealthAwakeFloor", 1.0f, g_IniPath.c_str()), 1.0f), 10.0f);
+    g_PlayerConfig.staminaFloor = MIN(MAX(GetIniFloat("Floors", "StaminaFloor", 1.0f, g_IniPath.c_str()), 1.0f), 10.0f);
+    g_PlayerConfig.deadEyeFloor = MIN(MAX(GetIniFloat("Floors", "DeadEyeFloor", 1.0f, g_IniPath.c_str()), 1.0f), 10.0f);
 
-    g_HorseConfig.baseHealthDecay = CLAMP_MIN(CLAMP_MAX(GetIniFloat("HorseBaseDecay", "HorseHealthDecayBase", 3.5f, g_IniPath.c_str()), 1.0f), 100.0f);
-    g_HorseConfig.baseStaminaDecay = CLAMP_MIN(CLAMP_MAX(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", 5.5f, g_IniPath.c_str()), 1.0f), 100.0f);
-    g_HorseConfig.trotStaminaMultiplier = CLAMP_MIN(CLAMP_MAX(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", 1.3f, g_IniPath.c_str()), 1.0f), 10.0f);
-    g_HorseConfig.gallopStaminaMultiplier = CLAMP_MIN(CLAMP_MAX(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", 4.5f, g_IniPath.c_str()), 1.0f), 10.0f);
-    g_HorseConfig.healthFloor = CLAMP_MIN(CLAMP_MAX(GetIniFloat("HorseFloors", "HorseHealthFloor", 5.0f, g_IniPath.c_str()), 1.0f), 10.0f);
-    g_HorseConfig.staminaFloor = CLAMP_MIN(CLAMP_MAX(GetIniFloat("HorseFloors", "HorseStaminaFloor", 1.0f, g_IniPath.c_str()), 1.0f), 10.0f);
+    g_HorseConfig.baseHealthDecay = MIN(MAX(GetIniFloat("HorseBaseDecay", "HorseHealthDecayBase", 3.5f, g_IniPath.c_str()), 1.0f), 100.0f);
+    g_HorseConfig.baseStaminaDecay = MIN(MAX(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", 5.5f, g_IniPath.c_str()), 1.0f), 100.0f);
+    g_HorseConfig.trotStaminaMultiplier = MIN(MAX(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", 1.3f, g_IniPath.c_str()), 1.0f), 10.0f);
+    g_HorseConfig.gallopStaminaMultiplier = MIN(MAX(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", 4.5f, g_IniPath.c_str()), 1.0f), 10.0f);
+    g_HorseConfig.healthFloor = MIN(MAX(GetIniFloat("HorseFloors", "HorseHealthFloor", 5.0f, g_IniPath.c_str()), 1.0f), 10.0f);
+    g_HorseConfig.staminaFloor = MIN(MAX(GetIniFloat("HorseFloors", "HorseStaminaFloor", 1.0f, g_IniPath.c_str()), 1.0f), 10.0f);
 
     if (g_CoreConfig.logLevelRaw >= 2) g_CoreConfig.currentLogLevel = LogLevel::Dev;
     else if (g_CoreConfig.logLevelRaw == 1) g_CoreConfig.currentLogLevel = LogLevel::Standard;
@@ -373,9 +374,9 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         float elapsedHours = (float)elapsedMinutes / 60.0f;
 
         // Process flat-rate batch decay drops for the player
-        float finalHealth = CLAMP_MAX(g_State.cachedHealth - (elapsedHours * localPlayerConfig.baseHealthDecay), localPlayerConfig.healthAwakeFloor);
-        float finalStamina = CLAMP_MAX(g_State.cachedStamina - (elapsedHours * localPlayerConfig.baseStaminaDecay), localPlayerConfig.staminaFloor);
-        float finalDeadEye = CLAMP_MAX(g_State.cachedDeadEye - (elapsedHours * localPlayerConfig.baseDeadEyeDecay), localPlayerConfig.deadEyeFloor);
+        float finalHealth = MAX(g_State.cachedHealth - (elapsedHours * localPlayerConfig.baseHealthDecay), localPlayerConfig.healthAwakeFloor);
+        float finalStamina = MAX(g_State.cachedStamina - (elapsedHours * localPlayerConfig.baseStaminaDecay), localPlayerConfig.staminaFloor);
+        float finalDeadEye = MAX(g_State.cachedDeadEye - (elapsedHours * localPlayerConfig.baseDeadEyeDecay), localPlayerConfig.deadEyeFloor);
 
         WriteLog(LogLevel::Standard, "Player Core Sync TIME JUMP Tick: Health=" + std::to_string(finalHealth) + ", Stamina=" + std::to_string(finalStamina) + ", DeadEye=" + std::to_string(finalDeadEye));
 
@@ -389,8 +390,8 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             
             if (activeHorse != 0 && ENTITY::DOES_ENTITY_EXIST(activeHorse)) {
                 // Since the horse was resting during the time skip, we apply a base passive metabolism drop
-                float finalHorseHealth = CLAMP_MAX(g_State.cachedHorseHealth - (elapsedHours * localHorseConfig.baseHealthDecay), localHorseConfig.healthFloor);
-                float finalHorseStamina = CLAMP_MAX(g_State.cachedHorseStamina - (elapsedHours * localHorseConfig.baseStaminaDecay), localHorseConfig.staminaFloor);
+                float finalHorseHealth = MAX(g_State.cachedHorseHealth - (elapsedHours * localHorseConfig.baseHealthDecay), localHorseConfig.healthFloor);
+                float finalHorseStamina = MAX(g_State.cachedHorseStamina - (elapsedHours * localHorseConfig.baseStaminaDecay), localHorseConfig.staminaFloor);
 
                 WriteLog(LogLevel::Standard, "Horse Core Sync TIME JUMP Tick: Health=" + std::to_string(finalHorseHealth) + ", Stamina=" + std::to_string(finalHorseStamina));
 
@@ -485,9 +486,9 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
     float minStaminaFloor = ctx.isAtCamp || ctx.isWeaponWheel ? localPlayerConfig.staminaFloor : 0.0f;
     float minDeadEyeFloor = ctx.isAtCamp || ctx.isWeaponWheel ? localPlayerConfig.deadEyeFloor : 0.0f;
 
-    targetHealth = CLAMP_MAX(targetHealth, minHealthFloor);
-    targetStamina = CLAMP_MAX(targetStamina, minStaminaFloor);
-    targetDeadEye = CLAMP_MAX(targetDeadEye, minDeadEyeFloor);
+    targetHealth = MAX(targetHealth, minHealthFloor);
+    targetStamina = MAX(targetStamina, minStaminaFloor);
+    targetDeadEye = MAX(targetDeadEye, minDeadEyeFloor);
 
 	WriteLog(LogLevel::Dev, "Player Core Simulation: HealthDecay=" + std::to_string(activeHealthDecay) + ", StaminaDecay=" + std::to_string(activeStaminaDecay) + ", DeadEyeDecay=" + std::to_string(activeDeadEyeDecay) + ", HoursDelta=" + std::to_string(hoursDelta));
 	WriteLog(LogLevel::Dev, "Player Core Simulation: CurrentHealth=" + std::to_string(currentHealth) + ", CurrentStamina=" + std::to_string(currentStamina) + ", CurrentDeadEye=" + std::to_string(currentDeadEye));
@@ -556,8 +557,8 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
     float minHealthFloor = ctx.isAtCamp || ctx.isWeaponWheel ? localHorseConfig.healthFloor : 0.0f;
     float minStaminaFloor = ctx.isAtCamp || ctx.isWeaponWheel ? localHorseConfig.staminaFloor : 0.0f;
 
-    targetHealth = CLAMP_MAX(targetHealth, minHealthFloor);
-    targetStamina = CLAMP_MAX(targetStamina, minStaminaFloor);
+    targetHealth = MAX(targetHealth, minHealthFloor);
+    targetStamina = MAX(targetStamina, minStaminaFloor);
 
     WriteLog(LogLevel::Dev, "Horse Core Simulation: HealthDecay=" + std::to_string(activeHealthDecay) + ", StaminaDecay=" + std::to_string(activeStaminaDecay) + ", HoursDelta=" + std::to_string(hoursDelta));
     WriteLog(LogLevel::Dev, "Horse Core Simulation: CurrentHealth=" + std::to_string(currentHealth) + ", CurrentStamina=" + std::to_string(currentStamina));
