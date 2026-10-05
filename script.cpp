@@ -618,9 +618,9 @@ void ScriptMain() {
     WriteLog(LogLevel::Standard, "==== Core Drain Management Simulation Engine Initialised Successfully [" + VERSION + "] ====");
 
 	// Start the INI watcher thread to monitor for configuration changes
+    g_RunWatcherThread.store(true);
     std::thread watcher(IniWatcherThread);
-    watcher.detach();
-
+    
     while (true) {
         UpdateCoreSimulation();
         scriptWait(g_TickIntervalMs.load());
