@@ -12,8 +12,6 @@
 #include "Config.h"
 #include "ThreadManager.h"
 
-
-
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
 
@@ -54,8 +52,6 @@ static bool s_structuresInitialized = false;
 std::array<Hash, 11> g_SleepScenarios{};
 std::array<Hash, 15> g_CampScenarios{};
 
-Hash g_InputOpenWheelMenuHash;
-Hash g_BathingScriptHash;
 Hash g_JailScriptHash;
 Hash g_CustomJailScriptHash;
 
@@ -64,6 +60,7 @@ Hash g_BlackjackScriptHash;
 Hash g_DominoesScriptHash;
 Hash g_FiveFingerFilletScriptHash;
 
+Hash g_BathingScriptHash;
 Hash g_BathMaidScriptHash;
 
 bool g_WasRestrictedLastTick = false;
@@ -98,14 +95,11 @@ void PrecomputeHashes() {
         GetKey("WORLD_PLAYER_DYNAMIC_CAMP_FIRE_KNEEL_ARTHUR")
     };
 
-    // In the standard RDR2 control layout, INPUT_OPEN_WHEEL_MENU is index 24.
-	g_InputOpenWheelMenuHash = 24;
-
-	g_BathingScriptHash = GetKey("bathing");
+    g_BathingScriptHash = GetKey("bathing");
     g_BathingScriptHash = GetKey("bath_maid");
 
     g_JailScriptHash = GetKey("bounty_jail");
-	g_CustomJailScriptHash = GetKey("enhanced_jail"); // don't actuall know the hash, but this is a placeholder for the Enhanced Jail mod if installed
+	g_CustomJailScriptHash = GetKey("enhanced_jail"); // don't actually know the hash, but this is a placeholder for the Enhanced Jail mod if installed
 
 	g_PokerScriptHash = GetKey("poker_core");
 	g_BlackjackScriptHash = GetKey("blackjack_core");
@@ -206,7 +200,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
             << "Gameplay state changed:"
             << "missionBlock = " << missionBlock
             << ", minigameBlock=" << minigameBlock
-            << ", isFallingOrDead=" << isFallingOrGoingToDie
+            << ", isFallingOrGoingToDie=" << isFallingOrGoingToDie
             << ", bathingState=" << ctx.bathingState
             << ", isSleeping=" << ctx.isSleeping
             << ", isAtCamp=" << ctx.isAtCamp
@@ -219,32 +213,24 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     return ctx;
 }
 
-float CalculateStaminaTimeSkipFloor(bool wasSleeping, const PlayerConfigSettings& playerConfig) {
-    //todo: replenish stamina based on sleep time if sleeping
-    if (wasSleeping)
-		return 80.0f; // arbitrary value for now, can be adjusted based on desired gameplay balance
-    
-    return playerConfig.restrainedStaminaFloor; // this value is for missions/minigames etc when the drain flags are set
-}
-
-float CalculateDeadEyeTimeSkipFloor(bool wasSleeping, const PlayerConfigSettings& playerConfig) {
-    //todo: replenish deadeye based on sleep time if sleeping
-    if (wasSleeping)
-		return 50.0f; // arbitrary value for now, can be adjusted based on desired gameplay balance
-    
-    return playerConfig.restrainedDeadEyeFloor; // this value is for missions/minigames etc when the drain flags are set
-}
-
-float CalculateStaminaSleepReplenish(float currentStamina, float elapsedHours) {
+float CalculateStaminaSleepReplenish(float currentStamina, float elapsedHours,bool isNighttime, bool isHotelRoom) {
     // Standard linear scaling: 10 points per hour of sleep
     float uplift = elapsedHours * 10.0f;
 
-    // POOR SLEEP PENALTY (Less than 8 Hours)
-    // If you don't get a minimum of 8 hours of rest, your maximum reward capacity is capped hard at 40 points
+    // POOR SLEEP PENALTY (Less than 8 Hours or daytime and in the wilderness)
+	// If you don't get a minimum of 8 hours of rest, your maximum reward capacity is capped hard at 40 points (20 if it's daytime and you're not in a hotel room).
     if (elapsedHours < 8.0f) {
-        uplift = std::min(uplift, 40.0f);
+        float cap = (isNighttime || isHotelRoom) ? 40.0f : 20.0f;
+        uplift = std::min(uplift, cap);
         WriteLog(LogLevel::Verbose, "Short sleep session detected (< 8 hours). Restorative stamina uplift capped at 40 points.");
     }
+
+	// DAYTIME WILDERNESS SLEEP PENALTY (8+ Hours but not in a hotel room)
+	// If you sleep for 8 or more hours but it's daytime and you're not in a hotel room, your maximum reward capacity is capped hard at 50 points.
+	if (elapsedHours >= 8.0f && (!isNighttime && !isHotelRoom)) {
+        uplift = std::min(uplift, 50.0f);
+		WriteLog(LogLevel::Verbose, "Daytime wilderness sleep detected. Stamina uplift capped at 50 points.");
+	}
 
     float finalStamina = currentStamina + uplift;
     return std::min(finalStamina, 100.0f); // Standard full core ceiling
@@ -253,35 +239,45 @@ float CalculateStaminaSleepReplenish(float currentStamina, float elapsedHours) {
 float CalculateDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, bool isNighttime, bool isHotelRoom) {
     // Establish the Baseline Focus Threshold Caps
 
-    float focusCap = 70.0f;   // Maximum normal sleep reward boundary
+    float focusCap = 60.0f;   // Maximum normal sleep reward boundary
     float fatigueCap = 50.0f; // Maximum over-sleep unfocused boundary
 
-    // Luxury Hotel Quality Adjustment (+10 points to caps)
+    // Luxury Hotel Quality Adjustment (+20/+10 points to caps)
     if (isHotelRoom) {
-        focusCap += 10.0f;
-        fatigueCap += 10.0f;
+        if (isNighttime) {
+			WriteLog(LogLevel::Verbose, "Luxury hotel room detected at night. Dead Eye caps increased by +20 points.");
+            focusCap += 20.0f;
+            fatigueCap += 20.0f;
+		}
+        else {
+            WriteLog(LogLevel::Verbose, "Luxury hotel room detected during daytime. Dead Eye caps increased by +10 points.");
+            focusCap += 10.0f;
+            fatigueCap += 10.0f;
+        }
     }
 
-    // Daytime Rest Disturbance Adjustment (-5 points to caps)
-    if (!isNighttime) {
+	// Daytime Wilderness Penalty (-5 points to caps)
+    if (!isNighttime && !isHotelRoom) {
+		WriteLog(LogLevel::Verbose, "Daytime wilderness sleep detected. Dead Eye caps decreased by -5 points.");
         focusCap -= 5.0f;
         fatigueCap -= 5.0f;
     }
 
     // THE OVER-SLEEP UNFOCUS ROUTE (10+ Hours)
     if (elapsedHours >= 10.0f) {
-        // If current focus is higher than the fatigue boundary, apply the 15-point reduction penalty
-        if (currentDeadEye > fatigueCap)
-            return std::max(currentDeadEye - 15.0f, fatigueCap);
+		// If current dead eye is higher than the fatigue boundary, apply the 15-point reduction penalty (10 points if in a hotel room)
+        if (currentDeadEye > fatigueCap) {
+			WriteLog(LogLevel::Verbose, "Over-sleep detected. Dead Eye reduced by 15 points (10 if in a hotel room).");
+            return std::max(currentDeadEye - (isHotelRoom ? 10.0f : 15.0f), fatigueCap);
+        }
 
         return fatigueCap;
     }
 
     // THE REGULAR SLEEP ROUTE (Less than 10 Hours)
     // If your starting Dead Eye is already higher than the focus cap, leave it completely untouched!
-    if (currentDeadEye >= focusCap) {
+    if (currentDeadEye >= focusCap)
         return currentDeadEye;
-    }
 
     float uplift = elapsedHours * 5.0f;
     float finalDeadEye = currentDeadEye + uplift;
@@ -291,8 +287,8 @@ float CalculateDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, b
 
 void ApplyBatchTimeSkipDecay(
     Ped playerPed, int elapsedMinutes, float startHealth, float startStamina, float startDeadEye, 
-    float startHorseHealth, float startHorseStamina, bool processHorse, bool wasSleeping, 
-    const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
+    float startHorseHealth, float startHorseStamina, bool processHorse, bool wasSleeping,
+	const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
 
     float elapsedHours = static_cast<float>(elapsedMinutes) / 60.0f;
     if (elapsedHours > 12.0f) elapsedHours = 12.0f;
@@ -304,25 +300,45 @@ void ApplyBatchTimeSkipDecay(
     if (!isHealthGold) {
         int finalHealth = static_cast<int>(std::max(startHealth - (elapsedHours * playerConfig.baseHealthDecay),
             wasSleeping ? playerConfig.healthTimeSkipFloor : playerConfig.restrainedHealthFloor));
+
+		WriteLog(LogLevel::Standard, "Player time-skipped. Health decayed to: " + std::to_string(finalHealth));
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
 
     if (wasSleeping) {
         // Gold cores are immune to sleep cap constraints, they remain full
         if (!isStaminaGold) {
-            int finalStamina = static_cast<int>(CalculateStaminaSleepReplenish(startStamina, elapsedHours));
-            ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
+            int currentHour = CLOCK::GET_CLOCK_HOURS();
+            bool isNighttime = (currentHour >= generalConfig.nightStartHour || currentHour < generalConfig.nightEndHour);
+            bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
+
+			// SPECIAL GOLDEN STAMINA CORE REWARD (8-12 Hours in a Hotel Room at Night)
+            if (isHotelRoom && isNighttime && elapsedHours >= 8.0f && elapsedHours <= 12.0f) {
+				
+				WriteLog(LogLevel::Standard, "Player slept 8-12 hours in a hotel room at night. Stamina core is now golden and fully fortified.");
+				ATTRIBUTE::ENABLE_ATTRIBUTE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), 100.0f, TRUE);
+            }
+			// REGULAR SLEEP REPLENISHMENT ROUTE (< 8 or > 12 Hours and NOT in a Hotel Room at Night)
+            else {
+
+                int finalStamina = static_cast<int>(CalculateStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
+
+                WriteLog(LogLevel::Standard, "Player slept. Stamina replenished to: " + std::to_string(finalStamina));
+                ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
+            }
         }
     }
     else if (!isStaminaGold) {
         // Standard macro transit decay (Trains/Stagecoaches)
         int finalStamina = static_cast<int>(std::max(startStamina - (elapsedHours * playerConfig.baseStaminaDecay), playerConfig.restrainedStaminaFloor));
+
+		WriteLog(LogLevel::Standard, "Player time-skipped. Stamina decayed to: " + std::to_string(finalStamina));
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
 
     if (wasSleeping) {
         int currentHour = CLOCK::GET_CLOCK_HOURS();
-        bool isNighttime = (currentHour >= g_GeneralConfig.nightStartHour || currentHour < g_GeneralConfig.nightEndHour);
+        bool isNighttime = (currentHour >= generalConfig.nightStartHour || currentHour < generalConfig.nightEndHour);
         bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
 
         // OVER-SLEEP PUNISHMENT INTERCEPT (10+ Hours)
@@ -330,22 +346,28 @@ void ApplyBatchTimeSkipDecay(
             if (isDeadEyeGold) {
                 // Forcefully break and remove the golden core overlay state!
                 // Passing a value below 100 to a gold core natively forces RDR2 to strip the gold status away instantly.
-                WriteLog(LogLevel::Standard, "Arthur over-slept with a Golden Dead Eye Core. Revoking gold fortification status due to fatigue.");
+                WriteLog(LogLevel::Standard, "Player over-slept with a Golden Dead Eye Core. Revoking gold fortification status due to fatigue.");
             }
 
             int finalDeadEye = static_cast<int>(CalculateDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
+
+			WriteLog(LogLevel::Standard, "Player overslept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
         }
         // REGULAR SLEEP ROUTE (< 10 Hours)
         else if (!isDeadEyeGold) {
             // Standard sleep replenishment only runs if the core isn't already golden
             int finalDeadEye = static_cast<int>(CalculateDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
+            
+            WriteLog(LogLevel::Standard, "Player slept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
         }
     }
     else if (!isDeadEyeGold) {
         // Standard macro transit decay (Trains/Stagecoaches)
         int finalDeadEye = static_cast<int>(std::max(startDeadEye - (elapsedHours * playerConfig.baseDeadEyeDecay), playerConfig.restrainedDeadEyeFloor));
+
+		WriteLog(LogLevel::Standard, "Player time-skipped. Dead Eye decayed to: " + std::to_string(finalDeadEye));
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
     }
 
@@ -366,7 +388,7 @@ void ApplyBatchTimeSkipDecay(
     }
 }
 
-bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int currentTotalMinutes, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
+bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int currentTotalMinutes, const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
 
     if (ctx.freezeActive && !g_State.isRestricted) {
         g_State.isRestricted = true;
@@ -414,7 +436,7 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
                 g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
                 g_State.cachedHorseHealth, g_State.cachedHorseStamina, g_State.hadHorse,
-                g_State.wasSleepingDuringRestriction, playerConfig, horseConfig);
+                g_State.wasSleepingDuringRestriction, generalConfig, playerConfig, horseConfig);
 
         g_State.wasSleepingDuringRestriction = false;
 
@@ -648,7 +670,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
     }    
 }
 
-void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
+void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
     int elapsedMinutes = currentTotalMinutes - g_State.cachedInGameTimeMinutes;
     if (elapsedMinutes < 0) elapsedMinutes += 1440;
 
@@ -670,7 +692,7 @@ void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const Play
         ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
             liveHealth, liveStamina, liveDeadEye,
             liveHorseHealth, liveHorseStamina, hasHorse,
-            false, playerConfig, horseConfig);
+            false, generalConfig, playerConfig, horseConfig);
     }
 
     // Keep the time baseline synchronized
@@ -715,6 +737,8 @@ void UpdateCoreSimulation() {
 
         std::lock_guard<std::mutex> lock(g_ConfigMutex);
 
+		// Cache the global configuration structures for fast-path access in the main loop
+		// they should not be used anywhere else except for the main loop tick, as they are not thread-safe
         s_cachedCoreConfig = g_CoreConfig;
         s_cachedGeneralConfig = g_GeneralConfig;
         s_cachedPlayerConfig = g_PlayerConfig;
@@ -724,6 +748,7 @@ void UpdateCoreSimulation() {
         g_ShouldReloadConfig.store(false, std::memory_order_release);
     }
 
+	// Cache the global configuration structures for fast-path access in the main loop
     CoreConfigSettings    coreConfig = s_cachedCoreConfig;
     GeneralConfigSettings generalConfig = s_cachedGeneralConfig;
     PlayerConfigSettings  playerConfig = s_cachedPlayerConfig;
@@ -736,7 +761,7 @@ void UpdateCoreSimulation() {
     if (context.freezeActive != g_WasRestrictedLastTick) {
         WriteLog(LogLevel::Verbose, "Fundamental state boundary flipped! Forcing immediate cache transition process.");
         
-        HandleStateTransitions(playerPed, context, currentTotalMinutes, playerConfig, horseConfig);
+        HandleStateTransitions(playerPed, context, currentTotalMinutes, generalConfig, playerConfig, horseConfig);
 
         g_WasRestrictedLastTick = context.freezeActive;
         g_State.accumulatedTimeMs = 0;
@@ -766,7 +791,7 @@ void UpdateCoreSimulation() {
 
                 // We force a manual time skip evaluation using the global cache states
                 // by temporarily simulating a transition block or a direct clean helper.
-                ProcessOpenWorldTimeSkip(playerPed, currentTotalMinutes, playerConfig, horseConfig);
+                ProcessOpenWorldTimeSkip(playerPed, currentTotalMinutes, generalConfig, playerConfig, horseConfig);
 
                 g_State.accumulatedTimeMs = 0; // Clear the accumulation safely
             }
