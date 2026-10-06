@@ -786,7 +786,8 @@ void UpdateCoreSimulation() {
                 // Only clear accumulation on successful simulation cycles!
                 g_State.accumulatedTimeMs = 0;
             } 
-            else {
+            // If the delta is negative, it indicates a macro time jump (e.g., train, stagecoach, or fast travel)
+			else {
                 WriteLog(LogLevel::Standard, "Macro time jump detected during active play (Train/Stagecoach). Triggering batch catch-up.");
 
                 // We force a manual time skip evaluation using the global cache states
