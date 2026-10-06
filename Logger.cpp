@@ -24,16 +24,14 @@ static void AsyncLogWriterWorker() {
             return !s_LogQueue.empty() || !g_RunLogThread;
             });
 
-        if (!s_LogQueue.empty()) {
-            std::ofstream logFile(g_LogPath, std::ios_base::app);
-            if (logFile.is_open()) {
-                while (!s_LogQueue.empty()) {
-                    logFile << s_LogQueue.front() << "\n";
-                    s_LogQueue.pop();
-                }
-                logFile.flush();
-                logFile.close();
+        std::ofstream logFile(g_LogPath, std::ios_base::app);
+        if (logFile.is_open()) {
+            while (!s_LogQueue.empty()) {
+                logFile << s_LogQueue.front() << "\n";
+                s_LogQueue.pop();
             }
+            logFile.flush();
+            logFile.close();
         }
     }
 }
@@ -45,19 +43,14 @@ void StartAsyncLogger() {
 
 void StopAsyncLogger() {
     g_RunLogThread = false;
-    s_LogCV.notify_one();
+    s_LogCV.notify_all();
     if (s_LogWorkerThread.joinable()) {
         s_LogWorkerThread.join();
     }
 }
 
 void WriteLog(LogLevel requiredLevel, const std::string& message) {
-    LogLevel systemLevel = LogLevel::Disabled;
-    {
-        std::lock_guard<std::mutex> lock(g_ConfigMutex);
-        systemLevel = g_CoreConfig.currentLogLevel;
-    }
-
+    int systemLevel = g_CurrentLogLevel.load(std::memory_order_acquire);
     if (static_cast<int>(systemLevel) < static_cast<int>(requiredLevel)) return;
 
     SYSTEMTIME st;

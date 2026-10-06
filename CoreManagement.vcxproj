@@ -7,10 +7,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Config.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="script.cpp" />
+    <ClCompile Include="ThreadManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\CoreSDK\inc\main.h" />
@@ -21,6 +23,7 @@
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="script.h" />
+    <ClInclude Include="ThreadManager.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{f76816fb-9ad6-4642-a4d8-27090467a59c}</ProjectGuid>
