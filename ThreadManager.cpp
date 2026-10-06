@@ -12,6 +12,9 @@ void ScriptThreadManager::Initialize() {
 
 ScriptThreadManager::~ScriptThreadManager() {
     g_RunWatcherThread.store(false, std::memory_order_release);
+
+    // Notify the condition variable to instantly wake the thread up from its 2-second slumber
+    g_WatcherCv.notify_all();
     
     if (watcherThread.joinable()) {
         watcherThread.join();

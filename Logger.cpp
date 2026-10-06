@@ -24,6 +24,12 @@ static void AsyncLogWriterWorker() {
             return !s_LogQueue.empty() || !g_RunLogThread;
             });
 
+        // If we were woken up to shut down and the queue is completely empty, 
+        // break instantly to skip the slow disk I/O operations entirely.
+        if (!g_RunLogThread && s_LogQueue.empty()) {
+            break;
+        }
+
         std::ofstream logFile(g_LogPath, std::ios_base::app);
         if (logFile.is_open()) {
             while (!s_LogQueue.empty()) {

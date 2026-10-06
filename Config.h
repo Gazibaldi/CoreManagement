@@ -1,19 +1,14 @@
 #pragma once
-#include "Logger.h"
 #include <mutex>
 #include <atomic>
+#include "Logger.h"
 
-#ifndef MAX
-#define MAX(value, floorLimit) ((value) > (floorLimit) ? (value) : (floorLimit))
-#endif // !MAX
-
-#ifndef MIN
-#define MIN(value, ceilingLimit) ((value) < (ceilingLimit) ? (value) : (ceilingLimit))
-#endif // !MIN
+extern std::string VERSION;
 
 // Explicit extern linkage to look up your main configuration settings
 struct CoreConfigSettings {
-    int mainLoopTickIntervalMs = 1000;
+    int coreDrainTickIntervalMs = 5000;
+    int stateChangeTickIntervalMs = 500;
     int logLevelRaw = 1;
 
     LogLevel currentLogLevel = LogLevel::Standard;
@@ -32,13 +27,12 @@ struct PlayerConfigSettings {
     float baseStaminaDecay = 5.5f;
     float baseDeadEyeDecay = 4.16f;
     float sleepHealthMultiplier = 0.5f;
-    float nightDeadEyeMultiplier = 1.5f;
-    float campMultiplier = 0.25f;
-    float weaponWheelMultiplier = 0.05f;
-    float healthSleepFloor = 15.0f;
-    float healthAwakeFloor = 1.0f;
-    float staminaFloor = 1.0f;
-    float deadEyeFloor = 1.0f;
+    float nightDeadEyeMultiplier = 1.3f;
+    float campJailBathMultiplier = 0.25f;
+    float healthTimeSkipFloor = 15.0f;
+    float restrainedHealthFloor = 5.0f;
+    float restrainedStaminaFloor = 5.0f;
+    float restrainedDeadEyeFloor = 5.0f;
 };
 
 struct HorseConfigSettings {
@@ -46,16 +40,18 @@ struct HorseConfigSettings {
     float baseStaminaDecay = 5.5f;
     float trotStaminaMultiplier = 1.3f;
     float gallopStaminaMultiplier = 4.5f;
-    float healthFloor = 5.0f;
-    float staminaFloor = 1.0f;
+    float restrainedHealthFloor = 5.0f;
+    float restrainedStaminaFloor = 5.0f;
 };
 
 extern std::mutex g_ConfigMutex;
 extern std::atomic<int> g_CurrentLogLevel;
 extern std::atomic<bool> g_RunWatcherThread;
+extern std::condition_variable g_WatcherCv;
 extern std::atomic<bool> g_ShouldReloadConfig;
 extern std::string g_IniPath;
-extern std::atomic<int> g_TickIntervalMs;
+extern std::atomic<int> g_coreDrainTickIntervalMs;
+extern std::atomic<int> g_stateChangeTickIntervalMs;
 
 extern CoreConfigSettings g_CoreConfig;
 extern GeneralConfigSettings g_GeneralConfig;
