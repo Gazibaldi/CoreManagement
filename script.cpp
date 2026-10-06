@@ -1,6 +1,5 @@
 #define NOMINMAX
 
-#include "script.h"
 #include <array>
 #include <string>
 #include <atomic>
@@ -8,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include "script.h"
 #include "Logger.h"
 #include "Config.h"
 #include "ThreadManager.h"
