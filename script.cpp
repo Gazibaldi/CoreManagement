@@ -484,7 +484,7 @@ float CalculateTimescaleDelta(int currentTotalMinutes, bool forceReset = false)
 
     // UNMANAGED MACRO JUMP INTERCEPT (Trains, Coaches, Fast Travel)
     // If a time skip > 2 hours happens while the player has normal open-world agency,
-	// we return a clear invalid value to signal that HandleStateTransitions should take over and process the jump.
+	// we return a clear invalid value to signal that UpdateCoreSimulation should take over and process the jump.
     if (gameMinutesDelta > 120) return -1.0f;
 
     return static_cast<float>(gameMinutesDelta) / 60.0f;
