@@ -13,9 +13,9 @@ extern std::string VERSION;
 struct CoreConfigSettings {
     int coreDrainTickIntervalMs = 5000;
     int stateChangeTickIntervalMs = 500;
-    int logLevelRaw = 1;
+    int logLevelRaw = 0;
 
-    LogLevel currentLogLevel = LogLevel::Standard;
+    LogLevel currentLogLevel = LogLevel::Disabled;
 };
 
 struct GeneralConfigSettings {
@@ -32,7 +32,7 @@ struct PlayerConfigSettings {
     float baseDeadEyeDecay = 4.16f;
     float sleepHealthMultiplier = 0.5f;
     float nightDeadEyeMultiplier = 1.3f;
-    float campJailBathMultiplier = 0.25f;
+    float restrainedMultiplier = 0.25f;
     float healthTimeSkipFloor = 15.0f;
     float restrainedHealthFloor = 5.0f;
     float restrainedStaminaFloor = 5.0f;
@@ -49,9 +49,12 @@ struct HorseConfigSettings {
 };
 
 extern std::mutex g_ConfigMutex;
+
 extern std::atomic<int> g_CurrentLogLevel;
 extern std::atomic<bool> g_ShouldReloadConfig;
+
 extern std::string g_IniPath;
+
 extern std::atomic<int> g_coreDrainTickIntervalMs;
 extern std::atomic<int> g_stateChangeTickIntervalMs;
 
