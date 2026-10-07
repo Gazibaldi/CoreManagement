@@ -4,6 +4,8 @@
 
 #pragma once
 #include <thread>
+#include <mutex>
+#include <atomic>
 
 class ScriptThreadManager {
 public:
@@ -19,3 +21,7 @@ public:
 
 // Expose the global instance to main.cpp and other files
 extern ScriptThreadManager g_ThreadManager;
+
+extern std::atomic<bool> g_RunWatcherThread;
+extern std::condition_variable g_WatcherCv;
+extern std::mutex g_WatcherCvMutex;

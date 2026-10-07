@@ -50,8 +50,6 @@ struct HorseConfigSettings {
 
 extern std::mutex g_ConfigMutex;
 extern std::atomic<int> g_CurrentLogLevel;
-extern std::atomic<bool> g_RunWatcherThread;
-extern std::condition_variable g_WatcherCv;
 extern std::atomic<bool> g_ShouldReloadConfig;
 extern std::string g_IniPath;
 extern std::atomic<int> g_coreDrainTickIntervalMs;
