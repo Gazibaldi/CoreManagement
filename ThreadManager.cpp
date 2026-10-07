@@ -9,6 +9,9 @@
 
 ScriptThreadManager g_ThreadManager;
 
+std::atomic<bool> g_RunWatcherThread(false);
+std::condition_variable g_WatcherCv;
+
 void ScriptThreadManager::Initialize() {
     g_RunWatcherThread.store(true, std::memory_order_release);
     watcherThread = std::thread(IniWatcherThread);

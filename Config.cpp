@@ -11,21 +11,24 @@
 #include <algorithm>
 #include <fstream>
 #include "Config.h"
+#include "ThreadManager.h"
 
 std::string VERSION = "v0.2-ALPHA";
 
 std::mutex g_ConfigMutex;
+std::mutex g_WatcherCvMutex;
+
 CoreConfigSettings g_CoreConfig;
 GeneralConfigSettings g_GeneralConfig;
 PlayerConfigSettings g_PlayerConfig;
 HorseConfigSettings g_HorseConfig;
 
 std::atomic<int> g_CurrentLogLevel{ static_cast<int>(LogLevel::Standard) };
-std::atomic<bool> g_RunWatcherThread(false);
-std::condition_variable g_WatcherCv;
-std::mutex g_WatcherCvMutex;
+
 std::atomic<bool> g_ShouldReloadConfig(false);
+
 std::string g_IniPath = "";
+
 std::atomic<int> g_coreDrainTickIntervalMs(5000);
 std::atomic<int> g_stateChangeTickIntervalMs(500);
 
