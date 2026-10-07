@@ -1,10 +1,14 @@
-#include "Logger.h"
+/*
+        Copyright © 2026 Gary Tweddle / Gazibaldi.This program is free software : you can redistribute it and /or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+*/
+
 #include <windows.h>
 #include <queue>
 #include <mutex>
 #include <condition_variable>
 #include <fstream>
 #include "Config.h"
+#include "Logger.h"
 
 // Instantiate the actual memory addresses for your extern variables
 std::atomic<bool> g_RunLogThread(true);
