@@ -194,7 +194,7 @@ void LogConfiguration() {
         << "+---------------------------------------+------------+\n"
         << "| Performance: Drain Tick Interval (ms) | " << std::setw(10) << g_CoreConfig.coreDrainTickIntervalMs << " |\n"
         << "| Performance: State Tick Interval (ms) | " << std::setw(10) << g_CoreConfig.stateChangeTickIntervalMs << " |\n"
-        << "| Logging: Log Level                    | " << std::setw(10) << static_cast<int>(g_CoreConfig.currentLogLevel) << " |\n"
+        << "| Logging: Log Level                    | " << std::setw(10) << g_CoreConfig.logLevelRaw << " |\n"
         << "| General: Night Start Hour             | " << std::setw(10) << g_GeneralConfig.nightStartHour << " |\n"
         << "| General: Night End Hour               | " << std::setw(10) << g_GeneralConfig.nightEndHour << " |\n"
         << "| General: Allow Drain in Missions      | " << std::setw(10) << static_cast<int>(g_GeneralConfig.allowDrainInMissions) << " |\n"
@@ -217,29 +217,29 @@ void LogConfiguration() {
         << "| Horse: Stamina Restrained Floor       | " << std::setw(10) << g_HorseConfig.restrainedStaminaFloor << " |\n"
         << "+---------------------------------------+------------+";
 
-    WriteLog(LogLevel::Dev, "Internal Parameter Map Hydrated:" + table.str());
+    WriteLog(LogLevel::Verbose, "Internal Parameter Map Hydrated:" + table.str());
 }
 
 void LoadConfiguration() {
 
     if (!DoesFileExist(g_IniPath)) {
-        WriteLog(LogLevel::Standard, "Configuration file missing. Generating fresh defaults at: " + g_IniPath);
-
         BuildDefaultConfigFile();
+
+        WriteLog(LogLevel::Standard, "Configuration file missing. Generating fresh defaults at: " + g_IniPath);
     }
 
     WriteLog(LogLevel::Standard, "Loading ini configuration from: " + g_IniPath);
 
-    g_CoreConfig.coreDrainTickIntervalMs = std::clamp(GetIniInt("Performance", "coreDrainTickIntervalMs", 5000, g_IniPath.c_str()), 5000, 300000); // minimum 5 second tick interval maximum 5 minute tick interval
+    g_CoreConfig.coreDrainTickIntervalMs = std::clamp(GetIniInt("Performance", "coreDrainTickIntervalMs", 10000, g_IniPath.c_str()), 5000, 300000); // minimum 5 second tick interval maximum 5 minute tick interval
 		                                                                                                                                // it's designed to be a slow loop as core drain 
                                                                                                                                         // isn't really a real-time process        
         
-	g_CoreConfig.stateChangeTickIntervalMs = std::clamp(GetIniInt("Performance", "stateChangeTickIntervalMs", 500, g_IniPath.c_str()), 500, 1000); // clamp between 0.5 and 1 second tick interval 
+	g_CoreConfig.stateChangeTickIntervalMs = std::clamp(GetIniInt("Performance", "stateChangeTickIntervalMs", 500, g_IniPath.c_str()), 500, 2000); // clamp between 0.5 and 2 second tick interval 
                                                                                                                                                     // it's designed to be a fast loop, but not too fast 
                                                                                                                                                     // to avoid excessive CPU usage while not too slow to miss state changes
 
-	g_CoreConfig.logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", 0, g_IniPath.c_str()), 0); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay). Range is 0-2 for normal gameplay. 0=disabled, 1=standard, 2=verbose
-
+	g_CoreConfig.logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", 1, g_IniPath.c_str()), 1); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay). 
+                                                                                                            // Range is 0-2 for normal gameplay. 0=disabled, 1=standard, 2=verbose
     g_GeneralConfig.nightStartHour = std::clamp(GetIniInt("General", "NightStartHour", 19, g_IniPath.c_str()), 0, 23); // clamp between 0 and 23
     g_GeneralConfig.nightEndHour = std::clamp(GetIniInt("General", "NightEndHour", 7, g_IniPath.c_str()), 0, 23); // clamp between 0 and 23
     g_GeneralConfig.allowDrainInMissions = GetIniBool("General", "AllowDrainInMissions", false, g_IniPath.c_str());
@@ -251,7 +251,7 @@ void LoadConfiguration() {
     g_PlayerConfig.sleepHealthMultiplier = std::clamp(GetIniFloat("Modifiers", "SleepHealthMultiplier", 0.5f, g_IniPath.c_str()), 0.01f, 10.0f);
     g_PlayerConfig.nightDeadEyeMultiplier = std::clamp(GetIniFloat("Modifiers", "NightDeadEyeMultiplier", 1.3f, g_IniPath.c_str()), 1.0f, 10.0f);
     g_PlayerConfig.restrainedMultiplier = std::clamp(GetIniFloat("Modifiers", "RestrainedMultiplier", 0.25f, g_IniPath.c_str()), 0.01f, 10.0f);
-    g_PlayerConfig.healthTimeSkipFloor = std::clamp(GetIniFloat("Floors", "HealthTimeSkipFloor", 15.0f, g_IniPath.c_str()), 1.0f, 10.0f);
+    g_PlayerConfig.healthTimeSkipFloor = std::clamp(GetIniFloat("Floors", "HealthTimeSkipFloor", 15.0f, g_IniPath.c_str()), 1.0f, 15.0f);
     g_PlayerConfig.restrainedHealthFloor = std::clamp(GetIniFloat("Floors", "RestrainedHealthFloor", 5.0f, g_IniPath.c_str()), 5.0f, 10.0f);
     g_PlayerConfig.restrainedStaminaFloor = std::clamp(GetIniFloat("Floors", "RestrainedStaminaFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
     g_PlayerConfig.restrainedDeadEyeFloor = std::clamp(GetIniFloat("Floors", "RestrainedDeadEyeFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
@@ -263,7 +263,8 @@ void LoadConfiguration() {
     g_HorseConfig.restrainedHealthFloor = std::clamp(GetIniFloat("HorseFloors", "RestrainedHealthFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
     g_HorseConfig.restrainedStaminaFloor = std::clamp(GetIniFloat("HorseFloors", "RestrainedStaminaFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
 
-    if (g_CoreConfig.logLevelRaw == static_cast<int>(LogLevel::Verbose)) g_CoreConfig.currentLogLevel = LogLevel::Verbose;
+    if (g_CoreConfig.logLevelRaw == static_cast<int>(LogLevel::Dev)) g_CoreConfig.currentLogLevel = LogLevel::Dev;
+    else if (g_CoreConfig.logLevelRaw == static_cast<int>(LogLevel::Verbose)) g_CoreConfig.currentLogLevel = LogLevel::Verbose;
     else if (g_CoreConfig.logLevelRaw == static_cast<int>(LogLevel::Standard)) g_CoreConfig.currentLogLevel = LogLevel::Standard;
     else g_CoreConfig.currentLogLevel = LogLevel::Disabled;
 
@@ -272,6 +273,6 @@ void LoadConfiguration() {
 
     g_CurrentLogLevel.store(static_cast<int>(g_CoreConfig.logLevelRaw), std::memory_order_release);
 
-    if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev))
+    if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Verbose))
         LogConfiguration();
 }
