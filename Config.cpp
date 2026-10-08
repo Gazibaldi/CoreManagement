@@ -146,7 +146,10 @@ void BuildDefaultConfigFile() {
     }
 }
 
-void LogConfiguration() {    
+void LogConfiguration() {  
+    if (g_CurrentLogLevel.load(std::memory_order_acquire) < static_cast<int>(LogLevel::Verbose))
+        return;
+
     std::ostringstream table;
     table << std::fixed << std::setprecision(2)
         << "\n\n+---------------------------------------+------------+\n"
@@ -233,6 +236,5 @@ void LoadConfiguration() {
 
     g_CurrentLogLevel.store(static_cast<int>(g_CoreConfig.logLevelRaw), std::memory_order_release);
 
-    if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Verbose))
-        LogConfiguration();
+    LogConfiguration();
 }
