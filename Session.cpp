@@ -6,7 +6,7 @@
 
 std::string g_SessionPath = "";
 
-void PrepareNewSession() {
+void PrepareNewSessionLogFile() {
     // If the file DOES NOT exist, it's a true Cold Boot from desktop
     std::ifstream sessionCheck(g_SessionPath);
     bool isColdBoot = !sessionCheck.is_open();

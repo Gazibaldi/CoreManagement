@@ -3,6 +3,6 @@
 
 extern std::string g_SessionPath;
 
-void PrepareNewSession();
+void PrepareNewSessionLogFile();
 void CreateSessionMarkerFile();
 void DeleteSessionMarkerFile();

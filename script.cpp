@@ -923,7 +923,8 @@ void ScriptMain() {
     g_LogPath = ".\\CoreManagement.log";
 	g_SessionPath = ".\\CoreManagement.session";
 
-    PrepareNewSession();
+    PrepareNewSessionLogFile();
+
     LoadConfiguration();
     PrecomputeHashes();
 
