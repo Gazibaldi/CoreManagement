@@ -5,6 +5,7 @@
 #pragma once
 #include <mutex>
 #include <atomic>
+#include <string>
 #include "Logger.h"
 
 extern std::string VERSION;
@@ -63,5 +64,4 @@ extern GeneralConfigSettings g_GeneralConfig;
 extern PlayerConfigSettings g_PlayerConfig;
 extern HorseConfigSettings g_HorseConfig;
 
-void IniWatcherThread();
 void LoadConfiguration();

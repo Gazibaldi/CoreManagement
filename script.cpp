@@ -869,18 +869,16 @@ void ScriptMain() {
     g_LogPath = ".\\CoreManagement.log";
 
     // Wipe the log file on each script load to avoid excessive file growth
-	std::ofstream(g_LogPath, std::ios::out | std::ios::trunc).close();
-
-    StartAsyncLogger();
+	ClearLog();
 
     LoadConfiguration();
     PrecomputeHashes();
 
-    WriteLog(LogLevel::Standard, "==== Core Drain Management Simulation Engine Initialised Successfully [" + VERSION + "] ====");
-
-	// Start the INI watcher thread to monitor for configuration changes
+    // Start the INI watcher thread to monitor for configuration changes
     // Let the global manager handle spinning up the background watcher thread
-    g_ThreadManager.Initialize();
+    g_ThreadManager.Initialize();    
+
+    WriteLog(LogLevel::Standard, "==== Core Drain Management Simulation Engine Initialised Successfully [" + VERSION + "] ====");	
         
     while (true) {
         UpdateCoreSimulation();

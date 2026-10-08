@@ -11,12 +11,10 @@
 #include <algorithm>
 #include <fstream>
 #include "Config.h"
-#include "ThreadManager.h"
 
 std::string VERSION = "v0.3-ALPHA";
 
 std::mutex g_ConfigMutex;
-std::mutex g_WatcherCvMutex;
 
 CoreConfigSettings g_CoreConfig;
 GeneralConfigSettings g_GeneralConfig;
@@ -62,45 +60,6 @@ bool GetIniBool(const char* section, const char* key, bool defaultValue, const c
 bool DoesFileExist(const std::string& filePath) {
     DWORD fileAttributes = GetFileAttributesA(filePath.c_str());
     return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
-}
-
-void IniWatcherThread() {
-    WIN32_FILE_ATTRIBUTE_DATA fileData;
-    FILETIME lastWriteTime = { 0, 0 };
-
-    if (GetFileAttributesExA(g_IniPath.c_str(), GetFileExInfoStandard, &fileData)) {
-        lastWriteTime = fileData.ftLastWriteTime;
-    }
-
-    while (g_RunWatcherThread) {
-        std::unique_lock<std::mutex> lock(g_WatcherCvMutex);
-        
-        g_WatcherCv.wait_for(lock, std::chrono::milliseconds(2000), [] {
-            return !g_RunWatcherThread;
-        });
-
-        // Check again immediately after waking up to handle instant shutdown
-        if (!g_RunWatcherThread) break;
-
-        if (GetFileAttributesExA(g_IniPath.c_str(), GetFileExInfoStandard, &fileData)) {
-            if (CompareFileTime(&fileData.ftLastWriteTime, &lastWriteTime) > 0) {
-                lastWriteTime = fileData.ftLastWriteTime;
-
-                // Give the OS text editor 100ms to finish flushing its buffer to disk cleanly
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-                WriteLog(LogLevel::Standard, "Config change detected. Parsing INI...");
-
-                {
-                    std::lock_guard<std::mutex> lock(g_ConfigMutex);
-                    LoadConfiguration(); // Overwrites g_CoreConfig, g_GeneralConfig, etc.
-                }
-
-                g_ShouldReloadConfig.store(true, std::memory_order_release);
-                WriteLog(LogLevel::Standard, "Configuration dynamically reloaded.");
-            }
-        }
-    }
 }
 
 int ValidateLogLevel(int value, int defaultValue) {

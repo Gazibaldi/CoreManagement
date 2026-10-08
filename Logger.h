@@ -8,9 +8,10 @@
 
 enum class LogLevel : int { Disabled = 0, Standard = 1, Verbose = 2, Dev = 2105 };
 
-extern std::atomic<bool> g_RunLogThread;
 extern std::string g_LogPath;
 
-void StartAsyncLogger();
-void StopAsyncLogger();
+void AsyncLogWriterWorker(std::atomic<bool>& runFlag);
+
 void WriteLog(LogLevel requiredLevel, const std::string& message);
+
+void ClearLog();
