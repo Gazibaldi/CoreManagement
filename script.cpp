@@ -792,9 +792,7 @@ void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const Gene
     g_State.lastTickInGameMinutes = currentTotalMinutes;
 }
 
-void ResetEntireSimulationState() {
-    WriteLog(LogLevel::Standard, "==== Performing Full Simulation State Reset (Purging All Cache) ====");
-
+void ResetSimulationState() {
     g_State.isRestricted = false;
 
     // Clear out the timescale tracking explicitly in one place
@@ -818,11 +816,12 @@ void ResetEntireSimulationState() {
     g_State.wasAtCampDuringRestriction = false;
     g_State.wasRestrictedLastTick = false;
 
+    g_State.lastKnownPlayerPed = 0;
+
     s_structuresInitialized = false;
+    
 
     ClearDevLogCache();
-
-    WriteLog(LogLevel::Standard, "==== Simulation State Successfully Zeroed to Fresh Baseline ====");
 }
 
 
@@ -848,19 +847,51 @@ void CheckForConfigChange() {
     }
 }
 
+bool IsInSaveLoadState(Ped playerPed) {
+    Player playerId = PLAYER::PLAYER_ID();
+
+    // DETECTION PHASE
+    bool isFreshSaveLoad = (g_State.lastKnownPlayerPed != 0 && g_State.lastKnownPlayerPed != playerPed);
+    bool isDead = PLAYER::IS_PLAYER_DEAD(playerId) || !ENTITY::DOES_ENTITY_EXIST(playerPed);
+    bool isLoading = DLC::GET_IS_LOADING_SCREEN_ACTIVE();
+
+	WriteLog(LogLevel::Dev, "Save/Load State Check: isFreshSaveLoad=" + std::to_string(isFreshSaveLoad) + ", isDead=" + std::to_string(isDead) + ", isLoading=" + std::to_string(isLoading));
+
+    // HARD RESET ENGINE
+    if (isLoading || isDead || isFreshSaveLoad) {
+        if (g_State.timescaleDeltaInitialised) {
+            WriteLog(LogLevel::Standard, "Hard Reset Event Verified (Save Load/Death). Purging cache cleanly...");
+            ResetSimulationState();
+        }
+
+        g_State.lastKnownPlayerPed = playerPed;
+
+        return true;
+    } 
+    // RE-ANCHOR ENGINE
+    else if(!g_State.timescaleDeltaInitialised) {
+        WriteLog(LogLevel::Standard, "Simulation baseline calibrated. Re-anchoring timestamps...");
+
+		g_State.cachedInGameTimeMinutes = GetTotalInGameMinutes();
+        g_State.lastTickInGameMinutes = g_State.cachedInGameTimeMinutes;
+        g_State.accumulatedTimeMs = 0;
+
+        g_State.timescaleDeltaInitialised = true;
+        g_State.lastKnownPlayerPed = playerPed;
+
+        return true;
+    }
+
+    g_State.lastKnownPlayerPed = playerPed;
+
+	return false;
+}
+
 void UpdateCoreSimulation() {
     Ped playerPed = PLAYER::PLAYER_PED_ID();
 
-    // SYSTEM LEVEL RESET GUARD (Save File Loads, Reloading, Death Respawning)
-    if (DLC::GET_IS_LOADING_SCREEN_ACTIVE() || !ENTITY::DOES_ENTITY_EXIST(playerPed) || PLAYER::IS_PLAYER_DEAD(PLAYER::PLAYER_ID())) {
-        
-        if (g_State.timescaleDeltaInitialised) {
-            WriteLog(LogLevel::Verbose, "System Load/Reload/Death event detected. Flushing simulation cache safely...");
-            ResetEntireSimulationState();
-        }
-
-        return;
-    }
+	if (IsInSaveLoadState(playerPed))
+		return;
 
     CheckForConfigChange();
 
