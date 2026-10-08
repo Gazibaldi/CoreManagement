@@ -19,6 +19,8 @@ std::condition_variable g_LogCV;
 // Private, file-isolated synchronization variables (not exposed to script.cpp)
 static std::queue<std::string> s_LogQueue;
 
+DevLoggingCache g_LogCache;
+
 void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
     while (runFlag || !s_LogQueue.empty()) {
         std::unique_lock<std::mutex> lock(g_LogQueueMutex);
@@ -64,4 +66,28 @@ void WriteLog(LogLevel requiredLevel, const std::string& message) {
 
 void ClearLog() {
     std::ofstream(g_LogPath, std::ios::out | std::ios::trunc).close();
+}
+
+bool HasDevLogCacheChanged(GameplayContext& ctx) {
+	return (ctx.freezeActive != g_LogCache.lastFreezeActive ||
+		ctx.isAtCamp != g_LogCache.lastIsAtCamp ||
+		ctx.isSleeping != g_LogCache.lastIsSleeping ||
+		ctx.isJailed != g_LogCache.lastIsJailed ||
+		ctx.bathingState != g_LogCache.lastBathingState);
+}
+
+void UpdateDevLogCache(GameplayContext& ctx) {
+	g_LogCache.lastFreezeActive = ctx.freezeActive;
+	g_LogCache.lastIsAtCamp = ctx.isAtCamp;
+	g_LogCache.lastIsSleeping = ctx.isSleeping;
+	g_LogCache.lastIsJailed = ctx.isJailed;
+	g_LogCache.lastBathingState = ctx.bathingState;
+}
+
+void ClearDevLogCache() {
+	g_LogCache.lastFreezeActive = false;
+	g_LogCache.lastIsAtCamp = false;
+	g_LogCache.lastIsSleeping = false;
+	g_LogCache.lastIsJailed = false;
+	g_LogCache.lastBathingState = 0;
 }

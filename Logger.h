@@ -5,8 +5,17 @@
 #pragma once
 #include <string>
 #include <atomic>
+#include "..\CoreSDK\inc\types.h"
 
 enum class LogLevel : int { Disabled = 0, Standard = 1, Verbose = 2, Dev = 2105 };
+
+struct DevLoggingCache {
+    bool lastFreezeActive = false;
+    bool lastIsAtCamp = false;
+    bool lastIsSleeping = false;
+    bool lastIsJailed = false;
+    int  lastBathingState = 0;
+};
 
 extern std::string g_LogPath;
 
@@ -15,3 +24,9 @@ void AsyncLogWriterWorker(std::atomic<bool>& runFlag);
 void WriteLog(LogLevel requiredLevel, const std::string& message);
 
 void ClearLog();
+
+bool HasDevLogCacheChanged(GameplayContext& ctx);
+
+void UpdateDevLogCache(GameplayContext& ctx);
+
+void ClearDevLogCache();
