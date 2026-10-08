@@ -10,7 +10,7 @@
 #include "Config.h"
 #include "Logger.h"
 
-std::string g_LogPath = "";
+std::string g_LogPath = ".\\CoreManagement.log";
 
 // Shared orchestration variables instantiated here
 std::mutex g_LogQueueMutex;
@@ -44,6 +44,25 @@ void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
             logFile.flush();
             logFile.close();
         }
+    }
+}
+
+void TryWaitForLogQueueDrain() {
+    int timeoutTicks = 0;
+    bool queueIsEmpty = false;
+
+    // Check if the queue is empty. We lock briefly to read safely.
+    while (timeoutTicks++ < 15) { // Max wait of ~150ms 
+        {
+            std::lock_guard<std::mutex> lock(g_LogQueueMutex);
+            queueIsEmpty = s_LogQueue.empty();
+        }
+
+        if (queueIsEmpty) 
+            break; // Everything has been written to the file, we can exit early!
+
+        // Sleep for 10ms to let the worker thread execute its loop and open the file
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 

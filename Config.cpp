@@ -25,7 +25,7 @@ std::atomic<int> g_CurrentLogLevel{ static_cast<int>(LogLevel::Disabled) };
 
 std::atomic<bool> g_ShouldReloadConfig(false);
 
-std::string g_IniPath = "";
+std::string g_IniPath = ".\\CoreManagement.ini";
 
 std::atomic<int> g_coreDrainTickIntervalMs(5000);
 std::atomic<int> g_stateChangeTickIntervalMs(500);

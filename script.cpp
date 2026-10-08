@@ -13,11 +13,11 @@
 #include <algorithm>
 #include <tuple>
 #include <unordered_set>
+#include <cstdlib>
 #include "script.h"
 #include "Logger.h"
 #include "Config.h"
 #include "ThreadManager.h"
-#include "Session.h"
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
@@ -921,11 +921,7 @@ void UpdateCoreSimulation() {
 
 
 void ScriptMain() {
-    g_IniPath = ".\\CoreManagement.ini";
-    g_LogPath = ".\\CoreManagement.log";
-	g_SessionPath = ".\\CoreManagement.session";
-
-    PrepareNewSessionLogFile();
+    std::atexit([]() { g_ThreadManager.Shutdown(true); });
 
     LoadConfiguration();
     PrecomputeHashes();

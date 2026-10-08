@@ -14,13 +14,13 @@ public:
     std::thread loggerThread;
 
     ScriptThreadManager() = default;
-    ~ScriptThreadManager();
+    ~ScriptThreadManager() = default;
 
     // Spawns your background threads on script boot
     void Initialize();
 
     // Safely tears down and joins background threads
-    void Shutdown();
+    void Shutdown(bool isGameExiting = false);
 };
 
 extern ScriptThreadManager g_ThreadManager;

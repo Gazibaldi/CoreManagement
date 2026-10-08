@@ -7,7 +7,6 @@
 #include "ThreadManager.h"
 #include "Config.h"
 #include "Logger.h"
-#include "Session.h"
 
 ScriptThreadManager g_ThreadManager;
 
@@ -64,8 +63,6 @@ void ScriptThreadManager::Initialize() {
     // ALWAYS clean up any existing thread before starting a new one (reloads persist the global manager)
     Shutdown();
 
-    TryCreateSessionMarkerFile();
-
     // Boot up the Logger thread first so the script can log safely immediately
     g_RunLogThread.store(true, std::memory_order_release);
     loggerThread = std::thread(AsyncLogWriterWorker, std::ref(g_RunLogThread));
@@ -75,7 +72,7 @@ void ScriptThreadManager::Initialize() {
     iniWatcherThread = std::thread(IniWatcherThread);
 }
 
-void ScriptThreadManager::Shutdown() {
+void ScriptThreadManager::Shutdown(bool isGameExiting) {
     // Signal the threads to stop
     g_RunIniWatcherThread.store(false, std::memory_order_release);
     g_RunLogThread.store(false, std::memory_order_release);
@@ -92,15 +89,24 @@ void ScriptThreadManager::Shutdown() {
 
     // Wait for the thread to completely finish executing
     if (iniWatcherThread.joinable()) {
-        iniWatcherThread.join();
+        if (isGameExiting) {
+            iniWatcherThread.detach();
+        }
+        else {
+            iniWatcherThread.join(); // Safe to join during a reload because thread is fully responsive!
+        }
     }
 
     if (loggerThread.joinable()) {
-        loggerThread.join();
-    }
-}
+        if (isGameExiting) {
+            TryWaitForLogQueueDrain();
 
-ScriptThreadManager::~ScriptThreadManager() {
-    Shutdown();
-	DeleteSessionMarkerFile();
+            // Cut the cord. If Windows hasn't frozen the worker thread yet, it will 
+            // finish naturally. If it has, detaching prevents RDR2 from deadlocking on exit.
+            loggerThread.detach();
+        }
+        else {
+            loggerThread.join(); // Safe to join during a reload because thread is fully responsive!
+        }
+    }
 }

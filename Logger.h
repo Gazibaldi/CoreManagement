@@ -21,6 +21,8 @@ extern std::string g_LogPath;
 
 void AsyncLogWriterWorker(std::atomic<bool>& runFlag);
 
+void TryWaitForLogQueueDrain();
+
 void WriteLog(LogLevel requiredLevel, const std::string& message);
 
 void ClearLog();
