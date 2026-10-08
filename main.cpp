@@ -7,6 +7,7 @@
 #include "..\CoreSDK\inc\main.h"
 #include "script.h"
 #include "keyboard.h"
+#include "Logger.h"
 
 BOOL APIENTRY DllMain(HMODULE hInstance, DWORD reason, LPVOID lpReserved)
 {
@@ -14,6 +15,7 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD reason, LPVOID lpReserved)
 	{
 	case DLL_PROCESS_ATTACH:
 		scriptRegister(hInstance, ScriptMain);
+		ClearLog();
 		keyboardHandlerRegister(OnKeyboardMessage);
 		break;
 	case DLL_PROCESS_DETACH:

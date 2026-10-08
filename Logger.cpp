@@ -10,27 +10,28 @@
 #include "Config.h"
 #include "Logger.h"
 
-// Instantiate the actual memory addresses for your extern variables
-std::atomic<bool> g_RunLogThread(true);
-std::string g_LogPath = "";
+std::string g_LogPath = ".\\CoreManagement.log";
 
-// Private, file-isolated synchronization variables (not exposed to main.cpp)
+// Shared orchestration variables instantiated here
+std::mutex g_LogQueueMutex;
+std::condition_variable g_LogCV;
+
+// Private, file-isolated synchronization variables (not exposed to script.cpp)
 static std::queue<std::string> s_LogQueue;
-static std::mutex s_LogQueueMutex;
-static std::condition_variable s_LogCV;
-static std::thread s_LogWorkerThread;
 
-static void AsyncLogWriterWorker() {
-    while (g_RunLogThread || !s_LogQueue.empty()) {
-        std::unique_lock<std::mutex> lock(s_LogQueueMutex);
+DevLoggingCache g_LogCache;
 
-        s_LogCV.wait_for(lock, std::chrono::milliseconds(2000), [] {
-            return !s_LogQueue.empty() || !g_RunLogThread;
+void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
+    while (runFlag || !s_LogQueue.empty()) {
+        std::unique_lock<std::mutex> lock(g_LogQueueMutex);
+
+        g_LogCV.wait_for(lock, std::chrono::milliseconds(2000), [&] {
+            return !s_LogQueue.empty() || !runFlag.load(std::memory_order_acquire);
             });
 
         // If we were woken up to shut down and the queue is completely empty, 
         // break instantly to skip the slow disk I/O operations entirely.
-        if (!g_RunLogThread && s_LogQueue.empty()) {
+        if (!runFlag.load(std::memory_order_acquire) && s_LogQueue.empty()) {
             break;
         }
 
@@ -46,16 +47,22 @@ static void AsyncLogWriterWorker() {
     }
 }
 
-void StartAsyncLogger() {
-    g_RunLogThread = true;
-    s_LogWorkerThread = std::thread(AsyncLogWriterWorker);
-}
+void TryWaitForLogQueueDrain() {
+    int timeoutTicks = 0;
+    bool queueIsEmpty = false;
 
-void StopAsyncLogger() {
-    g_RunLogThread = false;
-    s_LogCV.notify_all();
-    if (s_LogWorkerThread.joinable()) {
-        s_LogWorkerThread.join();
+    // Check if the queue is empty. We lock briefly to read safely.
+    while (timeoutTicks++ < 15) { // Max wait of ~150ms 
+        {
+            std::lock_guard<std::mutex> lock(g_LogQueueMutex);
+            queueIsEmpty = s_LogQueue.empty();
+        }
+
+        if (queueIsEmpty) 
+            break; // Everything has been written to the file, we can exit early!
+
+        // Sleep for 10ms to let the worker thread execute its loop and open the file
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
@@ -70,8 +77,36 @@ void WriteLog(LogLevel requiredLevel, const std::string& message) {
     std::string formattedMessage = std::string(timeBuffer) + message;
 
     {
-        std::lock_guard<std::mutex> lock(s_LogQueueMutex);
+        std::lock_guard<std::mutex> lock(g_LogQueueMutex);
         s_LogQueue.push(formattedMessage);
     }
-    s_LogCV.notify_one();
+    g_LogCV.notify_one();
+}
+
+void ClearLog() {
+    std::ofstream(g_LogPath, std::ios::out | std::ios::trunc).close();
+}
+
+bool HasDevLogCacheChanged(GameplayContext& ctx) {
+	return (ctx.freezeActive != g_LogCache.lastFreezeActive ||
+		ctx.isAtCamp != g_LogCache.lastIsAtCamp ||
+		ctx.isSleeping != g_LogCache.lastIsSleeping ||
+		ctx.isJailed != g_LogCache.lastIsJailed ||
+		ctx.bathingState != g_LogCache.lastBathingState);
+}
+
+void UpdateDevLogCache(GameplayContext& ctx) {
+	g_LogCache.lastFreezeActive = ctx.freezeActive;
+	g_LogCache.lastIsAtCamp = ctx.isAtCamp;
+	g_LogCache.lastIsSleeping = ctx.isSleeping;
+	g_LogCache.lastIsJailed = ctx.isJailed;
+	g_LogCache.lastBathingState = ctx.bathingState;
+}
+
+void ClearDevLogCache() {
+	g_LogCache.lastFreezeActive = false;
+	g_LogCache.lastIsAtCamp = false;
+	g_LogCache.lastIsSleeping = false;
+	g_LogCache.lastIsJailed = false;
+	g_LogCache.lastBathingState = 0;
 }
