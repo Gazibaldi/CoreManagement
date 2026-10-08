@@ -4,6 +4,8 @@
 
 #include <thread>
 #include <windows.h>
+#include <fstream>
+#include <cstdio>
 #include "ThreadManager.h"
 #include "Config.h"
 #include "Logger.h"
@@ -59,9 +61,36 @@ void IniWatcherThread() {
     }
 }
 
+void CreateSessionMarkerFile() {
+    std::string sessionPath = ".\\CoreManagement.session";
+    std::ifstream checkSession(sessionPath);
+    if (!checkSession.is_open()) {
+        std::ofstream createSession(sessionPath);
+		WriteLog(LogLevel::Verbose, "Session marker file created: " + sessionPath);
+
+        if (createSession.is_open())
+            createSession.close();
+    }
+    else {
+        checkSession.close();
+    }
+}
+
+void DeleteSessionMarkerFile() {
+	std::string sessionPath = ".\\CoreManagement.session";
+	if (std::remove(sessionPath.c_str()) != 0) {
+		WriteLog(LogLevel::Verbose, "Failed to delete session marker file: " + sessionPath);
+	}
+	else {
+		WriteLog(LogLevel::Verbose, "Session marker file deleted successfully: " + sessionPath);
+	}
+}
+
 void ScriptThreadManager::Initialize() {
     // ALWAYS clean up any existing thread before starting a new one (reloads persist the global manager)
     Shutdown();
+
+    CreateSessionMarkerFile();
 
     // Boot up the Logger thread first so the script can log safely immediately
     g_RunLogThread.store(true, std::memory_order_release);
@@ -99,4 +128,5 @@ void ScriptThreadManager::Shutdown() {
 
 ScriptThreadManager::~ScriptThreadManager() {
     Shutdown();
+	DeleteSessionMarkerFile();
 }
