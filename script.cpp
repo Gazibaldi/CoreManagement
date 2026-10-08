@@ -17,6 +17,7 @@
 #include "Logger.h"
 #include "Config.h"
 #include "ThreadManager.h"
+#include "Session.h"
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
@@ -915,31 +916,14 @@ void UpdateCoreSimulation() {
     }
 }
 
-void PrepareLogFile() {
-    std::string sessionPath = ".\\CoreManagement.session";
 
-    // If the file DOES NOT exist, it's a true Cold Boot from desktop
-    std::ifstream sessionCheck(sessionPath);
-    bool isColdBoot = !sessionCheck.is_open();
-    if (sessionCheck.is_open()) {
-        sessionCheck.close();
-    }
-
-    if (isColdBoot) {
-        ClearLog(); // Clean slate only on cold boot
-        WriteLog(LogLevel::Standard, "==== Core Drain Management Engine - COLD DESKTOP BOOT ====");
-    }
-    else {
-        WriteLog(LogLevel::Standard, "==== Core Drain Management Engine - MID-GAME SAVE RELOAD ====");
-    }
-}
 
 void ScriptMain() {
     g_IniPath = ".\\CoreManagement.ini";
     g_LogPath = ".\\CoreManagement.log";
+	g_SessionPath = ".\\CoreManagement.session";
 
-    PrepareLogFile();
-
+    PrepareNewSession();
     LoadConfiguration();
     PrecomputeHashes();
 

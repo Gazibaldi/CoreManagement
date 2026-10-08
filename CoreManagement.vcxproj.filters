@@ -7,6 +7,7 @@
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ThreadManager.cpp" />
+    <ClCompile Include="Session.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="script.h" />
@@ -18,6 +19,7 @@
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ThreadManager.h" />
+    <ClInclude Include="Session.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">

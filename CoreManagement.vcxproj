@@ -12,6 +12,7 @@
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="script.cpp" />
+    <ClCompile Include="Session.cpp" />
     <ClCompile Include="ThreadManager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -23,6 +24,7 @@
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="script.h" />
+    <ClInclude Include="Session.h" />
     <ClInclude Include="ThreadManager.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

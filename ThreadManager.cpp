@@ -4,11 +4,10 @@
 
 #include <thread>
 #include <windows.h>
-#include <fstream>
-#include <cstdio>
 #include "ThreadManager.h"
 #include "Config.h"
 #include "Logger.h"
+#include "Session.h"
 
 ScriptThreadManager g_ThreadManager;
 
@@ -59,31 +58,6 @@ void IniWatcherThread() {
             }
         }
     }
-}
-
-void CreateSessionMarkerFile() {
-    std::string sessionPath = ".\\CoreManagement.session";
-    std::ifstream checkSession(sessionPath);
-    if (!checkSession.is_open()) {
-        std::ofstream createSession(sessionPath);
-		WriteLog(LogLevel::Verbose, "Session marker file created: " + sessionPath);
-
-        if (createSession.is_open())
-            createSession.close();
-    }
-    else {
-        checkSession.close();
-    }
-}
-
-void DeleteSessionMarkerFile() {
-	std::string sessionPath = ".\\CoreManagement.session";
-	if (std::remove(sessionPath.c_str()) != 0) {
-		WriteLog(LogLevel::Verbose, "Failed to delete session marker file: " + sessionPath);
-	}
-	else {
-		WriteLog(LogLevel::Verbose, "Session marker file deleted successfully: " + sessionPath);
-	}
 }
 
 void ScriptThreadManager::Initialize() {
