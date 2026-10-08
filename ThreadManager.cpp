@@ -64,7 +64,7 @@ void ScriptThreadManager::Initialize() {
     // ALWAYS clean up any existing thread before starting a new one (reloads persist the global manager)
     Shutdown();
 
-    CreateSessionMarkerFile();
+    TryCreateSessionMarkerFile();
 
     // Boot up the Logger thread first so the script can log safely immediately
     g_RunLogThread.store(true, std::memory_order_release);

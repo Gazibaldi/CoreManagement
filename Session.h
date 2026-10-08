@@ -4,5 +4,5 @@
 extern std::string g_SessionPath;
 
 void PrepareNewSessionLogFile();
-void CreateSessionMarkerFile();
+void TryCreateSessionMarkerFile();
 void DeleteSessionMarkerFile();

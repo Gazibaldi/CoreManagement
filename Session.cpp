@@ -23,7 +23,7 @@ void PrepareNewSessionLogFile() {
     }
 }
 
-void CreateSessionMarkerFile() {
+void TryCreateSessionMarkerFile() {
     std::ifstream checkSession(g_SessionPath);
 
     if (!checkSession.is_open()) {
