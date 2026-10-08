@@ -418,6 +418,8 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         }
         else {
             g_State.hadHorse = false;
+            g_State.cachedHorseHealth = 0.0f;
+            g_State.cachedHorseStamina = 0.0f;
             
             WriteLog(LogLevel::Verbose, "Entering restricted state. Cached player data (No active world mount detected).");
         }
