@@ -116,6 +116,7 @@ void BuildDefaultConfigFile() {
         outFile << "; CoreManagement.ini " << VERSION << "\n\n"
             << "[Performance]\n"
             << "; How often the main drain game simulation thread ticks (in milliseconds)\n"
+            << "; Minimum interval is 5 seconds (5000 ms) max is 5 mins (300000 ms)\n"
             << "coreDrainTickIntervalMs = " << g_CoreConfig.coreDrainTickIntervalMs << "\n"
             << "; How often the main state simulation should run (in milliseconds). \n"
             << "; This should be low to capture mission triggers etc. The drain will be forced  in such cases\n"
@@ -140,7 +141,7 @@ void BuildDefaultConfigFile() {
             << "AllowDrainInMinigames = " << static_cast<int>(g_GeneralConfig.allowDrainInMinigames) << "\n\n"
 
             << "[BaseDecayAwake]\n"
-            << "; Points decay per in-game hour\n"
+            << "; Points of core decay per in-game hour\n"
             << "HealthDecayBase = " << g_PlayerConfig.baseHealthDecay << "\n"
             << "StaminaDecayBase = " << g_PlayerConfig.baseStaminaDecay << "\n"
             << "DeadEyeDecayBase = " << g_PlayerConfig.baseDeadEyeDecay << "\n\n"
