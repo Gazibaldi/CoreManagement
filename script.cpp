@@ -760,7 +760,6 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
     bool isBeingLed = IsHorseBeingLed(playerPed, horsePed);
 	bool recievedHorseLeadReward = CalculateHorseLeadReward(horsePed, isBeingLed, isHorseHealthGold, hoursDelta, currentHealth);    
-
     bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);
 
 	// Health Core Decay Logic (only applies if the horse's health core is not golden, it's not being led, and has no cached lead reward was just applied)
