@@ -12,7 +12,7 @@
 #include <fstream>
 #include "Config.h"
 
-std::string VERSION = "v0.3-ALPHA";
+std::string VERSION = "v0.4-ALPHA";
 
 std::mutex g_ConfigMutex;
 
