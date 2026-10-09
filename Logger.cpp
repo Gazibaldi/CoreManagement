@@ -9,6 +9,7 @@
 #include <fstream>
 #include "Config.h"
 #include "Logger.h"
+#include "CMTypes.h"
 
 std::string g_LogPath = ".\\CoreManagement.log";
 

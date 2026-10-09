@@ -5,7 +5,7 @@
 #pragma once
 #include <string>
 #include <atomic>
-#include "..\CoreSDK\inc\types.h"
+#include "CMTypes.h"
 
 enum class LogLevel : int { Disabled = 0, Standard = 1, Verbose = 2, Dev = 2105 };
 
