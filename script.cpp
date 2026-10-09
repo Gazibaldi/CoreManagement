@@ -4,11 +4,10 @@
 
 #define NOMINMAX
 
-#include <array>
 #include <string>
 #include <atomic>
 #include <mutex>
-#include <fstream>
+#include <ios>
 #include <sstream>
 #include <algorithm>
 #include <tuple>
@@ -18,10 +17,12 @@
 #include "Logger.h"
 #include "Config.h"
 #include "ThreadManager.h"
+#include "CMTypes.h"
 
 struct Constants {
-	const float OverSleepThresholdHours = 12;
-	const float MinimumSleepHours = 8;
+	const float OverSleepThresholdHours = 12.0f;
+	const float MinimumSleepHours = 8.0f;
+    const float HorseLeadRewardPerGameHour = 10.0f;
 };
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
@@ -170,7 +171,7 @@ int GetPlayerBathingState() {
 
     // Fall back to their primary saddled mount if they aren't actively riding
     if (activeHorse == 0)
-        activeHorse = PLAYER::_GET_ACTIVE_HORSE_FOR_PLAYER(playerPed);
+        activeHorse = PLAYER::_GET_ACTIVE_HORSE_FOR_PLAYER(PLAYER::PLAYER_ID());
 
     bool hasHorse = (activeHorse != 0 &&
         ENTITY::DOES_ENTITY_EXIST(activeHorse) &&
@@ -516,6 +517,28 @@ bool IsPlayerSemiRestrained(const GameplayContext& ctx, bool includeBathing = tr
     return (ctx.isAtCamp || ctx.isJailed || (includeBathing && ctx.bathingState > 0));
 }
 
+bool IsPlayerMounted(Ped playerPed) {
+    Ped activeHorse = PED::GET_MOUNT(playerPed);
+
+    return (activeHorse != 0);
+}
+
+float GetPlayerMountedStaminaMultiplier(Ped playerPed) {
+    Ped activeHorse = PED::GET_MOUNT(playerPed);
+
+    if (activeHorse == 0)
+        return 1.0f; // not on a horse
+
+    float currentSpeed = ENTITY::GET_ENTITY_SPEED(activeHorse);
+
+    if (currentSpeed > static_cast<float>(HorseSpeed::Gallop))
+        return 1.2f;
+    else if (currentSpeed > static_cast<float>(HorseSpeed::Trot) && currentSpeed <= static_cast<float>(HorseSpeed::Gallop))
+        return 1.0f;
+    else
+        return 0.8f;
+}
+
 void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayContext& ctx, const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig) {
     int currentHour = CLOCK::GET_CLOCK_HOURS();
     bool isNighttime = (currentHour >= generalConfig.nightStartHour || currentHour < generalConfig.nightEndHour);
@@ -533,13 +556,15 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
     if (!isHealthGold) {
         float activeHealthDecay = playerConfig.baseHealthDecay;
 
-        if (IsPlayerSemiRestrained(ctx)) {
+		bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);
+
+        if (isPlayerSemiRestrained) {
 			WriteLog(LogLevel::Dev, "Player is semi-restrained. Applying restrained health decay multiplier.");
             activeHealthDecay *= playerConfig.restrainedMultiplier;
         }
 
         float targetHealth = currentHealth - (activeHealthDecay * hoursDelta);
-		float minHealthFloor = IsPlayerSemiRestrained(ctx) ? playerConfig.restrainedHealthFloor : 0.0f;  //the player is semi restrained (jail/camp/bath), so we apply the player's restrained floor to prevent full depletion
+		float minHealthFloor = isPlayerSemiRestrained ? playerConfig.restrainedHealthFloor : 0.0f;  //the player is semi restrained (jail/camp/bath), so we apply the player's restrained floor to prevent full depletion
         
         targetHealth = std::max(targetHealth, minHealthFloor);
 
@@ -548,6 +573,8 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), static_cast<int>(targetHealth));
     }
+
+    bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);
 
     if (!isStaminaGold) {
         float targetStamina = currentStamina;
@@ -568,12 +595,19 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         }
         // Normal Open-World or Semi-Restrained Decay Route
         else {
+
+            float currentSpeed = ENTITY::GET_ENTITY_SPEED(playerPed);
+
             float activeStaminaDecay = playerConfig.baseStaminaDecay;
 
-            bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx, false);
             if (isPlayerSemiRestrained) {
 				WriteLog(LogLevel::Dev, "Player is semi-restrained. Applying restrained stamina decay multiplier.");
                 activeStaminaDecay *= playerConfig.restrainedMultiplier;
+            }
+            else if (IsPlayerMounted(playerPed)) {
+                float mountedStaminaMultiplier = GetPlayerMountedStaminaMultiplier(playerPed);
+                WriteLog(LogLevel::Dev, "Player is mounted. Applying conditional mounted stamina decay multiplier: " + std::to_string(mountedStaminaMultiplier));
+                activeStaminaDecay *= mountedStaminaMultiplier;
             }
 
             targetStamina = currentStamina - (activeStaminaDecay * hoursDelta);
@@ -616,8 +650,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         else {
             float activeDeadEyeDecay = playerConfig.baseDeadEyeDecay;
 
-			bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx, false);
-            if (isPlayerSemiRestrained)
+			if (isPlayerSemiRestrained)
                 activeDeadEyeDecay *= playerConfig.restrainedMultiplier;
             else if (isNighttime)
                 activeDeadEyeDecay *= playerConfig.nightDeadEyeMultiplier;
@@ -635,21 +668,60 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
     }    
 }
 
-bool IsTaskActive(Ped ped, Hash taskHash) {
-	int taskStatus = TASK::GET_SCRIPT_TASK_STATUS(ped, taskHash, false);
-	return (taskStatus == 1); // 1 = Active/Performing the task
-}
-
 bool IsHorseHitched(Ped horsePed) {
-	//assumes horsePed is valid and exists
-	// 0x7179040D is the native task hash for TASK_HASH_HITCH_ANIMAL
-	return IsTaskActive(horsePed, 0x7179040D);
+	// Assumes horsePed is valid and exists    
+    // Check if the horse is hitched to a post or tied to a hitching rail
+    bool isHitched = (ENTITY::GET_ENTITY_SPEED(horsePed) <= 0.0f); // horse is completely stable if hitched
+
+    WriteLog(LogLevel::Dev, "Horse Hitched Check: horsePed=" + std::to_string(horsePed) + ", isHitched=" + std::to_string(isHitched));
+
+    return isHitched; 
 }
 
-bool IsHorseBeingLed(Ped horsePed) {
-    //assumes horsePed is valid and exists
-    // 0xDEAFB457 is the native task hash for SCRIPT_TASK_LEAD_HORSE
-	return IsTaskActive(horsePed, 0xDEAFB457);
+bool IsHorseBeingLed(Ped playerPed, Ped horsePed) {
+	// Assumes both playerPed and horsePed are valid and exist
+	bool isBeingLed = TASK::_IS_PED_BEING_LED(horsePed);
+	bool isPlayerLeading = TASK::_IS_PED_LEADING_HORSE(playerPed);
+
+	Ped ledHorse = TASK::_GET_LED_HORSE_FROM_PED(playerPed);
+
+	WriteLog(LogLevel::Dev, "Horse Being Led Check: PlayerPed=" + std::to_string(playerPed) + ", HorsePed=" + std::to_string(horsePed) + ", IsBeingLed=" + std::to_string(isBeingLed) + ", IsPlayerLeading=" + std::to_string(isPlayerLeading) + ", ledHorse=" + std::to_string(ledHorse));
+
+    return isBeingLed && isPlayerLeading && ledHorse == horsePed;
+}
+
+bool CalculateHorseLeadReward(Ped horsePed, bool isBeingLed, bool isHorseHealthGold, float hoursDelta, float currentHealth) {
+    // Edge Trigger: The player is actively leading the horse on this specific loop pass accumulating a reward cache for later application if the core is normal white
+    if (isBeingLed) {
+        float tickReward = g_Constants.HorseLeadRewardPerGameHour * hoursDelta;
+        g_State.accumulatedHorseLeadHealthReward += tickReward;
+
+        WriteLog(LogLevel::Verbose, "Player is leading horse. Accruing reward cache unconditionally: +" + std::to_string(tickReward) + " (Total Cached: " + std::to_string(g_State.accumulatedHorseLeadHealthReward) + ")");
+        g_State.wasHorseLeadingLastTick = true;
+    }
+    // Edge Trigger: The player JUST stopped leading the horse on this specific loop pass applying the cached reward if the core is normal white, or discarding it if the core is golden
+    else if (!isBeingLed && g_State.wasHorseLeadingLastTick) {
+        if (g_State.accumulatedHorseLeadHealthReward > 0.0f) {
+            if (!isHorseHealthGold) {
+                // Apply the full accumulated reward legacy now that the core is normal white
+                int finalHealth = static_cast<int>(std::min(currentHealth + g_State.accumulatedHorseLeadHealthReward, 100.0f));
+
+                WriteLog(LogLevel::Standard, "Player stopped leading horse. Core is normal white; applying cached reward: +" + std::to_string(g_State.accumulatedHorseLeadHealthReward) + ". Horse Health updated to: " + std::to_string(finalHealth));
+                ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health), finalHealth);
+            }
+            else {
+                WriteLog(LogLevel::Verbose, "Player stopped leading horse. Core is currently Golden; cached reward of " + std::to_string(g_State.accumulatedHorseLeadHealthReward) + " points discarded safely.");
+            }
+        }
+
+        // Clean out cache tracking parameters completely
+        g_State.accumulatedHorseLeadHealthReward = 0.0f;
+        g_State.wasHorseLeadingLastTick = false;
+
+		return !isHorseHealthGold; // Return true if the reward was applied (core was normal white), false if it was discarded (core was golden)
+    }
+
+    return false;
 }
 
 void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayContext& ctx, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
@@ -686,41 +758,15 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
     WriteLog(LogLevel::Verbose, "Horse Core Simulation: isHealthGold = " + std::to_string(isHorseHealthGold) + ", isStaminaGold = " + std::to_string(isHorseStaminaGold));
 
-    bool isBeingLed = IsHorseBeingLed(horsePed);
+    bool isBeingLed = IsHorseBeingLed(playerPed, horsePed);
+	bool recievedHorseLeadReward = CalculateHorseLeadReward(horsePed, isBeingLed, isHorseHealthGold, hoursDelta, currentHealth);    
 
-	// Edge Trigger: The player is actively leading the horse on this specific loop pass accumulating a reward cache for later application if the core is normal white
-    if (isBeingLed) {
-        // Let's say +10.0 core points per full game-world hour spent leading
-        float tickReward = 10.0f * hoursDelta;
-        g_State.accumulatedHorseLeadHealthReward += tickReward;
+    bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);
 
-        WriteLog(LogLevel::Verbose, "Player is leading horse. Accruing reward cache unconditionally: +" + std::to_string(tickReward) + " (Total Cached: " + std::to_string(g_State.accumulatedHorseLeadHealthReward) + ")");
-        g_State.wasHorseLeadingLastTick = true;
-    }
-	// Edge Trigger: The player JUST stopped leading the horse on this specific loop pass applying the cached reward if the core is normal white, or discarding it if the core is golden
-    else if (!isBeingLed && g_State.wasHorseLeadingLastTick) {
-        if (g_State.accumulatedHorseLeadHealthReward > 0.0f) {
-            if (!isHorseHealthGold) {
-                // Apply the full accumulated reward legacy now that the core is normal white
-                int finalHealth = static_cast<int>(std::min(currentHealth + g_State.accumulatedHorseLeadHealthReward, 100.0f));
-
-                WriteLog(LogLevel::Standard, "Player stopped leading horse. Core is normal white; applying cached reward: +" + std::to_string(g_State.accumulatedHorseLeadHealthReward) + ". Horse Health updated to: " + std::to_string(finalHealth));
-                ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health), finalHealth);
-            }
-            else {
-                WriteLog(LogLevel::Verbose, "Player stopped leading horse. Core is currently Golden; cached reward of " + std::to_string(g_State.accumulatedHorseLeadHealthReward) + " points discarded safely.");
-            }
-        }
-
-        // Clean out cache tracking parameters completely
-        g_State.accumulatedHorseLeadHealthReward = 0.0f;
-        g_State.wasHorseLeadingLastTick = false;
-    }
-    // Health Core Decay Logic
-    else if (!isHorseHealthGold && !isBeingLed) {
+	// Health Core Decay Logic (only applies if the horse's health core is not golden, it's not being led, and has no cached lead reward was just applied)
+    if (!isHorseHealthGold && !isBeingLed && !recievedHorseLeadReward) {
         float activeHealthDecay = horseConfig.baseHealthDecay;
 
-		bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);      
 		if (isPlayerSemiRestrained)
 			activeHealthDecay *= playerConfig.restrainedMultiplier;
 
@@ -735,8 +781,8 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health), (int)targetHealth);
     }
 
-	// Stamina Core Decay Logic
-    if (!isHorseStaminaGold) {
+	// Stamina Core Decay Logic (only applies if the horse's stamina core is not golden, and has no cached lead reward was just applied)
+    if (!isHorseStaminaGold && !recievedHorseLeadReward) {
         float targetStamina = currentStamina;
 
         // If the horse is physically hitched, freeze its stamina completely!
@@ -747,8 +793,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
         else {
             // Normal dynamic movement decay route
             float activeStaminaDecay = (horseConfig.baseStaminaDecay * staminaMultiplier);
-
-            bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);
+            
             if (isPlayerSemiRestrained)
                 activeStaminaDecay *= playerConfig.restrainedMultiplier;
 
@@ -810,6 +855,7 @@ void ResetSimulationState() {
     g_State.cachedHealth = 100.0f;
     g_State.cachedStamina = 100.0f;
     g_State.cachedDeadEye = 100.0f;
+
     g_State.cachedHorseHealth = 100.0f;
     g_State.cachedHorseStamina = 100.0f;
 
