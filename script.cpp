@@ -19,6 +19,11 @@
 #include "Config.h"
 #include "ThreadManager.h"
 
+struct Constants {
+	const float OverSleepThresholdHours = 12;
+	const float MinimumSleepHours = 8;
+};
+
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
 
@@ -43,6 +48,8 @@ Hash g_FiveFingerFilletScriptHash;
 
 Hash g_BathingScriptHash;
 Hash g_BathMaidScriptHash;
+
+Constants g_Constants;
 
 Hash GetKey(const char* key) {
     return MISC::GET_HASH_KEY(key);
@@ -220,16 +227,16 @@ float CalculateStaminaSleepReplenish(float currentStamina, float elapsedHours,bo
     float uplift = elapsedHours * 10.0f;
 
     // POOR SLEEP PENALTY (Less than 8 Hours or daytime and in the wilderness)
-	// If you don't get a minimum of 8 hours of rest, your maximum reward capacity is capped hard at 40 points (20 if it's daytime and you're not in a hotel room).
-    if (elapsedHours < 8.0f) {
+	// If you don't get the minimum of rest, your maximum reward capacity is capped hard at 40 points (20 if it's daytime and you're not in a hotel room).
+    if (elapsedHours < g_Constants.MinimumSleepHours) {
         float cap = (isNighttime || isHotelRoom) ? 40.0f : 20.0f;
         uplift = std::min(uplift, cap);
-        WriteLog(LogLevel::Verbose, "Short sleep session detected (< 8 hours). Restorative stamina uplift capped at 40 points.");
+        WriteLog(LogLevel::Verbose, "Short sleep session detected (< " + std::to_string(g_Constants.MinimumSleepHours) + " hours). Restorative stamina uplift capped at 40 points.");
     }
 
-	// DAYTIME WILDERNESS SLEEP PENALTY (8+ Hours but not in a hotel room)
-	// If you sleep for 8 or more hours but it's daytime and you're not in a hotel room, your maximum reward capacity is capped hard at 50 points.
-	if (elapsedHours >= 8.0f && (!isNighttime && !isHotelRoom)) {
+	// DAYTIME WILDERNESS SLEEP PENALTY (Minimum Hours but not in a hotel room)
+	// If you sleep for the minimum or more hours but it's daytime and you're not in a hotel room, your maximum reward capacity is capped hard at 50 points.
+	if (elapsedHours >= g_Constants.MinimumSleepHours && (!isNighttime && !isHotelRoom)) {
         uplift = std::min(uplift, 50.0f);
 		WriteLog(LogLevel::Verbose, "Daytime wilderness sleep detected. Stamina uplift capped at 50 points.");
 	}
@@ -265,8 +272,8 @@ float CalculateDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, b
         fatigueCap -= 5.0f;
     }
 
-    // THE OVER-SLEEP UNFOCUS ROUTE (10+ Hours)
-    if (elapsedHours >= 10.0f) {
+    // THE OVER-SLEEP UNFOCUS ROUTE (OverSleep Threshold Hours)
+    if (elapsedHours >= g_Constants.OverSleepThresholdHours) {
 		// If current dead eye is higher than the fatigue boundary, apply the 15-point reduction penalty (10 points if in a hotel room)
         if (currentDeadEye > fatigueCap) {
 			WriteLog(LogLevel::Verbose, "Over-sleep detected. Dead Eye reduced by 15 points (10 if in a hotel room).");
@@ -276,7 +283,7 @@ float CalculateDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, b
         return fatigueCap;
     }
 
-    // THE REGULAR SLEEP ROUTE (Less than 10 Hours)
+    // THE REGULAR SLEEP ROUTE (Less than OverSleep Threshold Hours)
     // If your starting Dead Eye is already higher than the focus cap, leave it completely untouched!
     if (currentDeadEye >= focusCap)
         return currentDeadEye;
@@ -316,13 +323,13 @@ void ApplyBatchTimeSkipDecay(
             bool isNighttime = (currentHour >= generalConfig.nightStartHour || currentHour < generalConfig.nightEndHour);
             bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
 
-			// SPECIAL GOLDEN STAMINA CORE REWARD (8-12 Hours in a Hotel Room at Night)
-            if (isHotelRoom && isNighttime && elapsedHours >= 8.0f && elapsedHours <= 12.0f) {
+			// SPECIAL GOLDEN STAMINA CORE REWARD (Minimum Sleep Hours-OverSleep Threshold Hours Hours in a Hotel Room at Night)
+            if (isHotelRoom && isNighttime && elapsedHours >= g_Constants.MinimumSleepHours && elapsedHours <= g_Constants.OverSleepThresholdHours) {
 				
-				WriteLog(LogLevel::Standard, "Player slept 8-12 hours in a hotel room at night. Stamina core is now golden and fully fortified.");
+				WriteLog(LogLevel::Standard, "Player slept " + std::to_string(g_Constants.MinimumSleepHours) + "-" + std::to_string(g_Constants.OverSleepThresholdHours) + " hours in a hotel room at night. Stamina core is now golden and fully fortified.");
 				ATTRIBUTE::ENABLE_ATTRIBUTE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
             }
-			// REGULAR SLEEP REPLENISHMENT ROUTE (< 8 or > 12 Hours and NOT in a Hotel Room at Night)
+			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
             else {
 
                 int finalStamina = static_cast<int>(CalculateStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
@@ -346,20 +353,21 @@ void ApplyBatchTimeSkipDecay(
         bool isNighttime = (currentHour >= generalConfig.nightStartHour || currentHour < generalConfig.nightEndHour);
         bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
 
-        // OVER-SLEEP PUNISHMENT INTERCEPT (10+ Hours)
-        if (elapsedHours >= 10.0f) {
+        // OVER-SLEEP PUNISHMENT INTERCEPT (OverSleep Threshold Hours+)
+        if (elapsedHours >= g_Constants.OverSleepThresholdHours) {
             if (isDeadEyeGold) {
                 // Forcefully break and remove the golden core overlay state!
                 ATTRIBUTE::DISABLE_ATTRIBUTE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye));
                 WriteLog(LogLevel::Standard, "Player over-slept with a Golden Dead Eye Core. Revoking gold fortification status due to fatigue.");
             }
+            else {
+                int finalDeadEye = static_cast<int>(CalculateDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
 
-            int finalDeadEye = static_cast<int>(CalculateDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
-
-			WriteLog(LogLevel::Standard, "Player overslept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
-            ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
+                WriteLog(LogLevel::Standard, "Player overslept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
+                ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
+            }
         }
-        // REGULAR SLEEP ROUTE (< 10 Hours)
+        // REGULAR SLEEP ROUTE (< OverSleep Threshold Hours)
         else if (!isDeadEyeGold) {
             // Standard sleep replenishment only runs if the core isn't already golden
             int finalDeadEye = static_cast<int>(CalculateDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
@@ -697,9 +705,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
                 int finalHealth = static_cast<int>(std::min(currentHealth + g_State.accumulatedHorseLeadHealthReward, 100.0f));
 
                 WriteLog(LogLevel::Standard, "Player stopped leading horse. Core is normal white; applying cached reward: +" + std::to_string(g_State.accumulatedHorseLeadHealthReward) + ". Horse Health updated to: " + std::to_string(finalHealth));
-
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health), finalHealth);
-                currentHealth = static_cast<float>(finalHealth);
             }
             else {
                 WriteLog(LogLevel::Verbose, "Player stopped leading horse. Core is currently Golden; cached reward of " + std::to_string(g_State.accumulatedHorseLeadHealthReward) + " points discarded safely.");
@@ -818,8 +824,7 @@ void ResetSimulationState() {
 
     g_State.lastKnownPlayerPed = 0;
 
-    s_structuresInitialized = false;
-    
+    s_structuresInitialized = false;    
 
     ClearDevLogCache();
 }
@@ -952,7 +957,8 @@ void UpdateCoreSimulation() {
 
 
 void ScriptMain() {
-    std::atexit([]() { g_ThreadManager.Shutdown(true); });
+    // ensure the background thread is cleanly terminated on script exit
+	std::atexit([]() { g_ThreadManager.Shutdown(true); });
 
     LoadConfiguration();
     PrecomputeHashes();
