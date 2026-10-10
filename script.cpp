@@ -18,12 +18,7 @@
 #include "Config.h"
 #include "ThreadManager.h"
 #include "CMTypes.h"
-
-struct Constants {
-	const float OverSleepThresholdHours = 12.0f;
-	const float MinimumSleepHours = 8.0f;
-    const float HorseLeadRewardPerGameHour = 10.0f;
-};
+#include "Constants.h"
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
@@ -49,8 +44,6 @@ Hash g_FiveFingerFilletScriptHash;
 
 Hash g_BathingScriptHash;
 Hash g_BathMaidScriptHash;
-
-Constants g_Constants;
 
 Hash GetKey(const char* key) {
     return MISC::GET_HASH_KEY(key);
@@ -120,7 +113,7 @@ bool IsInActiveScenerio(Ped playerPed, const std::unordered_set<Hash>& scenarioS
 
     // Fall back to transient dynamic actions if the primary structural anchor returns empty
     if (activeScenario == 0)
-	    Hash activeScenario = PED::_GET_ACTIVE_DYNAMIC_SCENARIO(playerPed);
+	    activeScenario = PED::_GET_ACTIVE_DYNAMIC_SCENARIO(playerPed);
 
 	if (activeScenario == 0) return false;
 
@@ -180,6 +173,66 @@ int GetPlayerBathingState() {
     return { activeHorse, hasHorse };
 }
 
+void UpdateHorseHitchedCheck(GameplayContext ctx, Ped playerPed)
+{
+    auto [activeHorse, hasHorse] = GetActivePlayerHorse(playerPed);
+
+    // Hard reset the accumulator as we no longer have a horse or we're in a freeze state
+    if (!hasHorse || ctx.freezeActive) {
+		WriteLog(LogLevel::Verbose, "Horse hitched check: No active horse or freeze state detected. Resetting accumulated immobility counter.");
+        
+        g_State.accumulatedHorseHitchedImmobility = 0;
+        ctx.isHorseHitched = false;
+    }
+
+    // INSTANT-PASS ENGINE MEMORY FLAGS
+    // If internal engine bits confirm a hitch or physical rope constraint, skip accumulation entirely.
+    if (PED::GET_PED_CONFIG_FLAG(activeHorse, 217, true) ||
+        PED::GET_PED_CONFIG_FLAG(activeHorse, 287, true) ||
+        invoke<bool>(0xDFE2C6AA327663E7, activeHorse)) // _IS_PED_CONSTRAINED
+    {
+		WriteLog(LogLevel::Verbose, "Horse hitched check: Engine memory flags indicate horse is physically hitched. Setting state to hitched.");
+        
+        g_State.accumulatedHorseHitchedImmobility = HORSE_HITCHED_REQ;
+        ctx.isHorseHitched = true;
+        return;
+    }
+
+    // HIGH-PRECISION VELOCITY & SCENARIO FILTER
+    float horseSpeed = ENTITY::GET_ENTITY_SPEED(activeHorse);
+
+    // Condition: True zero velocity, not executing ambient unhitched behaviors (grazing/resting)
+    if (horseSpeed == 0.0f &&
+        !PED::IS_PED_USING_ANY_SCENARIO(activeHorse) &&
+        TASK::_GET_SCENARIO_POINT_TYPE_PED_IS_USING(activeHorse) > 0)
+    {
+        Ped playerPed = PLAYER::PLAYER_PED_ID();
+        bool isBeingRidden = PED::IS_PED_ON_MOUNT(playerPed) && (PED::GET_MOUNT(playerPed) == activeHorse);
+
+        if (!isBeingRidden)
+        {
+			WriteLog(LogLevel::Verbose, "Horse hitched check: Horse is stationary and not being ridden. Accumulating immobility counter.");
+            
+            g_State.accumulatedHorseHitchedImmobility++;
+
+            if (g_State.accumulatedHorseHitchedImmobility >= HORSE_HITCHED_REQ)
+            {
+				WriteLog(LogLevel::Verbose, "Horse hitched check: Accumulated immobility threshold reached. Horse is now considered hitched.");
+                g_State.accumulatedHorseHitchedImmobility = HORSE_HITCHED_REQ;
+                ctx.isHorseHitched = true;
+            }
+
+            return;
+        }
+    }
+
+    // RAPID RESET
+    // If any check breaks for even a single 500ms loop tick, immediately drop the state
+	WriteLog(LogLevel::Verbose, "Horse hitched check: Rapid reset triggered. Resetting accumulated immobility counter and hitched state.");
+    g_State.accumulatedHorseHitchedImmobility = 0;
+    ctx.isHorseHitched = false;
+}
+
 GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings& generalConfig) {
     GameplayContext ctx;
 
@@ -198,6 +251,8 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 
     // camp/jailed/bathing stays out as we want a customized slowed decay in those cases
     ctx.freezeActive = (missionBlock || minigameBlock || isFallingOrGoingToDie || ctx.isSleeping);
+    
+    UpdateHorseHitchedCheck(ctx, playerPed);
 
 	if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev) && HasDevLogCacheChanged(ctx)) {
         WriteLog(LogLevel::Dev, "Gameplay state evaluated: allowDrainInMissions=" + std::to_string(generalConfig.allowDrainInMissions) + ", allowDrainInMinigames=" + std::to_string(generalConfig.allowDrainInMinigames));
@@ -229,15 +284,15 @@ float CalculateStaminaSleepReplenish(float currentStamina, float elapsedHours,bo
 
     // POOR SLEEP PENALTY (Less than 8 Hours or daytime and in the wilderness)
 	// If you don't get the minimum of rest, your maximum reward capacity is capped hard at 40 points (20 if it's daytime and you're not in a hotel room).
-    if (elapsedHours < g_Constants.MinimumSleepHours) {
+    if (elapsedHours < MIN_SLEEP_HOURS) {
         float cap = (isNighttime || isHotelRoom) ? 40.0f : 20.0f;
         uplift = std::min(uplift, cap);
-        WriteLog(LogLevel::Verbose, "Short sleep session detected (< " + std::to_string(g_Constants.MinimumSleepHours) + " hours). Restorative stamina uplift capped at 40 points.");
+        WriteLog(LogLevel::Verbose, "Short sleep session detected (< " + std::to_string(MIN_SLEEP_HOURS) + " hours). Restorative stamina uplift capped at 40 points.");
     }
 
 	// DAYTIME WILDERNESS SLEEP PENALTY (Minimum Hours but not in a hotel room)
 	// If you sleep for the minimum or more hours but it's daytime and you're not in a hotel room, your maximum reward capacity is capped hard at 50 points.
-	if (elapsedHours >= g_Constants.MinimumSleepHours && (!isNighttime && !isHotelRoom)) {
+	if (elapsedHours >= MIN_SLEEP_HOURS && (!isNighttime && !isHotelRoom)) {
         uplift = std::min(uplift, 50.0f);
 		WriteLog(LogLevel::Verbose, "Daytime wilderness sleep detected. Stamina uplift capped at 50 points.");
 	}
@@ -274,7 +329,7 @@ float CalculateDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, b
     }
 
     // THE OVER-SLEEP UNFOCUS ROUTE (OverSleep Threshold Hours)
-    if (elapsedHours >= g_Constants.OverSleepThresholdHours) {
+    if (elapsedHours >= OVERSLEEP_THRESHOLD_HOURS) {
 		// If current dead eye is higher than the fatigue boundary, apply the 15-point reduction penalty (10 points if in a hotel room)
         if (currentDeadEye > fatigueCap) {
 			WriteLog(LogLevel::Verbose, "Over-sleep detected. Dead Eye reduced by 15 points (10 if in a hotel room).");
@@ -325,9 +380,9 @@ void ApplyBatchTimeSkipDecay(
             bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
 
 			// SPECIAL GOLDEN STAMINA CORE REWARD (Minimum Sleep Hours-OverSleep Threshold Hours Hours in a Hotel Room at Night)
-            if (isHotelRoom && isNighttime && elapsedHours >= g_Constants.MinimumSleepHours && elapsedHours <= g_Constants.OverSleepThresholdHours) {
+            if (isHotelRoom && isNighttime && elapsedHours >= MIN_SLEEP_HOURS && elapsedHours <= OVERSLEEP_THRESHOLD_HOURS) {
 				
-				WriteLog(LogLevel::Standard, "Player slept " + std::to_string(g_Constants.MinimumSleepHours) + "-" + std::to_string(g_Constants.OverSleepThresholdHours) + " hours in a hotel room at night. Stamina core is now golden and fully fortified.");
+				WriteLog(LogLevel::Standard, "Player slept " + std::to_string(MIN_SLEEP_HOURS) + "-" + std::to_string(OVERSLEEP_THRESHOLD_HOURS) + " hours in a hotel room at night. Stamina core is now golden and fully fortified.");
 				ATTRIBUTE::ENABLE_ATTRIBUTE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
             }
 			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
@@ -355,7 +410,7 @@ void ApplyBatchTimeSkipDecay(
         bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
 
         // OVER-SLEEP PUNISHMENT INTERCEPT (OverSleep Threshold Hours+)
-        if (elapsedHours >= g_Constants.OverSleepThresholdHours) {
+        if (elapsedHours >= OVERSLEEP_THRESHOLD_HOURS) {
             if (isDeadEyeGold) {
                 // Forcefully break and remove the golden core overlay state!
                 ATTRIBUTE::DISABLE_ATTRIBUTE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye));
@@ -668,15 +723,15 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
     }    
 }
 
-bool IsHorseHitched(Ped horsePed) {
-	// Assumes horsePed is valid and exists    
-    // Check if the horse is hitched to a post or tied to a hitching rail
-    bool isHitched = (ENTITY::GET_ENTITY_SPEED(horsePed) <= 0.0f); // horse is completely stable if hitched
-
-    WriteLog(LogLevel::Dev, "Horse Hitched Check: horsePed=" + std::to_string(horsePed) + ", isHitched=" + std::to_string(isHitched));
-
-    return isHitched; 
-}
+//bool IsHorseHitched(Ped horsePed) {
+//	// Assumes horsePed is valid and exists    
+//    // Check if the horse is hitched to a post or tied to a hitching rail
+//    bool isHitched = (ENTITY::GET_ENTITY_SPEED(horsePed) <= 0.0f); // horse is completely stable if hitched
+//
+//    WriteLog(LogLevel::Dev, "Horse Hitched Check: horsePed=" + std::to_string(horsePed) + ", isHitched=" + std::to_string(isHitched));
+//
+//    return isHitched; 
+//}
 
 bool IsHorseBeingLed(Ped playerPed, Ped horsePed) {
 	// Assumes both playerPed and horsePed are valid and exist
@@ -693,7 +748,7 @@ bool IsHorseBeingLed(Ped playerPed, Ped horsePed) {
 bool CalculateHorseLeadReward(Ped horsePed, bool isBeingLed, bool isHorseHealthGold, float hoursDelta, float currentHealth) {
     // Edge Trigger: The player is actively leading the horse on this specific loop pass accumulating a reward cache for later application if the core is normal white
     if (isBeingLed) {
-        float tickReward = g_Constants.HorseLeadRewardPerGameHour * hoursDelta;
+        float tickReward = HORSE_LEAD_REWARD_GAME_HOUR * hoursDelta;
         g_State.accumulatedHorseLeadHealthReward += tickReward;
 
         WriteLog(LogLevel::Verbose, "Player is leading horse. Accruing reward cache unconditionally: +" + std::to_string(tickReward) + " (Total Cached: " + std::to_string(g_State.accumulatedHorseLeadHealthReward) + ")");
@@ -762,6 +817,8 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 	bool recievedHorseLeadReward = CalculateHorseLeadReward(horsePed, isBeingLed, isHorseHealthGold, hoursDelta, currentHealth);    
     bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);
 
+    float liveHorseHealth = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health)));
+
 	// Health Core Decay Logic (only applies if the horse's health core is not golden, it's not being led, and has no cached lead reward was just applied)
     if (!isHorseHealthGold && !isBeingLed && !recievedHorseLeadReward) {
         float activeHealthDecay = horseConfig.baseHealthDecay;
@@ -785,9 +842,20 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
         float targetStamina = currentStamina;
 
         // If the horse is physically hitched, freeze its stamina completely!
+		// Apply a small bonus if the horse is well-fed or health is golden to reward the player for good care
         // This rewards the player for using hitching posts around the world.
-        if (IsHorseHitched(horsePed)) {
+        
+        if (ctx.isHorseHitched) {
             WriteLog(LogLevel::Verbose, "Active Horse is securely hitched. Freezing stamina core decay completely.");
+
+            // Give a little bonus to stamina is horse is well fed
+            if (isHorseHealthGold || liveHorseHealth >= HORSE_HITCHED_HEALTH_REQ) {
+				float rewardMultiplier = (HORSE_HITCHED_BONUS_MULT * hoursDelta);
+                targetStamina = currentStamina + rewardMultiplier;
+
+				WriteLog(LogLevel::Verbose, "Horse is well-fed or has golden health. Applying hitched bonus: +" + std::to_string(rewardMultiplier) + " to stamina core.");                
+                ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), static_cast<int>(targetStamina));
+            }
         }
         else {
             // Normal dynamic movement decay route
@@ -862,6 +930,7 @@ void ResetSimulationState() {
 
     g_State.accumulatedHorseLeadHealthReward = 0.0f;
     g_State.wasHorseLeadingLastTick = false;
+    g_State.accumulatedHorseHitchedImmobility = 0;
 
     g_State.wasSleepingDuringRestriction = false;
     g_State.wasAtCampDuringRestriction = false;
@@ -998,8 +1067,6 @@ void UpdateCoreSimulation() {
         }
     }
 }
-
-
 
 void ScriptMain() {
     // ensure the background thread is cleanly terminated on script exit
