@@ -23,8 +23,8 @@ struct GeneralConfigSettings {
     int nightStartHour = 19;
     int nightEndHour = 7;
 
-    bool allowDrainInMissions = false;
-    bool allowDrainInMinigames = false;
+    bool enableDuringMissions = false;
+    bool enableDuringMinigames = false;
 };
 
 struct PlayerConfigSettings {

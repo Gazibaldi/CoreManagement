@@ -94,10 +94,10 @@ void BuildDefaultConfigFile() {
             << "NightEndHour = " << g_GeneralConfig.nightEndHour << "\n"
             << "; If 1 (true), core drain ticks continuously during story/world missions. \n"
             << "; No catch-up math will trigger on mission completion.\n"
-            << "AllowDrainInMissions = " << static_cast<int>(g_GeneralConfig.allowDrainInMissions) << "\n"
+            << "EnableDuringMissions = " << static_cast<int>(g_GeneralConfig.enableDuringMissions) << "\n"
             << "; If 1 (true), core drain ticks continuously while sitting at poker, blackjack, etc.\n"
             << "; No catch-up math will trigger when standing up from the table.\n"
-            << "AllowDrainInMinigames = " << static_cast<int>(g_GeneralConfig.allowDrainInMinigames) << "\n\n"
+            << "EnableDuringMinigames = " << static_cast<int>(g_GeneralConfig.enableDuringMinigames) << "\n\n"
 
             << "[BaseDecayAwake]\n"
             << "; Points of core decay per in-game hour\n"
@@ -117,7 +117,7 @@ void BuildDefaultConfigFile() {
 
             << "[Floors]\n"
             << "; minimum core levels in the event of a time skip (missions, minigames, sleep).\n"
-            << "; is inactive for the corresponding gameplay type if AllowDrainInMissions or AllowDrainInMinigames is active. Always active for sleep and other events\n"
+            << "; is inactive for the corresponding gameplay type if EnableDuringMissions or EnableDuringMinigames is active. Always active for sleep and other events\n"
             << "; in general gameplay these are ignored and you can drop to zero core\n"
             << "; for example, when you sleep for 12 hours you will awaken with minimum cores of:\n"
 			<< "; Health - 15.0\n" // todo: add stamina and dead eye values here too, as well as a non -sleep example for the player to understand the difference between sleep and non-sleep time skips
@@ -160,8 +160,8 @@ void LogConfiguration() {
         << "| Logging: Log Level                    | " << std::setw(10) << g_CoreConfig.logLevelRaw << " |\n"
         << "| General: Night Start Hour             | " << std::setw(10) << g_GeneralConfig.nightStartHour << " |\n"
         << "| General: Night End Hour               | " << std::setw(10) << g_GeneralConfig.nightEndHour << " |\n"
-        << "| General: Allow Drain in Missions      | " << std::setw(10) << static_cast<int>(g_GeneralConfig.allowDrainInMissions) << " |\n"
-        << "| General: Allow Drain in Minigames     | " << std::setw(10) << static_cast<int>(g_GeneralConfig.allowDrainInMinigames) << " |\n"
+        << "| General: Allow During in Missions     | " << std::setw(10) << static_cast<int>(g_GeneralConfig.enableDuringMissions) << " |\n"
+        << "| General: Allow During in Mini-games   | " << std::setw(10) << static_cast<int>(g_GeneralConfig.enableDuringMinigames) << " |\n"
         << "| Player: Health Base Awake Decay       | " << std::setw(10) << g_PlayerConfig.baseHealthDecay << " |\n"
         << "| Player: Stamina Base Awake Decay      | " << std::setw(10) << g_PlayerConfig.baseStaminaDecay << " |\n"
         << "| Player: Dead Eye Base Awake Decay     | " << std::setw(10) << g_PlayerConfig.baseDeadEyeDecay << " |\n"
@@ -205,8 +205,8 @@ void LoadConfiguration() {
                                                                                                             // Range is 0-2 for normal gameplay. 0=disabled, 1=standard, 2=verbose
     g_GeneralConfig.nightStartHour = std::clamp(GetIniInt("General", "NightStartHour", 19, g_IniPath.c_str()), 0, 23); // clamp between 0 and 23
     g_GeneralConfig.nightEndHour = std::clamp(GetIniInt("General", "NightEndHour", 7, g_IniPath.c_str()), 0, 23); // clamp between 0 and 23
-    g_GeneralConfig.allowDrainInMissions = GetIniBool("General", "AllowDrainInMissions", false, g_IniPath.c_str());
-    g_GeneralConfig.allowDrainInMinigames = GetIniBool("General", "AllowDrainInMinigames", false, g_IniPath.c_str());
+    g_GeneralConfig.enableDuringMissions = GetIniBool("General", "EnableDuringMissions", false, g_IniPath.c_str());
+    g_GeneralConfig.enableDuringMinigames = GetIniBool("General", "EnableDuringMinigames", false, g_IniPath.c_str());
 
     g_PlayerConfig.baseHealthDecay = std::clamp(GetIniFloat("BaseDecayAwake", "HealthDecayBase", 3.5f, g_IniPath.c_str()), 1.0f, 100.0f);
     g_PlayerConfig.baseStaminaDecay = std::clamp(GetIniFloat("BaseDecayAwake", "StaminaDecayBase", 5.5f, g_IniPath.c_str()), 1.0f, 100.0f);

@@ -193,14 +193,14 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 	ctx.isAtCamp = IsInCampScenario(playerPed) && !ctx.isSleeping;
     
     // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
-    bool missionBlock = isMission && !generalConfig.allowDrainInMissions;
-    bool minigameBlock = isMinigame && !generalConfig.allowDrainInMinigames;
+    bool missionBlock = isMission && !generalConfig.enableDuringMissions;
+    bool minigameBlock = isMinigame && !generalConfig.enableDuringMinigames;
 
     // camp/jailed/bathing stays out as we want a customized slowed decay in those cases
     ctx.freezeActive = (missionBlock || minigameBlock || isFallingOrGoingToDie || ctx.isSleeping);
 
 	if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev) && HasDevLogCacheChanged(ctx)) {
-        WriteLog(LogLevel::Dev, "Gameplay state evaluated: allowDrainInMissions=" + std::to_string(generalConfig.allowDrainInMissions) + ", allowDrainInMinigames=" + std::to_string(generalConfig.allowDrainInMinigames));
+        WriteLog(LogLevel::Dev, "Gameplay state evaluated: allowDrainInMissions=" + std::to_string(generalConfig.enableDuringMissions) + ", allowDrainInMinigames=" + std::to_string(generalConfig.enableDuringMinigames));
 
         // Update tracking baselines immediately
         UpdateDevLogCache(ctx);
@@ -297,8 +297,9 @@ float CalculateDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, b
 
 void ApplyBatchTimeSkipDecay(
     Ped playerPed, int elapsedMinutes, float startHealth, float startStamina, float startDeadEye, 
-    float startHorseHealth, float startHorseStamina, bool processHorse, bool wasSleeping,
-	const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
+    float startHorseHealth, float startHorseStamina, bool processHorse,
+	const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig,
+    bool wasSleeping = false, bool timeSkipDrainEnabled = true) {
 
     float elapsedHours = static_cast<float>(elapsedMinutes) / 60.0f;
     if (elapsedHours > 12.0f) elapsedHours = 12.0f;
@@ -308,7 +309,7 @@ void ApplyBatchTimeSkipDecay(
     bool isDeadEyeGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::DeadEye));
 
 	// Health Core Decay Logic
-    if (!isHealthGold) {
+    if (!isHealthGold && timeSkipDrainEnabled) {
         int finalHealth = static_cast<int>(std::max(startHealth - (elapsedHours * playerConfig.baseHealthDecay),
             wasSleeping ? playerConfig.healthTimeSkipFloor : playerConfig.restrainedHealthFloor));
 
@@ -340,7 +341,7 @@ void ApplyBatchTimeSkipDecay(
             }
         }
     }
-    else if (!isStaminaGold) {
+    else if (!isStaminaGold && timeSkipDrainEnabled) {
         // Standard macro transit decay (Trains/Stagecoaches)
         int finalStamina = static_cast<int>(std::max(startStamina - (elapsedHours * playerConfig.baseStaminaDecay), playerConfig.restrainedStaminaFloor));
 
@@ -377,7 +378,7 @@ void ApplyBatchTimeSkipDecay(
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
         }
     }
-    else if (!isDeadEyeGold) {
+    else if (!isDeadEyeGold && timeSkipDrainEnabled) {
         // Standard macro transit decay (Trains/Stagecoaches)
         int finalDeadEye = static_cast<int>(std::max(startDeadEye - (elapsedHours * playerConfig.baseDeadEyeDecay), playerConfig.restrainedDeadEyeFloor));
 
@@ -386,7 +387,7 @@ void ApplyBatchTimeSkipDecay(
     }
 
     // Compute Horse Core Reductions
-    if (processHorse) {
+    if (processHorse && timeSkipDrainEnabled) {
         auto [activeHorse, hasHorse] = GetActivePlayerHorse(playerPed);
         if (hasHorse) {
             int finalHorseHealth = static_cast<int>(std::max(startHorseHealth - (elapsedHours * horseConfig.baseHealthDecay), horseConfig.restrainedHealthFloor));
@@ -451,7 +452,9 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
                 g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
                 g_State.cachedHorseHealth, g_State.cachedHorseStamina, g_State.hadHorse,
-                g_State.wasSleepingDuringRestriction, generalConfig, playerConfig, horseConfig);
+                generalConfig, playerConfig, horseConfig,
+                g_State.wasSleepingDuringRestriction,
+                generalConfig.enableTimeskipCatchup);
 
         g_State.wasSleepingDuringRestriction = false;
 
@@ -834,7 +837,7 @@ void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const Gene
         ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
             liveHealth, liveStamina, liveDeadEye,
             liveHorseHealth, liveHorseStamina, hasHorse,
-            false, generalConfig, playerConfig, horseConfig);
+            generalConfig, playerConfig, horseConfig);
     }
 
     // This updates the transition baseline AND keeps CalculateTimescaleDelta from dual-decaying
