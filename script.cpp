@@ -182,7 +182,7 @@ void UpdateHorseHitchedCheck(GameplayContext ctx, Ped playerPed)
 		WriteLog(LogLevel::Verbose, "Horse hitched check: No active horse or freeze state detected. Resetting accumulated immobility counter.");
         
         g_State.accumulatedHorseHitchedImmobility = 0;
-        ctx.isHorseHitched = false;
+        g_State.wasHorseHitchedLastTick = false;
     }
 
     // INSTANT-PASS ENGINE MEMORY FLAGS
@@ -194,7 +194,7 @@ void UpdateHorseHitchedCheck(GameplayContext ctx, Ped playerPed)
 		WriteLog(LogLevel::Verbose, "Horse hitched check: Engine memory flags indicate horse is physically hitched. Setting state to hitched.");
         
         g_State.accumulatedHorseHitchedImmobility = HORSE_HITCHED_REQ;
-        ctx.isHorseHitched = true;
+        g_State.wasHorseHitchedLastTick = true;
         return;
     }
 
@@ -208,17 +208,17 @@ void UpdateHorseHitchedCheck(GameplayContext ctx, Ped playerPed)
 
         if (!isBeingRidden)
         {
-			// If the horse is stationary, not being ridden and not confirmed hitched we increment the immobility counter. 
+			// If the horse is stationary, not being ridden and not confirmed hitched already, we increment the immobility counter. 
             // Once it reaches the threshold, we consider the horse hitched.
-			if (!ctx.isHorseHitched) {
+			if (!g_State.wasHorseHitchedLastTick) {
                 WriteLog(LogLevel::Verbose, "Horse hitched check: Horse is stationary and not being ridden. Accumulating immobility counter.");
                 g_State.accumulatedHorseHitchedImmobility++;
 
-                if (g_State.accumulatedHorseHitchedImmobility >= HORSE_HITCHED_REQ)
+				if (g_State.accumulatedHorseHitchedImmobility >= HORSE_HITCHED_REQ) // default threshold: 6 ticks of 500ms = 3 seconds of immobility
                 {
                     WriteLog(LogLevel::Verbose, "Horse hitched check: Accumulated immobility threshold reached. Horse is now considered hitched.");
                     g_State.accumulatedHorseHitchedImmobility = HORSE_HITCHED_REQ;
-                    ctx.isHorseHitched = true;
+                    g_State.wasHorseHitchedLastTick = true;
                 }
             }
 
@@ -230,7 +230,7 @@ void UpdateHorseHitchedCheck(GameplayContext ctx, Ped playerPed)
     // If any check breaks for even a single 500ms loop tick, immediately drop the state
 	WriteLog(LogLevel::Verbose, "Horse hitched check: Rapid reset triggered. Horse is not hitched. Resetting accumulated immobility counter and hitched state.");
     g_State.accumulatedHorseHitchedImmobility = 0;
-    ctx.isHorseHitched = false;
+    g_State.wasHorseHitchedLastTick = false;
 }
 
 GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings& generalConfig) {
@@ -932,7 +932,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 		// Apply a small bonus if the horse is well-fed or health is golden to reward the player for good care
         // This rewards the player for using hitching posts around the world.
         
-        if (ctx.isHorseHitched) {
+        if (g_State.wasHorseHitchedLastTick) {
             WriteLog(LogLevel::Verbose, "Active Horse is securely hitched. Freezing stamina core decay completely.");
 
             // Give a little bonus to stamina is horse is well fed
@@ -1015,6 +1015,7 @@ void ResetSimulationState() {
     g_State.accumulatedHorseLeadHealthReward = 0.0f;
     g_State.wasHorseLeadingLastTick = false;
     g_State.accumulatedHorseHitchedImmobility = 0;
+	g_State.wasHorseHitchedLastTick = false;
 
     g_State.wasSleepingDuringRestriction = false;
     g_State.wasAtCampDuringRestriction = false;
