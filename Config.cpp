@@ -138,7 +138,7 @@ void BuildDefaultConfigFile() {
 
             << "[HorseFloors]\n"
             << "; minimum core levels in the event of a time skip (missions, minigames, sleep).\n"
-            << "; is inactive for the corresponding gameplay type if AllowDrainInMissions or AllowDrainInMinigames is active. Always active for sleep and other events\n"
+            << "; is inactive for the corresponding gameplay type if EnableDuringMissions or EnableDuringMissions is active. Always active for sleep and other events\n"
             << "; in general gameplay these are ignored and you can drop to 0.0\n"
             << "RestrainedHorseHealthFloor = " << g_HorseConfig.restrainedHealthFloor << "\n"
             << "RestrainedHorseStaminaFloor = " << g_HorseConfig.restrainedStaminaFloor << "\n";
