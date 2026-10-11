@@ -27,6 +27,8 @@ struct SimulationState {
     bool wasHorseLeadingLastTick = false;
     float accumulatedHorseLeadHealthReward = 0.0f;
 
+    int accumulatedHorseHitchedImmobility = 0;
+
     int lastTickInGameMinutes = 0;
     bool timescaleDeltaInitialised = false;
 
@@ -40,5 +42,6 @@ struct GameplayContext {
     bool isSleeping = false;
     bool isAtCamp = false;
     bool isJailed = false;
+    bool isHorseHitched = false;
     int bathingState = 0;
 };
