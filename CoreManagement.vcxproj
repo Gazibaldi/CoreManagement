@@ -21,6 +21,7 @@
     <ClInclude Include="..\CoreSDK\inc\types.h" />
     <ClInclude Include="CMTypes.h" />
     <ClInclude Include="Config.h" />
+    <ClInclude Include="Constants.h" />
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="script.h" />
