@@ -23,6 +23,8 @@ struct Constants {
 	const float OverSleepThresholdHours = 12.0f;
 	const float MinimumSleepHours = 8.0f;
     const float HorseLeadRewardPerGameHour = 10.0f;
+    const float PostMissionDecayMultiplier = 1.2f;
+	const float PostMissionDecayHours = 1.0f;
 };
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
@@ -183,8 +185,8 @@ int GetPlayerBathingState() {
 GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings& generalConfig) {
     GameplayContext ctx;
 
-    bool isMission = MISC::GET_MISSION_FLAG();
-    bool isMinigame = IsPlayerPlayingTableMinigame();
+    bool isInMission = MISC::GET_MISSION_FLAG();
+    bool isInMinigame = IsPlayerPlayingTableMinigame();
     bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
     
     ctx.bathingState = GetPlayerBathingState();
@@ -193,11 +195,11 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 	ctx.isAtCamp = IsInCampScenario(playerPed) && !ctx.isSleeping;
     
     // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
-    bool missionBlock = isMission && !generalConfig.enableDuringMissions;
-    bool minigameBlock = isMinigame && !generalConfig.enableDuringMinigames;
+    ctx.isInMission = isInMission && !generalConfig.enableDuringMissions;
+    ctx.isInMinigame = isInMinigame && !generalConfig.enableDuringMinigames;
 
     // camp/jailed/bathing stays out as we want a customized slowed decay in those cases
-    ctx.freezeActive = (missionBlock || minigameBlock || isFallingOrGoingToDie || ctx.isSleeping);
+    ctx.freezeActive = (ctx.isInMission || ctx.isInMinigame || isFallingOrGoingToDie || ctx.isSleeping);
 
 	if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev) && HasDevLogCacheChanged(ctx)) {
         WriteLog(LogLevel::Dev, "Gameplay state evaluated: allowDrainInMissions=" + std::to_string(generalConfig.enableDuringMissions) + ", allowDrainInMinigames=" + std::to_string(generalConfig.enableDuringMinigames));
@@ -208,8 +210,8 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
         std::ostringstream message;
         message << std::boolalpha
             << "Gameplay state changed:"
-            << "missionBlock = " << missionBlock
-            << ", minigameBlock=" << minigameBlock
+            << " isInMission = " << ctx.isInMission
+            << ", isInMinigame=" << ctx.isInMinigame
             << ", isFallingOrGoingToDie=" << isFallingOrGoingToDie
             << ", bathingState=" << ctx.bathingState
             << ", isSleeping=" << ctx.isSleeping
@@ -296,20 +298,28 @@ float CalculateDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, b
 }
 
 void ApplyBatchTimeSkipDecay(
-    Ped playerPed, int elapsedMinutes, float startHealth, float startStamina, float startDeadEye, 
+	Ped playerPed, int elapsedMinutes, float startHealth, float startStamina, float startDeadEye, 
     float startHorseHealth, float startHorseStamina, bool processHorse,
 	const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig,
-    bool wasSleeping = false, bool timeSkipDrainEnabled = true) {
+    bool wasSleeping = false, bool wasInMinigame = false) {
 
     float elapsedHours = static_cast<float>(elapsedMinutes) / 60.0f;
-    if (elapsedHours > 12.0f) elapsedHours = 12.0f;
+
+    if (wasInMinigame) {
+		WriteLog(LogLevel::Verbose, "Player is in a minigame. Capping time skip to 2 hours for core decay calculations.");
+		elapsedHours = std::min(elapsedHours, 2.0f); // Cap the maximum time skip to 2 hours for minigames
+    }
+    else if (elapsedHours > 12.0f) {
+		WriteLog(LogLevel::Verbose, "Time skip exceeds 12 hours. Capping to 12 hours for core decay calculations.");
+        elapsedHours = 12.0f;
+    }
 
     bool isHealthGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::Health));
     bool isStaminaGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::Stamina));
     bool isDeadEyeGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::DeadEye));
 
 	// Health Core Decay Logic
-    if (!isHealthGold && timeSkipDrainEnabled) {
+    if (!isHealthGold) {
         int finalHealth = static_cast<int>(std::max(startHealth - (elapsedHours * playerConfig.baseHealthDecay),
             wasSleeping ? playerConfig.healthTimeSkipFloor : playerConfig.restrainedHealthFloor));
 
@@ -341,7 +351,7 @@ void ApplyBatchTimeSkipDecay(
             }
         }
     }
-    else if (!isStaminaGold && timeSkipDrainEnabled) {
+    else if (!isStaminaGold) {
         // Standard macro transit decay (Trains/Stagecoaches)
         int finalStamina = static_cast<int>(std::max(startStamina - (elapsedHours * playerConfig.baseStaminaDecay), playerConfig.restrainedStaminaFloor));
 
@@ -378,7 +388,7 @@ void ApplyBatchTimeSkipDecay(
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
         }
     }
-    else if (!isDeadEyeGold && timeSkipDrainEnabled) {
+    else if (!isDeadEyeGold) {
         // Standard macro transit decay (Trains/Stagecoaches)
         int finalDeadEye = static_cast<int>(std::max(startDeadEye - (elapsedHours * playerConfig.baseDeadEyeDecay), playerConfig.restrainedDeadEyeFloor));
 
@@ -387,7 +397,7 @@ void ApplyBatchTimeSkipDecay(
     }
 
     // Compute Horse Core Reductions
-    if (processHorse && timeSkipDrainEnabled) {
+    if (processHorse) {
         auto [activeHorse, hasHorse] = GetActivePlayerHorse(playerPed);
         if (hasHorse) {
             int finalHorseHealth = static_cast<int>(std::max(startHorseHealth - (elapsedHours * horseConfig.baseHealthDecay), horseConfig.restrainedHealthFloor));
@@ -408,9 +418,11 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         g_State.cachedInGameTimeMinutes = currentTotalMinutes;
         g_State.lastTickInGameMinutes = currentTotalMinutes;
 
-        // Lock the sleep/camp context down safely right here!
+        // Lock the context down safely right here!
         g_State.wasSleepingDuringRestriction = ctx.isSleeping;
         g_State.wasAtCampDuringRestriction = ctx.isAtCamp;
+		g_State.wasInMissionDuringRestriction = ctx.isInMission;
+		g_State.wasInMinigameDuringRestriction = ctx.isInMinigame;
 
         // Cache player base structures
         g_State.cachedHealth = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health)));
@@ -439,6 +451,15 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
 
     // Leaving a restricted / fast-forward state (Run Batch Catch-up Calculations)
     if (!ctx.freezeActive && g_State.isRestricted) {
+        // We have either just ended one of the following:
+		// - A mission or minigame that was blocking core decay
+		// - A player death/fall that was blocking core decay
+		// - A sleep scenario that was blocking core decay
+        //
+		// We now need to calculate the total elapsed time and apply the appropriate decay/replenishment logic.
+		// Death is basically redundant here because the player is immediately respawned and the g_state is reset, so we don't need to handle it separately.
+		// Sleep/minigames needs to used cached values because the player may have slept for a long time and we need to use the historical values from when they started sleeping.
+		// missions are a special case as we set up a multiplier that will apply to the slow decay logic, but will only last for 
         g_State.isRestricted = false;
         int elapsedMinutes = currentTotalMinutes - g_State.cachedInGameTimeMinutes;
 
@@ -448,15 +469,32 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         WriteLog(LogLevel::Verbose, "Exiting restricted state. Total elapsed game minutes: " + std::to_string(elapsedMinutes));
 
         if (elapsedMinutes > 0)
-            // Uses the HISTORICAL frozen values from the cache
-            ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
-                g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
-                g_State.cachedHorseHealth, g_State.cachedHorseStamina, g_State.hadHorse,
-                generalConfig, playerConfig, horseConfig,
-                g_State.wasSleepingDuringRestriction,
-                generalConfig.enableTimeskipCatchup);
+            if (g_State.wasSleepingDuringRestriction || g_State.wasInMinigameDuringRestriction) {
+                // Uses the HISTORICAL frozen values from the cache
+				WriteLog(LogLevel::Verbose, "Player was sleeping or in a minigame during restriction. Applying batch time skip decay.");
+
+                ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
+                    g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
+                    g_State.cachedHorseHealth, g_State.cachedHorseStamina, g_State.hadHorse,
+                    generalConfig, playerConfig, horseConfig,
+                    g_State.wasSleepingDuringRestriction, g_State.wasInMinigameDuringRestriction);                
+            }
+            else if (g_State.wasInMissionDuringRestriction)
+            {
+                g_State.PostMissionDecayHoursRemaining += g_Constants.PostMissionDecayHours;
+
+				// Cap the post-mission decay hours to a maximum of 3 hours to prevent excessive decay 
+                // (in-case multiple missions accumulate over the decay multiplier period)
+				g_State.PostMissionDecayHoursRemaining = std::min(g_State.PostMissionDecayHoursRemaining, 3.0f);
+				WriteLog(LogLevel::Verbose, "Player exited a mission. Post-mission decay hours remaining: " + std::to_string(g_State.PostMissionDecayHoursRemaining));
+            }
+            else {
+				WriteLog(LogLevel::Dev, "Player was not sleeping, in a minigame, or in a mission during restriction. No batch decay applied.");
+            }
 
         g_State.wasSleepingDuringRestriction = false;
+        g_State.wasInMinigameDuringRestriction = false;
+		g_State.wasInMissionDuringRestriction = false;
 
         // This stops CalculateTimescaleDelta from processing a phantom macro-jump on the next loop tick.
         g_State.cachedInGameTimeMinutes = currentTotalMinutes;
@@ -542,6 +580,60 @@ float GetPlayerMountedStaminaMultiplier(Ped playerPed) {
         return 0.8f;
 }
 
+float CalculatePlayerHealthDecayMultiplier(bool isPlayerSemiRestrained, bool applyPostMissionDecay, const PlayerConfigSettings& playerConfig) {
+	float multiplier = 1.0f;
+    if (isPlayerSemiRestrained) {
+        WriteLog(LogLevel::Dev, "Player is semi-restrained. Applying restrained health decay multiplier.");
+        multiplier += playerConfig.restrainedMultiplier;
+    }
+
+    if (applyPostMissionDecay) {
+        WriteLog(LogLevel::Dev, "Player is exiting a mission. Applying post-mission health decay multiplier.");
+        multiplier += g_Constants.PostMissionDecayMultiplier;
+    }
+
+	return multiplier;
+}
+
+float CalculatePlayerStaminaDecayMultiplier(bool isPlayerSemiRestrained, bool applyPostMissionDecay, const PlayerConfigSettings& playerConfig, Ped playerPed) {
+    float multiplier = 1.0f;
+    if (isPlayerSemiRestrained) {
+        WriteLog(LogLevel::Dev, "Player is semi-restrained. Applying restrained stamina decay multiplier.");
+        multiplier += playerConfig.restrainedMultiplier;
+    }
+    else if (IsPlayerMounted(playerPed)) {
+        float mountedStaminaMultiplier = GetPlayerMountedStaminaMultiplier(playerPed);
+        WriteLog(LogLevel::Dev, "Player is mounted. Applying conditional mounted stamina decay multiplier: " + std::to_string(mountedStaminaMultiplier));
+        multiplier += mountedStaminaMultiplier;
+    }
+
+    if (applyPostMissionDecay) {
+        WriteLog(LogLevel::Dev, "Player is exiting a mission. Applying post-mission stamina decay multiplier.");
+        multiplier += g_Constants.PostMissionDecayMultiplier;
+    }
+
+    return multiplier;
+}
+
+float CalculatePlayerDeadEyeDecayMultiplier(bool isPlayerSemiRestrained, bool applyPostMissionDecay, bool isNighttime, const PlayerConfigSettings& playerConfig) {
+    float multiplier = 1.0f;
+    if (isPlayerSemiRestrained) {
+		WriteLog(LogLevel::Dev, "Player is semi-restrained. Applying restrained dead eye decay multiplier.");
+        multiplier += playerConfig.restrainedMultiplier;
+    }
+    else if (isNighttime) {
+		WriteLog(LogLevel::Dev, "Player is in nighttime. Applying night dead eye decay multiplier.");
+        multiplier += playerConfig.nightDeadEyeMultiplier;
+    }
+
+    if (applyPostMissionDecay) {
+        WriteLog(LogLevel::Dev, "Player is exiting a mission. Applying post-mission dead eye decay multiplier.");
+        multiplier += g_Constants.PostMissionDecayMultiplier;
+    }
+
+    return multiplier;
+}
+
 void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayContext& ctx, const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig) {
     int currentHour = CLOCK::GET_CLOCK_HOURS();
     bool isNighttime = (currentHour >= generalConfig.nightStartHour || currentHour < generalConfig.nightEndHour);
@@ -556,19 +648,26 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 
     WriteLog(LogLevel::Verbose, "Player Core Simulation: isHealthGold = " + std::to_string(isHealthGold) + ", isStaminaGold = " + std::to_string(isStaminaGold) + ", isDeadEyeGold = " + std::to_string(isDeadEyeGold));
 
+	// Track post-mission decay hours remaining if the player is exiting a mission. This will apply a multiplier to all cores for a limited time after the mission ends.
+    bool applyPostMissionDecay = (g_State.PostMissionDecayHoursRemaining > 0.0f);
+
+    if (applyPostMissionDecay) {
+        g_State.PostMissionDecayHoursRemaining -= hoursDelta;
+		WriteLog(LogLevel::Dev, "Post-mission decay is active. Remaining hours: " + std::to_string(g_State.PostMissionDecayHoursRemaining));
+
+		// Ensure that the remaining hours do not go below zero
+		g_State.PostMissionDecayHoursRemaining = std::max(g_State.PostMissionDecayHoursRemaining, 0.0f);
+	}
+
     if (!isHealthGold) {
-        float activeHealthDecay = playerConfig.baseHealthDecay;
+        bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);
 
-		bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);
-
-        if (isPlayerSemiRestrained) {
-			WriteLog(LogLevel::Dev, "Player is semi-restrained. Applying restrained health decay multiplier.");
-            activeHealthDecay *= playerConfig.restrainedMultiplier;
-        }
+        float activeHealthDecay = playerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(isPlayerSemiRestrained, applyPostMissionDecay, playerConfig);
 
         float targetHealth = currentHealth - (activeHealthDecay * hoursDelta);
-		float minHealthFloor = isPlayerSemiRestrained ? playerConfig.restrainedHealthFloor : 0.0f;  //the player is semi restrained (jail/camp/bath), so we apply the player's restrained floor to prevent full depletion
-        
+
+        // The player is semi restrained (jail/camp/bath), so we apply the player's restrained floor to prevent full depletion
+		float minHealthFloor = isPlayerSemiRestrained ? playerConfig.restrainedHealthFloor : 0.0f;          
         targetHealth = std::max(targetHealth, minHealthFloor);
 
 		WriteLog(LogLevel::Verbose, "Player Core Simulation: HoursDelta=" + std::to_string(hoursDelta) + ", HealthDecay = " + std::to_string(activeHealthDecay) + ", TargetHealth=" + std::to_string(targetHealth) + ", MinHealthFloor=" + std::to_string(minHealthFloor));
@@ -577,7 +676,9 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), static_cast<int>(targetHealth));
     }
 
-    bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx);
+	// Redo the semi-restrained check for stamina and dead eye, 
+    // disregarding bathing for stamina and dead eye decay, as bathing rewards these cores.
+    bool isPlayerSemiRestrained = IsPlayerSemiRestrained(ctx, false);
 
     if (!isStaminaGold) {
         float targetStamina = currentStamina;
@@ -598,20 +699,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         }
         // Normal Open-World or Semi-Restrained Decay Route
         else {
-
-            float currentSpeed = ENTITY::GET_ENTITY_SPEED(playerPed);
-
-            float activeStaminaDecay = playerConfig.baseStaminaDecay;
-
-            if (isPlayerSemiRestrained) {
-				WriteLog(LogLevel::Dev, "Player is semi-restrained. Applying restrained stamina decay multiplier.");
-                activeStaminaDecay *= playerConfig.restrainedMultiplier;
-            }
-            else if (IsPlayerMounted(playerPed)) {
-                float mountedStaminaMultiplier = GetPlayerMountedStaminaMultiplier(playerPed);
-                WriteLog(LogLevel::Dev, "Player is mounted. Applying conditional mounted stamina decay multiplier: " + std::to_string(mountedStaminaMultiplier));
-                activeStaminaDecay *= mountedStaminaMultiplier;
-            }
+            float activeStaminaDecay = playerConfig.baseStaminaDecay * CalculatePlayerStaminaDecayMultiplier(isPlayerSemiRestrained, applyPostMissionDecay, playerConfig, playerPed);            
 
             targetStamina = currentStamina - (activeStaminaDecay * hoursDelta);
             float minStaminaFloor = isPlayerSemiRestrained ? playerConfig.restrainedStaminaFloor : 0.0f;
@@ -651,12 +739,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         }
         // Normal Open-World, Nighttime, or Semi-Restrained Decay Route
         else {
-            float activeDeadEyeDecay = playerConfig.baseDeadEyeDecay;
-
-			if (isPlayerSemiRestrained)
-                activeDeadEyeDecay *= playerConfig.restrainedMultiplier;
-            else if (isNighttime)
-                activeDeadEyeDecay *= playerConfig.nightDeadEyeMultiplier;
+            float activeDeadEyeDecay = playerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(isPlayerSemiRestrained, applyPostMissionDecay, isNighttime, playerConfig);
 
             targetDeadEye = currentDeadEye - (activeDeadEyeDecay * hoursDelta);
             float minDeadEyeFloor = isPlayerSemiRestrained ? playerConfig.restrainedDeadEyeFloor : 0.0f;
@@ -727,6 +810,36 @@ bool CalculateHorseLeadReward(Ped horsePed, bool isBeingLed, bool isHorseHealthG
     return false;
 }
 
+float CalculateHorseSpeedStaminaDecayMultiplier(Ped horsePed, const HorseConfigSettings& horseConfig) {
+    float currentSpeed = ENTITY::GET_ENTITY_SPEED(horsePed);
+    float speedMultiplier = 1.0f;
+
+    // The logic automatically scales down to a base flat rate if the horse is hitched or stabled!
+    if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {
+        speedMultiplier = horseConfig.gallopStaminaMultiplier;
+        WriteLog(LogLevel::Verbose, "Active Horse: Running/Galloping. Applying high stamina multiplier.");
+    }
+    else if (currentSpeed > static_cast<float>(HorseSpeed::Trot) && currentSpeed <= static_cast<float>(HorseSpeed::Gallop)) {
+        speedMultiplier = horseConfig.trotStaminaMultiplier;
+        WriteLog(LogLevel::Verbose, "Active Horse: Trotting. Applying medium stamina multiplier.");
+    }
+    else {
+        WriteLog(LogLevel::Verbose, "Active Horse: Hitched, standing still, or grazing. Applying base decay.");
+    }
+
+	return speedMultiplier;
+}
+
+float CalculateHorseStaminaDecayMultiplier(Ped horsePed, const HorseConfigSettings& horseConfig, bool isPlayerSemiRestrained, const PlayerConfigSettings& playerConfig) {
+	float multiplier = CalculateHorseSpeedStaminaDecayMultiplier(horsePed, horseConfig);
+    
+    // Dynamic Velocity Evaluation (Works whether you are riding it or it's moving ambiently)
+    if (isPlayerSemiRestrained)
+        multiplier += playerConfig.restrainedMultiplier;
+
+    return multiplier;
+}
+
 void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayContext& ctx, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
     auto [horsePed, hasHorse] = GetActivePlayerHorse(playerPed);
 
@@ -741,23 +854,6 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
     float currentHealth = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health)));
     float currentStamina = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina)));
-
-    // Dynamic Velocity Evaluation (Works whether you are riding it or it's moving ambiently)
-    float currentSpeed = ENTITY::GET_ENTITY_SPEED(horsePed);
-    float staminaMultiplier = 1.0f;
-
-    // The logic automatically scales down to a base flat rate if the horse is hitched or stabled!
-    if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {
-        staminaMultiplier = horseConfig.gallopStaminaMultiplier;
-        WriteLog(LogLevel::Verbose, "Active Horse: Running/Galloping. Applying high stamina multiplier.");
-    }
-    else if (currentSpeed > static_cast<float>(HorseSpeed::Trot) && currentSpeed <= static_cast<float>(HorseSpeed::Gallop)) {
-        staminaMultiplier = horseConfig.trotStaminaMultiplier;
-        WriteLog(LogLevel::Verbose, "Active Horse: Trotting. Applying medium stamina multiplier.");
-    }
-    else {
-        WriteLog(LogLevel::Verbose, "Active Horse: Hitched, standing still, or grazing. Applying base decay.");
-    }
 
     WriteLog(LogLevel::Verbose, "Horse Core Simulation: isHealthGold = " + std::to_string(isHorseHealthGold) + ", isStaminaGold = " + std::to_string(isHorseStaminaGold));
 
@@ -794,17 +890,14 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
         }
         else {
             // Normal dynamic movement decay route
-            float activeStaminaDecay = (horseConfig.baseStaminaDecay * staminaMultiplier);
+            float activeStaminaDecay = horseConfig.baseStaminaDecay * CalculateHorseStaminaDecayMultiplier(horsePed, horseConfig, isPlayerSemiRestrained, playerConfig);
             
-            if (isPlayerSemiRestrained)
-                activeStaminaDecay *= playerConfig.restrainedMultiplier;
-
-            targetStamina = currentStamina - (activeStaminaDecay * hoursDelta);
+            float targetStamina = currentStamina - (activeStaminaDecay * hoursDelta);
             float minStaminaFloor = isPlayerSemiRestrained ? horseConfig.restrainedStaminaFloor : 0.0f;
 
             targetStamina = std::max(targetStamina, minStaminaFloor);
 
-            WriteLog(LogLevel::Verbose, "Horse Core Simulation: HoursDelta=" + std::to_string(hoursDelta) + ", StaminaDecay=" + std::to_string(activeStaminaDecay) + ", TargetStamina=" + std::to_string(targetStamina) + ", MinStaminaFloor=" + std::to_string(minStaminaFloor) + ", StaminaMultiplier=" + std::to_string(staminaMultiplier));
+            WriteLog(LogLevel::Verbose, "Horse Core Simulation: HoursDelta=" + std::to_string(hoursDelta) + ", StaminaDecay=" + std::to_string(activeStaminaDecay) + ", TargetStamina=" + std::to_string(targetStamina) + ", MinStaminaFloor=" + std::to_string(minStaminaFloor));
             WriteLog(LogLevel::Standard, "Horse Core Sync Tick: Stamina=" + std::to_string(targetStamina));
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), static_cast<int>(targetStamina));
         }
@@ -868,6 +961,11 @@ void ResetSimulationState() {
 
     g_State.wasSleepingDuringRestriction = false;
     g_State.wasAtCampDuringRestriction = false;
+	g_State.wasInMissionDuringRestriction = false;
+	g_State.wasInMinigameDuringRestriction = false;
+
+	g_State.PostMissionDecayHoursRemaining = 0.0f;
+
     g_State.wasRestrictedLastTick = false;
 
     g_State.lastKnownPlayerPed = 0;

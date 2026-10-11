@@ -13,6 +13,10 @@ struct SimulationState {
 
     bool wasSleepingDuringRestriction = false;
     bool wasAtCampDuringRestriction = false;
+    bool wasInMinigameDuringRestriction = false;
+    bool wasInMissionDuringRestriction = false;
+	float PostMissionDecayHoursRemaining = 0.0f;
+
     bool wasRestrictedLastTick = false;
 
     bool hadHorse = false;
@@ -31,6 +35,8 @@ struct SimulationState {
 
 struct GameplayContext {
     bool freezeActive = false;
+    bool isInMission = false;
+    bool isInMinigame = false;
     bool isSleeping = false;
     bool isAtCamp = false;
     bool isJailed = false;
