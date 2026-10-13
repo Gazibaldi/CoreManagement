@@ -335,7 +335,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     return ctx;
 }
 
-float CalculateStaminaSleepReplenish(float currentStamina, float elapsedHours,bool isNighttime, bool isHotelRoom) {
+float CalculatePlayerStaminaSleepReplenish(float currentStamina, float elapsedHours,bool isNighttime, bool isHotelRoom) {
     // Standard linear scaling: 10 points per hour of sleep
     float uplift = elapsedHours * 10.0f;
 
@@ -358,7 +358,7 @@ float CalculateStaminaSleepReplenish(float currentStamina, float elapsedHours,bo
     return std::min(finalStamina, 100.0f); // Standard full core ceiling
 }
 
-float CalculateDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, bool isNighttime, bool isHotelRoom) {
+float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, bool isNighttime, bool isHotelRoom) {
     // Establish the Baseline Focus Threshold Caps
 
     float focusCap = 60.0f;   // Maximum normal sleep reward boundary
@@ -411,8 +411,8 @@ float CalculateHorseStaminaSleepReplenish(float currentStamina, float elapsedHou
     // Standard linear scaling: 10 points per hour of sleep
     float uplift = elapsedHours * 10.0f;
 
-    // DAYTIME WILDERNESS SLEEP PENALTY (Minimum Hours but not in a hotel room)
-    // If you sleep for the minimum or more hours but it's daytime and you're not in a hotel room, your maximum reward capacity is capped hard at 50 points.
+    // DAYTIME WILDERNESS SLEEP PENALTY (not in a stable (hotel) room at that)
+    // If you sleep for the minimum or more hours but it's daytime and you're not in a hotel room, the horse's maximum reward capacity is capped hard at 50 points.
     if (!isNighttime && !isHotelRoom) {
         uplift = std::min(uplift, 50.0f);
         WriteLog(LogLevel::Verbose, "Daytime wilderness sleep detected. Horse Stamina uplift capped at 50 points.");
@@ -469,7 +469,7 @@ void ApplyBatchTimeSkipDecay(
 			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
             else {
 
-                int finalStamina = static_cast<int>(CalculateStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
+                int finalStamina = static_cast<int>(CalculatePlayerStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
 
                 WriteLog(LogLevel::Standard, "Player slept. Stamina replenished to: " + std::to_string(finalStamina));
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
@@ -498,7 +498,7 @@ void ApplyBatchTimeSkipDecay(
                 WriteLog(LogLevel::Standard, "Player over-slept with a Golden Dead Eye Core. Revoking gold fortification status due to fatigue.");
             }
             else {
-                int finalDeadEye = static_cast<int>(CalculateDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
+                int finalDeadEye = static_cast<int>(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
 
                 WriteLog(LogLevel::Standard, "Player overslept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
@@ -507,7 +507,7 @@ void ApplyBatchTimeSkipDecay(
         // REGULAR SLEEP ROUTE (< OverSleep Threshold Hours)
         else if (!isDeadEyeGold) {
             // Standard sleep replenishment only runs if the core isn't already golden
-            int finalDeadEye = static_cast<int>(CalculateDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
+            int finalDeadEye = static_cast<int>(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
             
             WriteLog(LogLevel::Standard, "Player slept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
@@ -732,12 +732,18 @@ float GetPlayerMountedStaminaMultiplier(Ped playerPed) {
 
     float currentSpeed = ENTITY::GET_ENTITY_SPEED(activeHorse);
 
-    if (currentSpeed > static_cast<float>(HorseSpeed::Gallop))
+    if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {
+		WriteLog(LogLevel::Dev, "Active horse is galloping. Applying Player stamina decay multiplier: 1.2");
         return 1.2f;
-    else if (currentSpeed > static_cast<float>(HorseSpeed::Trot) && currentSpeed <= static_cast<float>(HorseSpeed::Gallop))
+    }        
+    else if (currentSpeed > static_cast<float>(HorseSpeed::Trot) && currentSpeed <= static_cast<float>(HorseSpeed::Gallop)) {
+    	WriteLog(LogLevel::Dev, "Active horse is trotting. Applying Player stamina decay multiplier: 1.0");
         return 1.0f;
-    else
+    }
+    else {
+		WriteLog(LogLevel::Dev, "Active horse is walking or stationary. Applying Player stamina decay multiplier: 0.8");
         return 0.8f;
+    }
 }
 
 float CalculatePlayerHealthDecayMultiplier(bool isPlayerSemiRestrained, bool applyPostMissionDecay, const PlayerConfigSettings& playerConfig) {
