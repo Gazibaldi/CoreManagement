@@ -88,20 +88,25 @@ void ClearLog() {
     std::ofstream(g_LogPath, std::ios::out | std::ios::trunc).close();
 }
 
-bool HasDevLogCacheChanged(GameplayContext& ctx) {
-	return (ctx.freezeActive != g_LogCache.lastFreezeActive ||
+bool HasDevLogCacheChanged(const GameplayContext& ctx) {
+	return 
+        (ctx.freezeActive != g_LogCache.lastFreezeActive ||
 		ctx.isAtCamp != g_LogCache.lastIsAtCamp ||
 		ctx.isSleeping != g_LogCache.lastIsSleeping ||
 		ctx.isJailed != g_LogCache.lastIsJailed ||
-		ctx.bathingState != g_LogCache.lastBathingState);
+		ctx.bathingState != g_LogCache.lastBathingState ||
+        ctx.isInMission != g_LogCache.lastIsInMission ||
+        ctx.isInMinigame != g_LogCache.lastIsInMinigame);
 }
 
-void UpdateDevLogCache(GameplayContext& ctx) {
+void UpdateDevLogCache(const GameplayContext& ctx) {
 	g_LogCache.lastFreezeActive = ctx.freezeActive;
 	g_LogCache.lastIsAtCamp = ctx.isAtCamp;
 	g_LogCache.lastIsSleeping = ctx.isSleeping;
 	g_LogCache.lastIsJailed = ctx.isJailed;
 	g_LogCache.lastBathingState = ctx.bathingState;
+	g_LogCache.lastIsInMission = ctx.isInMission;
+	g_LogCache.lastIsInMinigame = ctx.isInMinigame;
 }
 
 void ClearDevLogCache() {
@@ -110,4 +115,6 @@ void ClearDevLogCache() {
 	g_LogCache.lastIsSleeping = false;
 	g_LogCache.lastIsJailed = false;
 	g_LogCache.lastBathingState = 0;
+	g_LogCache.lastIsInMission = false;
+	g_LogCache.lastIsInMinigame = false;
 }

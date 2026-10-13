@@ -15,6 +15,8 @@ struct DevLoggingCache {
     bool lastIsSleeping = false;
     bool lastIsJailed = false;
     int  lastBathingState = 0;
+	bool lastIsInMission = false;
+	bool lastIsInMinigame = false;
 };
 
 extern std::string g_LogPath;
@@ -27,8 +29,8 @@ void WriteLog(LogLevel requiredLevel, const std::string& message);
 
 void ClearLog();
 
-bool HasDevLogCacheChanged(GameplayContext& ctx);
+bool HasDevLogCacheChanged(const GameplayContext& ctx);
 
-void UpdateDevLogCache(GameplayContext& ctx);
+void UpdateDevLogCache(const GameplayContext& ctx);
 
 void ClearDevLogCache();

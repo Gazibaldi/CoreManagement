@@ -31,9 +31,9 @@ void IniWatcherThread() {
     while (g_RunIniWatcherThread) {
         std::unique_lock<std::mutex> lock(g_IniWatcherCvMutex);
 
-        g_IniWatcherCv.wait_for(lock, std::chrono::milliseconds(2000), [&] {
+        g_IniWatcherCv.wait_for(lock, std::chrono::milliseconds(8000), [&] {
             return !g_RunIniWatcherThread.load(std::memory_order_acquire);
-            });
+        });
 
         // Check again immediately after waking up to handle instant shutdown
         if (!g_RunIniWatcherThread) break;
