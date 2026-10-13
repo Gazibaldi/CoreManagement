@@ -242,10 +242,12 @@ float GetHorseDistanceFromPlayer(Ped playerPed, Ped horsePed) {
     if (hasHorse) {
 		float distance = GetHorseDistanceFromPlayer(playerPed, activeHorse);
 
+		WriteLog(LogLevel::Dev, "Active horse detected. Distance from player: " + std::to_string(distance) + " metres.");
+
 		// If the horse is too far away, we consider it "lost" and reset the state.
-		// 500 metres is a generous distance, 350m is the Bonding Level 4 max whistle distance.
+		// 400 metres is a generous distance, 350m is the Bonding Level 4 max whistle distance.
 		// Deters exploiting the drain mechanics for the horse by leaving it in a distant location while the player is elsewhere.
-        if (distance > 500.0f) {
+        if (distance > 400.0f) {
 			WriteLog(LogLevel::Verbose, "Active horse is too far away (" + std::to_string(distance) + " metres). Resetting horse state.");
             hasHorse = false;
             activeHorse = 0;
@@ -260,7 +262,7 @@ void UpdateHorseHitchedCheck(GameplayContext ctx, Ped playerPed)
     auto [activeHorse, hasHorse] = GetActivePlayerHorse(playerPed);
 
     // Hard reset the accumulator as we no longer have a horse or we're in a freeze state
-    if (!hasHorse || ctx.freezeActive) {
+	if (!hasHorse || ctx.freezeActive) {
 		WriteLog(LogLevel::Verbose, "Horse hitched check: No active horse or freeze state detected. Resetting accumulated immobility counter.");
         
         g_State.accumulatedHorseHitchedImmobility = 0;
