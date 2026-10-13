@@ -214,6 +214,20 @@ int GetPlayerBathingState(Ped playerPed) {
     return 0;
 }
 
+float GetHorseDistanceFromPlayer(Ped playerPed, Ped horsePed) {
+    Vector3 playerCoords = ENTITY::GET_ENTITY_COORDS(playerPed, true, true);
+    Vector3 horseCoords = ENTITY::GET_ENTITY_COORDS(horsePed, true, true);
+
+    // Calculate distance in metres (using 3D distance)
+    float distance = MISC::GET_DISTANCE_BETWEEN_COORDS(
+        playerCoords.x, playerCoords.y, playerCoords.z,
+        horseCoords.x, horseCoords.y, horseCoords.z,
+        true
+    );
+
+	return distance;
+}
+
 [[nodiscard]] std::tuple<Ped, bool> GetActivePlayerHorse(Ped playerPed) {
     Ped activeHorse = PED::GET_MOUNT(playerPed);
 
@@ -224,6 +238,19 @@ int GetPlayerBathingState(Ped playerPed) {
     bool hasHorse = (activeHorse != 0 &&
         ENTITY::DOES_ENTITY_EXIST(activeHorse) &&
         !ENTITY::IS_ENTITY_DEAD(activeHorse));
+
+    if (hasHorse) {
+		float distance = GetHorseDistanceFromPlayer(playerPed, activeHorse);
+
+		// If the horse is too far away, we consider it "lost" and reset the state.
+		// 500 metres is a generous distance, 350m is the Bonding Level 4 max whistle distance.
+		// Deters exploiting the drain mechanics for the horse by leaving it in a distant location while the player is elsewhere.
+        if (distance > 500.0f) {
+			WriteLog(LogLevel::Verbose, "Active horse is too far away (" + std::to_string(distance) + " metres). Resetting horse state.");
+            hasHorse = false;
+            activeHorse = 0;
+        }
+    }
 
     return { activeHorse, hasHorse };
 }
