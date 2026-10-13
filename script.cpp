@@ -11,7 +11,7 @@
 #include <sstream>
 #include <algorithm>
 #include <tuple>
-#include <unordered_set>
+#include <unordered_map>
 #include <cstdlib>
 #include "script.h"
 #include "Logger.h"
@@ -31,8 +31,8 @@ static PlayerConfigSettings  s_cachedPlayerConfig;
 static HorseConfigSettings   s_cachedHorseConfig;
 static bool s_structuresInitialized = false;
 
-std::unordered_set<Hash> g_SleepScenarios{};
-std::unordered_set<Hash> g_CampScenarios{};
+std::unordered_map<Hash, std::string> g_SleepScenarios{};
+std::unordered_map<Hash, std::string> g_CampScenarios{};
 
 Hash g_JailScriptHash;
 Hash g_CustomJailScriptHash;
@@ -46,48 +46,53 @@ Hash g_BathingScriptHash;
 Hash g_BathMaidScriptHash;
 
 Hash GetKey(const char* key) {
-    return MISC::GET_HASH_KEY(key);
+	Hash hash = MISC::GET_HASH_KEY(key);
+	WriteLog(LogLevel::Dev, "Precomputed hash for key '" + std::string(key) + "': " + std::to_string(hash));
+    
+    return hash;
 }
 
 void PrecomputeHashes() {
 	// Precompute hashes here to avoid repeated calls to MISC::GET_HASH_KEY during gameplay.
 
     g_SleepScenarios = {
-        GetKey("WORLD_PLAYER_SLEEP_BEDROLL"),
-        GetKey("WORLD_PLAYER_SLEEP_BEDROLL_ARTHUR"),
-        GetKey("WORLD_PLAYER_SLEEP_BEDROLL_JOHN"),
-        GetKey("WORLD_PLAYER_SLEEP_GROUND"),
-        GetKey("PROP_PLAYER_SLEEP_BED"),
-        GetKey("PROP_PLAYER_SLEEP_BED_ARTHUR"),
-        GetKey("PROP_PLAYER_SLEEP_BED_JOHN"),
-        GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME"),
-        GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME_ARTHUR"),
-        GetKey("PROP_CAMP_SLEEP_BEDROLL"),
-        GetKey("PROP_PLAYER_SLEEP_CAMP_BEDROLL"),
-        GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME_JOHN"),
-        GetKey("PROP_PLAYER_SLEEP_TENT_CANOPY"),
-        GetKey("PROP_PLAYER_SLEEP_TENT_CANOPY_ARTHUR"),
-        GetKey("PROP_PLAYER_SLEEP_TENT_CANOPY_JOHN"),
-        GetKey("WORLD_PLAYER_SLEEP_GROUND_ARTHUR"),
-        GetKey("WORLD_PLAYER_SLEEP_GROUND_JOHN")
+        { GetKey("WORLD_PLAYER_SLEEP_BEDROLL"), "WORLD_PLAYER_SLEEP_BEDROLL" },
+        { GetKey("WORLD_PLAYER_SLEEP_BEDROLL_ARTHUR"), "WORLD_PLAYER_SLEEP_BEDROLL_ARTHUR" },
+        { GetKey("WORLD_PLAYER_SLEEP_BEDROLL_JOHN"), "WORLD_PLAYER_SLEEP_BEDROLL_JOHN" },
+        { GetKey("WORLD_PLAYER_SLEEP_GROUND"), "WORLD_PLAYER_SLEEP_GROUND" },
+        { GetKey("PROP_PLAYER_SLEEP_BED"), "PROP_PLAYER_SLEEP_BED" },
+        { GetKey("PROP_PLAYER_SLEEP_BED_ARTHUR"), "PROP_PLAYER_SLEEP_BED_ARTHUR" },
+        { GetKey("PROP_PLAYER_SLEEP_BED_JOHN"), "PROP_PLAYER_SLEEP_BED_JOHN" },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME"), "PROP_PLAYER_SLEEP_TENT_A_FRAME" },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME_ARTHUR"), "PROP_PLAYER_SLEEP_TENT_A_FRAME_ARTHUR" },
+        { GetKey("PROP_CAMP_SLEEP_BEDROLL"), "PROP_CAMP_SLEEP_BEDROLL" },
+        { GetKey("PROP_PLAYER_SLEEP_CAMP_BEDROLL"), "PROP_PLAYER_SLEEP_CAMP_BEDROLL" },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME_JOHN"), "PROP_PLAYER_SLEEP_TENT_A_FRAME_JOHN" },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_CANOPY"), "PROP_PLAYER_SLEEP_TENT_CANOPY" },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_CANOPY_ARTHUR"), "PROP_PLAYER_SLEEP_TENT_CANOPY_ARTHUR" },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_CANOPY_JOHN"), "PROP_PLAYER_SLEEP_TENT_CANOPY_JOHN" },
+        { GetKey("WORLD_PLAYER_SLEEP_GROUND_ARTHUR"), "WORLD_PLAYER_SLEEP_GROUND_ARTHUR" },
+        { GetKey("WORLD_PLAYER_SLEEP_GROUND_JOHN"), "WORLD_PLAYER_SLEEP_GROUND_JOHN" }
     };
 
     g_CampScenarios = {
-        GetKey("WORLD_PLAYER_CAMP_FIRE_KNEEL1"),
-        GetKey("WORLD_PLAYER_CAMP_FIRE_KNEEL2"),
-        GetKey("WORLD_PLAYER_CAMP_FIRE_SIT"),
-        GetKey("WORLD_PLAYER_CAMP_FIRE_SIT_GROUND"),
-        GetKey("WORLD_PLAYER_CAMP_FIRE_SQUAT"),
-        GetKey("WORLD_PLAYER_CAMP_FIRE_CRAFT"),
-        GetKey("WORLD_PLAYER_DYNAMIC_CAMP_FIRE_KNEEL_ARTHUR"),
-        GetKey("WORLD_PLAYER_DYNAMIC_CAMP_FIRE_KNEEL_JOHN"),
-        GetKey("WORLD_PLAYER_CAMP_FIRE_SIT_ARTHUR"),
-        GetKey("WORLD_PLAYER_CAMP_FIRE_SIT_JOHN"),
-        GetKey("WORLD_PLAYER_REST_GROUND"),
-        GetKey("WORLD_PLAYER_REST_GROUND_ARTHUR"),
-        GetKey("WORLD_PLAYER_REST_GROUND_JOHN"),
-        GetKey("PROP_CAMP_FIRE_SIT_ARTHUR"),
-        GetKey("PROP_CAMP_FIRE_SIT_JOHN")
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_KNEEL1"), "WORLD_PLAYER_CAMP_FIRE_KNEEL1" },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_KNEEL2"), "WORLD_PLAYER_CAMP_FIRE_KNEEL2" },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SIT"), "WORLD_PLAYER_CAMP_FIRE_SIT" },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SIT_GROUND"), "WORLD_PLAYER_CAMP_FIRE_SIT_GROUND" },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SQUAT"), "WORLD_PLAYER_CAMP_FIRE_SQUAT" },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_CRAFT"), "WORLD_PLAYER_CAMP_FIRE_CRAFT" },
+        { GetKey("WORLD_PLAYER_DYNAMIC_CAMP_FIRE_KNEEL_ARTHUR"), "WORLD_PLAYER_DYNAMIC_CAMP_FIRE_KNEEL_ARTHUR" },
+        { GetKey("WORLD_PLAYER_DYNAMIC_CAMP_FIRE_KNEEL_JOHN"), "WORLD_PLAYER_DYNAMIC_CAMP_FIRE_KNEEL_JOHN" },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SIT_ARTHUR"), "WORLD_PLAYER_CAMP_FIRE_SIT_ARTHUR" },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SIT_JOHN"), "WORLD_PLAYER_CAMP_FIRE_SIT_JOHN" },
+        { GetKey("WORLD_PLAYER_REST_GROUND"), "WORLD_PLAYER_REST_GROUND" },
+        { GetKey("WORLD_PLAYER_REST_GROUND_ARTHUR"), "WORLD_PLAYER_REST_GROUND_ARTHUR" },
+        { GetKey("WORLD_PLAYER_REST_GROUND_JOHN"), "WORLD_PLAYER_REST_GROUND_JOHN" },
+        { GetKey("PROP_CAMP_FIRE_SIT_ARTHUR"), "PROP_CAMP_FIRE_SIT_ARTHUR" },
+        { GetKey("PROP_CAMP_FIRE_SIT_JOHN"), "PROP_CAMP_FIRE_SIT_JOHN" },
+        { GetKey("WORLD_PLAYER_DYNAMIC_KNEEL"), "WORLD_PLAYER_DYNAMIC_KNEEL" }
+		//{ 3052985748, "UNKNONW_HASH_RESTING_ON_KNEE" } // Placeholder for a hash that doesn't have a known string representation. This is a temporary measure until the correct string can be identified.
     };
 
     g_BathingScriptHash = GetKey("bathing");
@@ -108,52 +113,102 @@ int GetTotalInGameMinutes() {
     return (CLOCK::GET_CLOCK_HOURS() * 60) + CLOCK::GET_CLOCK_MINUTES();
 }
 
-bool IsInActiveScenerio(Ped playerPed, const std::unordered_set<Hash>& scenarioSet) {
+bool IsInActiveScenerio(Ped playerPed, const std::unordered_map<Hash, std::string>& scenarioSet) {
     Hash activeScenario = TASK::_GET_SCENARIO_POINT_TYPE_PED_IS_USING(playerPed);
+	WriteLog(LogLevel::Dev, "Active scenario hash: " + std::to_string(activeScenario));
 
     // Fall back to transient dynamic actions if the primary structural anchor returns empty
-    if (activeScenario == 0)
-	    activeScenario = PED::_GET_ACTIVE_DYNAMIC_SCENARIO(playerPed);
+	if (activeScenario == 0) {
+		activeScenario = PED::_GET_ACTIVE_DYNAMIC_SCENARIO(playerPed);
+		WriteLog(LogLevel::Dev, "Fallback to dynamic scenario hash: " + std::to_string(activeScenario));
+	}
 
 	if (activeScenario == 0) return false;
 
-	return (scenarioSet.contains(activeScenario));
+	// If the current log level is below Dev, we skip the detailed logging and just return the result.
+    if (g_CoreConfig.currentLogLevel < LogLevel::Dev)
+        return scenarioSet.contains(activeScenario);
+
+    bool isInScenarioSet = (scenarioSet.contains(activeScenario));
+
+	if (isInScenarioSet) {
+		WriteLog(LogLevel::Dev, "Active scenario matches known set: " + scenarioSet.at(activeScenario));
+	}
+	else {
+		WriteLog(LogLevel::Dev, "Active scenario does not match any known set.");
+	}
+
+	return isInScenarioSet;
 }
 
 bool IsInSleepScenario(Ped playerPed) {
-	return IsInActiveScenerio(playerPed, g_SleepScenarios);
+	bool isInSleepScenario = IsInActiveScenerio(playerPed, g_SleepScenarios);
+	WriteLog(LogLevel::Dev, "IsInSleepScenario check: " + std::string(isInSleepScenario ? "true" : "false"));
+
+	return isInSleepScenario;
 }
 
 bool IsInCampScenario(Ped playerPed) {
-	return IsInActiveScenerio(playerPed, g_CampScenarios);
+    bool isInCampScenario = IsInActiveScenerio(playerPed, g_CampScenarios);
+    WriteLog(LogLevel::Dev, "IsInCampScenario check: " + std::string(isInCampScenario ? "true" : "false"));
+
+    return isInCampScenario;
 }
 
 bool IsPlayerArrested() {
-    bool isBeingArrested = PLAYER::IS_PLAYER_BEING_ARRESTED(PLAYER::PLAYER_ID(), FALSE);
+    bool isBeingArrested = PLAYER::IS_PLAYER_BEING_ARRESTED(PLAYER::PLAYER_ID(), false);
 
-    // Checks if the vanilla jail cell environment script is actively executing
-    bool isVanillaJailScriptActive = (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_JailScriptHash) > 0);
+	// Checks if the vanilla jail cell environment script is actively executing
+    int jailThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_JailScriptHash);
 
     // Placeholder for Enhanced Jail. 
     // If the mod isn't installed, this native just safely returns 0 with no error.
-    bool isCustomJailScriptActive = (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_CustomJailScriptHash) > 0);
+	int customJailThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_CustomJailScriptHash);
+    
+	WriteLog(LogLevel::Dev, "IsPlayerArrested check: isBeingArrested=" + std::string(isBeingArrested ? "true" : "false") + ", jailThreads=" + std::to_string(jailThreads) + ", customJailThreads=" + std::to_string(customJailThreads));
 
-    return (isBeingArrested || isVanillaJailScriptActive || isCustomJailScriptActive);
+    return (isBeingArrested || (jailThreads > 0) || (customJailThreads > 0));
 }
 
 bool IsPlayerPlayingTableMinigame() {
-    return (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_PokerScriptHash) > 0) ||
-    (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_BlackjackScriptHash) > 0) ||
-    (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_DominoesScriptHash) > 0) ||
-    (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_FiveFingerFilletScriptHash) > 0);
+
+	int pokerThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_PokerScriptHash);
+	int blackjackThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_BlackjackScriptHash);
+	int dominoesThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_DominoesScriptHash);
+	int fiveFingerFilletThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_FiveFingerFilletScriptHash); 
+
+	WriteLog(LogLevel::Dev, "Table minigame thread counts - Poker: " + std::to_string(pokerThreads) + ", Blackjack: " + std::to_string(blackjackThreads) + ", Dominoes: " + std::to_string(dominoesThreads) + ", Five Finger Fillet: " + std::to_string(fiveFingerFilletThreads));
+
+	return (pokerThreads > 0 || blackjackThreads > 0 || dominoesThreads > 0 || fiveFingerFilletThreads > 0);
 }
 
-int GetPlayerBathingState() {
-    bool isMasterBathThreadRunning = (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_BathingScriptHash) > 0);
+int GetPlayerBathingState(Ped playerPed) {
+	bool isBathingInitialised = (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_BathingScriptHash) > 0);
+	WriteLog(LogLevel::Dev, "IsPlayerBathing check: isBathingInitialised=" + std::string(isBathingInitialised ? "true" : "false"));
 
-    if (isMasterBathThreadRunning) {
-        bool isMaidActive = (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_BathMaidScriptHash) > 0);
-        return (isMaidActive ? 2 : 1); // 2 = Deluxe Service, 1 = Standard Self-Wash
+    if (isBathingInitialised) {
+
+        // Filter out the walking phase: Ensure Arthur is actually interacting with the tub scene
+		// This is a bit of a hack, but the bathing script doesn't provide a direct way to check if the player is actually in the bathhouse scene.
+        int bathHouseStatus = TASK::GET_SCRIPT_TASK_STATUS(playerPed, MISC::GET_HASH_KEY("WORLD_HUMAN_BATH_PLAYER"), false);  
+		WriteLog(LogLevel::Dev, "Bathing script task status: " + std::to_string(bathHouseStatus));
+
+        if (bathHouseStatus == 0) {
+            WriteLog(LogLevel::Dev, "Player is in the bathing script but not yet inside the bathhouse scene. Waiting for animation to start.");
+            return 0;
+        }
+
+		WriteLog(LogLevel::Dev, "Player is inside the bathhouse scene. Checking for deluxe bathing service...");
+
+		bool isMaidServiceActive = false;
+
+		// Check if the player is using the maid service bathing scenario, which indicates a deluxe bathing experience.
+        if (TASK::IS_TASK_MOVE_NETWORK_ACTIVE(playerPed)) {
+			WriteLog(LogLevel::Dev, "Deluxe Bathing active!");
+            isMaidServiceActive = true;
+        }		
+
+        return (isMaidServiceActive ? 2 : 1); // 2 = Deluxe Service, 1 = Standard Self-Wash
     }
    
     return 0;
@@ -183,6 +238,8 @@ void UpdateHorseHitchedCheck(GameplayContext ctx, Ped playerPed)
         
         g_State.accumulatedHorseHitchedImmobility = 0;
         g_State.wasHorseHitchedLastTick = false;
+        
+        return;
     }
 
     // INSTANT-PASS ENGINE MEMORY FLAGS
@@ -240,10 +297,10 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     bool isInMinigame = IsPlayerPlayingTableMinigame();
     bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
     
-    ctx.bathingState = GetPlayerBathingState();
+    ctx.bathingState = GetPlayerBathingState(playerPed);
     ctx.isJailed = IsPlayerArrested();
 	ctx.isSleeping = IsInSleepScenario(playerPed);
-	ctx.isAtCamp = IsInCampScenario(playerPed) && !ctx.isSleeping;
+	ctx.isAtCamp = IsInCampScenario(playerPed);
     
     // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
     ctx.isInMission = isInMission && !generalConfig.enableDuringMissions;
@@ -350,6 +407,21 @@ float CalculateDeadEyeSleepReplenish(float currentDeadEye, float elapsedHours, b
     return std::min(finalDeadEye, focusCap);
 }
 
+float CalculateHorseStaminaSleepReplenish(float currentStamina, float elapsedHours, bool isNighttime, bool isHotelRoom) {
+    // Standard linear scaling: 10 points per hour of sleep
+    float uplift = elapsedHours * 10.0f;
+
+    // DAYTIME WILDERNESS SLEEP PENALTY (Minimum Hours but not in a hotel room)
+    // If you sleep for the minimum or more hours but it's daytime and you're not in a hotel room, your maximum reward capacity is capped hard at 50 points.
+    if (!isNighttime && !isHotelRoom) {
+        uplift = std::min(uplift, 50.0f);
+        WriteLog(LogLevel::Verbose, "Daytime wilderness sleep detected. Horse Stamina uplift capped at 50 points.");
+    }
+
+    float finalStamina = currentStamina + uplift;
+    return std::min(finalStamina, 100.0f); // Standard full core ceiling
+}
+
 void ApplyBatchTimeSkipDecay(
 	Ped playerPed, int elapsedMinutes, float startHealth, float startStamina, float startDeadEye, 
     float startHorseHealth, float startHorseStamina, bool processHorse,
@@ -386,7 +458,7 @@ void ApplyBatchTimeSkipDecay(
         if (!isStaminaGold) {
             int currentHour = CLOCK::GET_CLOCK_HOURS();
             bool isNighttime = (currentHour >= generalConfig.nightStartHour || currentHour < generalConfig.nightEndHour);
-            bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
+			bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
 
 			// SPECIAL GOLDEN STAMINA CORE REWARD (Minimum Sleep Hours-OverSleep Threshold Hours Hours in a Hotel Room at Night)
             if (isHotelRoom && isNighttime && elapsedHours >= MIN_SLEEP_HOURS && elapsedHours <= OVERSLEEP_THRESHOLD_HOURS) {
@@ -450,16 +522,51 @@ void ApplyBatchTimeSkipDecay(
     }
 
     // Compute Horse Core Reductions
-    if (processHorse) {
+
+	if (processHorse) {
         auto [activeHorse, hasHorse] = GetActivePlayerHorse(playerPed);
         if (hasHorse) {
-            int finalHorseHealth = static_cast<int>(std::max(startHorseHealth - (elapsedHours * horseConfig.baseHealthDecay), horseConfig.restrainedHealthFloor));
-            int finalHorseStamina = static_cast<int>(std::max(startHorseStamina - (elapsedHours * horseConfig.baseStaminaDecay), horseConfig.restrainedStaminaFloor));
+            bool isHorseHealthGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(activeHorse, static_cast<int>(CoreIndex::Health));
+            bool isHorseStaminaGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(activeHorse, static_cast<int>(CoreIndex::Stamina));
 
-            WriteLog(LogLevel::Standard, "Horse Batch Sync: Health=" + std::to_string(finalHorseHealth) + ", Stamina=" + std::to_string(finalHorseStamina));
+			// Horse Health Core Decay Logic
+            if (!isHorseHealthGold) {
+                int finalHorseHealth = static_cast<int>(std::max(startHorseHealth - (elapsedHours * horseConfig.baseHealthDecay), wasSleeping ? horseConfig.healthTimeSkipFloor : horseConfig.restrainedHealthFloor));
+                WriteLog(LogLevel::Standard, "Player time-skipped. Horse Health decayed to: " + std::to_string(finalHorseHealth));
+                ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health), finalHorseHealth);
+            }
 
-            ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health), finalHorseHealth);
-            ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalHorseStamina);
+			// Horse Stamina Core Decay Logic
+            if (wasSleeping) {
+                // Gold cores are immune to sleep cap constraints, they remain full
+                if (!isHorseStaminaGold) {
+                    int currentHour = CLOCK::GET_CLOCK_HOURS();
+                    bool isNighttime = (currentHour >= generalConfig.nightStartHour || currentHour < generalConfig.nightEndHour);
+                    bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
+
+                    // SPECIAL GOLDEN STAMINA CORE REWARD (Hotel Stable at Night)
+                    if (isHotelRoom && isNighttime) {
+
+                        WriteLog(LogLevel::Standard, "Horse slept in a stable (hotel) at night. Stamina core is now golden and fully fortified.");
+                        ATTRIBUTE::ENABLE_ATTRIBUTE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
+                    }
+                    // REGULAR SLEEP REPLENISHMENT ROUTE
+                    else {
+
+                        int finalHorseStamina = static_cast<int>(CalculateHorseStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
+
+                        WriteLog(LogLevel::Standard, "Player slept. Horse Stamina replenished to: " + std::to_string(finalHorseStamina));
+                        ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalHorseStamina);
+                    }
+                }
+            }
+            else if (!isStaminaGold) {
+                // Standard macro transit decay (Trains/Stagecoaches)
+                int finalHorseStamina = static_cast<int>(std::max(startHorseStamina - (elapsedHours * horseConfig.baseStaminaDecay), horseConfig.restrainedStaminaFloor));
+
+                WriteLog(LogLevel::Standard, "Player time-skipped. Horse Stamina decayed to: " + std::to_string(finalHorseStamina));
+                ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalHorseStamina);
+            }
         }
     }
 }

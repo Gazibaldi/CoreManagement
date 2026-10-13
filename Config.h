@@ -20,8 +20,8 @@ struct CoreConfigSettings {
 };
 
 struct GeneralConfigSettings {
-    int nightStartHour = 19;
-    int nightEndHour = 7;
+    int nightStartHour = 20;
+    int nightEndHour = 6;
 
     bool enableDuringMissions = false;
     bool enableDuringMinigames = false;
@@ -45,6 +45,7 @@ struct HorseConfigSettings {
     float baseStaminaDecay = 5.5f;
     float trotStaminaMultiplier = 1.3f;
     float gallopStaminaMultiplier = 4.5f;
+    float healthTimeSkipFloor = 15.0f;
     float restrainedHealthFloor = 5.0f;
     float restrainedStaminaFloor = 5.0f;
 };
