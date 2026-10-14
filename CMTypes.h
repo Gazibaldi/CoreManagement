@@ -19,7 +19,7 @@ struct SimulationState {
     bool wasAtCampDuringRestriction = false;
     bool wasInMinigameDuringRestriction = false;
     bool wasInMissionDuringRestriction = false;
-    bool wasBathingDuringRestriction = false;
+    bool isBathingDuringRestriction = false;
     bool wasRestrictedLastTick = false;
 	
     float PostMissionDecayHoursRemaining = 0.0f;    
@@ -42,7 +42,7 @@ struct SimulationState {
 };
 
 struct TransientState {
-	int bathingTickCount = 0;
+	int bathingResetTickCount = 0;
 	bool isBathingStateActive = false;
 };
 

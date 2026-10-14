@@ -195,13 +195,15 @@ bool IsPlayerPlayingTableMinigame() {
 
 bool HasBathingStateResetPeriodExpired(const std::string& currentBathingState) {
 	// If the player is still in a valid bathing state, we increase the tick count and return false (not expired).
-	if (VALID_BATHING_STATES.contains(currentBathingState)) {
-        g_TransientState.bathingTickCount++;
-		
+	if (VALID_BATHING_STATES.contains(currentBathingState))
         return false;
-	}
-	// If the player has exited the bathing state, we check if the reset period has expired.
-	return (g_TransientState.bathingTickCount >= BATHING_STATE_RESET_TICKS);
+	
+	// If the player has exited the bathing state, we increment the reset tick count and check if it has reached the threshold.
+    g_TransientState.bathingResetTickCount++;
+
+	// The deluxe maid cutscene can take circa 15 real time seconds to complete (in which the currentBathingState is Unknown), so we allow a generous number of ticks before confirming the bathing state has fully reset.
+	// The threshold is based on the state change tick interval (def: 500ms), which is configurable. The default is 20 seconds, so we allow 40 ticks before confirming the reset.
+	return (g_TransientState.bathingResetTickCount >= g_bathingResetTicks.load(std::memory_order_acquire));
 }
 
 bool IsPlayerBathing(Ped playerPed) {
@@ -216,10 +218,10 @@ bool IsPlayerBathing(Ped playerPed) {
 
     if (g_TransientState.isBathingStateActive) {
         if (HasBathingStateResetPeriodExpired(bathingStateName)) {
-			WriteLog(LogLevel::Dev, "Player bathing check: Player has exited the bath. Resetting bathing state.");
 			g_TransientState.isBathingStateActive = false;
-			g_TransientState.bathingTickCount = 0;
+			g_TransientState.bathingResetTickCount = 0;
             
+            WriteLog(LogLevel::Dev, "Player bathing check: Player has exited the bath. Resetting transient bathing state.");
             return false;
         }
 		
@@ -230,14 +232,13 @@ bool IsPlayerBathing(Ped playerPed) {
         WriteLog(LogLevel::Dev, "Player bathing check: Current bathing state name: " + bathingStateName);
 
         if (VALID_BATHING_STATES.contains(bathingStateName)) {
-            WriteLog(LogLevel::Dev, "Player bathing check: Player is in a bath.");
-
             g_TransientState.isBathingStateActive = true;
-            g_TransientState.bathingTickCount = 1;
 
+            WriteLog(LogLevel::Dev, "Player bathing check: Player is now in a bath.");
             return true;
         }
 
+		WriteLog(LogLevel::Dev, "Player bathing check: Player is not in a bath.");
         return false;
     }
 }
@@ -485,7 +486,6 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
 
     float elapsedHours = static_cast<float>(elapsedMinutes) / 60.0f;
 
-    WriteLog(LogLevel::Verbose, "Time skip exceeds BATHING_TIMESKIP_MAX_HOURS hours. Capping to BATHING_TIMESKIP_MAX_HOURS hours for core decay calculations.");
     elapsedHours = std::min(elapsedHours, BATHING_TIMESKIP_MAX_HOURS);
 
     bool isHealthGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::Health));
@@ -523,7 +523,7 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
         // SPECIAL GOLDEN DEADEYE CORE REWARD (Bathing Deluxe Service (Maid))
         if (g_State.cachedBathingState == 2) {
             WriteLog(LogLevel::Verbose, "Player Bathing Deluxe Service: Dead Eye is now golden and fully fortified.");
-            ATTRIBUTE::ENABLE_ATTRIBUTE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye), 100.0f, true);
+            ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye), 100.0f, true);
         }
         else {
 			float targetDeadEye = startDeadEye;
@@ -543,6 +543,16 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), static_cast<int>(targetDeadEye));
         }
     }
+}
+
+void BreakGoldCore(Ped playerPed, CoreIndex coreIndex) {
+	int index = static_cast<int>(coreIndex);
+
+	if (ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, index)) {
+        ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, index, 0);
+        ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, index, 100);
+		WriteLog(LogLevel::Standard, "Player's " + std::to_string(index) + " core has been broken and is no longer golden.");
+	}
 }
 
 void ApplyBatchTimeSkipDecay(
@@ -587,7 +597,7 @@ void ApplyBatchTimeSkipDecay(
             if (isHotelRoom && isNighttime && elapsedHours >= MIN_SLEEP_HOURS && elapsedHours <= OVERSLEEP_THRESHOLD_HOURS) {
 				
 				WriteLog(LogLevel::Standard, "Player slept " + std::to_string(MIN_SLEEP_HOURS) + "-" + std::to_string(OVERSLEEP_THRESHOLD_HOURS) + " hours in a hotel room at night. Stamina core is now golden and fully fortified.");
-				ATTRIBUTE::ENABLE_ATTRIBUTE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
+				ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
             }
 			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
             else {
@@ -617,7 +627,7 @@ void ApplyBatchTimeSkipDecay(
         if (elapsedHours >= OVERSLEEP_THRESHOLD_HOURS) {
             if (isDeadEyeGold) {
                 // Forcefully break and remove the golden core overlay state!
-                ATTRIBUTE::DISABLE_ATTRIBUTE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye));
+                BreakGoldCore(playerPed, CoreIndex::DeadEye);
                 WriteLog(LogLevel::Standard, "Player over-slept with a Golden Dead Eye Core. Revoking gold fortification status due to fatigue.");
             }
             else {
@@ -671,7 +681,7 @@ void ApplyBatchTimeSkipDecay(
                     if (isHotelRoom && isNighttime) {
 
                         WriteLog(LogLevel::Standard, "Horse slept in a stable (hotel) at night. Stamina core is now golden and fully fortified.");
-                        ATTRIBUTE::ENABLE_ATTRIBUTE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
+                        ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
                     }
                     // REGULAR SLEEP REPLENISHMENT ROUTE
                     else {
@@ -695,15 +705,39 @@ void ApplyBatchTimeSkipDecay(
 }
 
 void UpdateFrozenStateVariables() {
-	if (g_State.wasBathingDuringRestriction) {
-        if (g_State.cachedMoney > MONEY::_MONEY_GET_CASH_BALANCE() || g_State.cachedBathingState > 0) {
+	WriteLog(LogLevel::Dev, "Updating frozen state variables based on cached values.");
+
+
+	WriteLog(LogLevel::Dev, "Frozen state variables updated: isRestricted=" + std::to_string(g_State.isRestricted) +
+		", isRestrictedVariable=" + std::to_string(g_State.isRestrictedVariable) +
+		", cachedInGameTimeMinutes=" + std::to_string(g_State.cachedInGameTimeMinutes) +
+		", lastTickInGameMinutes=" + std::to_string(g_State.lastTickInGameMinutes) +
+		", wasSleepingDuringRestriction=" + std::to_string(g_State.wasSleepingDuringRestriction) +
+		", wasAtCampDuringRestriction=" + std::to_string(g_State.wasAtCampDuringRestriction) +
+		", wasInMissionDuringRestriction=" + std::to_string(g_State.wasInMissionDuringRestriction) +
+		", wasInMinigameDuringRestriction=" + std::to_string(g_State.wasInMinigameDuringRestriction) +
+		", isBathingDuringRestriction=" + std::to_string(g_State.isBathingDuringRestriction) +
+		", cachedHealth=" + std::to_string(g_State.cachedHealth) +
+		", cachedStamina=" + std::to_string(g_State.cachedStamina) +
+		", cachedDeadEye=" + std::to_string(g_State.cachedDeadEye) +
+		", cachedMoney=" + std::to_string(g_State.cachedMoney) +
+        ", cachedBathingState=" + std::to_string(g_State.cachedBathingState) +
+		", hadHorse=" + std::to_string(g_State.hadHorse) +
+		", cachedHorseHealth=" + std::to_string(g_State.cachedHorseHealth) +
+		", cachedHorseStamina=" + std::to_string(g_State.cachedHorseStamina));
+
+	// Bathing check: If the player was bathing during the restriction period, we need to determine if they paid for a premium bath and adjust the cached bathing state accordingly.
+	if (g_State.isBathingDuringRestriction) {
+        if (g_State.cachedMoney > MONEY::_MONEY_GET_CASH_BALANCE() && g_State.cachedBathingState == 1) {
             WriteLog(LogLevel::Dev, "Player bathing check: Player has paid for a premium bath. Setting bathing state to Premium Bathing.");
             g_State.cachedBathingState = 2; // Premium Bathing
         }
 	}
+
+	// Add more frozen state variable updates here as needed in the future
 }
 
-bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int currentTotalMinutes, const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
+void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int currentTotalMinutes, const GeneralConfigSettings& generalConfig, const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig) {
 
     if (ctx.freezeActive && !g_State.isRestricted) {
         g_State.isRestricted = true;
@@ -717,7 +751,7 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         g_State.wasAtCampDuringRestriction = ctx.isAtCamp;
 		g_State.wasInMissionDuringRestriction = ctx.isInMission;
 		g_State.wasInMinigameDuringRestriction = ctx.isInMinigame;
-		g_State.wasBathingDuringRestriction = ctx.isBathing;
+		g_State.isBathingDuringRestriction = ctx.isBathing;
 		g_State.cachedBathingState = ctx.isBathing ? 1 : 0; // Default to standard bathing state if we're in a bathing scenario, otherwise 0 (not bathing)
 
         // Cache player base structures
@@ -742,18 +776,9 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             
             WriteLog(LogLevel::Verbose, "Entering restricted state. Cached player data (No active world mount detected).");
         }
-
-        return true;
     }
 
-	// If we're still in a restricted state and the freeze variable is active, we update the frozen state variables to ensure they reflect the current gameplay context.
-	if (g_State.isRestricted && g_State.isRestrictedVariable) {
-        UpdateFrozenStateVariables();
-		
-        return true;
-	}
-
-    // Leaving a restricted / fast-forward state (Run Batch Catch-up Calculations)
+	// Leaving a restricted / fast-forward state (Run Batch Catch-up Calculations)
     if (!ctx.freezeActive && g_State.isRestricted) {
         // We have either just ended one of the following:
 		// - A mission or minigame that was blocking core decay
@@ -787,7 +812,7 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                     generalConfig, playerConfig, horseConfig,
                     g_State.wasSleepingDuringRestriction, g_State.wasInMinigameDuringRestriction);                
             }
-            else if (g_State.wasBathingDuringRestriction) {
+            else if (g_State.isBathingDuringRestriction) {
                 // Uses the HISTORICAL frozen values from the cache
                 WriteLog(LogLevel::Verbose, "Player was bathing during restriction. Applying batch time skip decay with bathing multiplier.");
 
@@ -811,9 +836,9 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         g_State.wasSleepingDuringRestriction = false;
         g_State.wasInMinigameDuringRestriction = false;
 		g_State.wasInMissionDuringRestriction = false;
-        g_State.wasBathingDuringRestriction = false;
+        g_State.isBathingDuringRestriction = false;
 
-        g_TransientState.bathingTickCount = 0;
+        g_TransientState.bathingResetTickCount = 0;
 		g_TransientState.isBathingStateActive = false;
 
 		// Reset the cached bathing state and money to prevent false positives on future bathing checks
@@ -823,11 +848,7 @@ bool HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         // This stops CalculateTimescaleDelta from processing a phantom macro-jump on the next loop tick.
         g_State.cachedInGameTimeMinutes = currentTotalMinutes;
         g_State.lastTickInGameMinutes = currentTotalMinutes;
-
-        return true;
     }
-
-    return false;
 }
 
 float CalculateTimescaleDelta(int currentTotalMinutes)
@@ -1254,7 +1275,7 @@ void ResetSimulationState() {
     g_State.wasAtCampDuringRestriction = false;
 	g_State.wasInMissionDuringRestriction = false;
 	g_State.wasInMinigameDuringRestriction = false;
-    g_State.wasBathingDuringRestriction = false;
+    g_State.isBathingDuringRestriction = false;
 
 	g_State.PostMissionDecayHoursRemaining = 0.0f;
 
@@ -1262,7 +1283,7 @@ void ResetSimulationState() {
 
     g_State.lastKnownPlayerPed = 0;
 
-    g_TransientState.bathingTickCount = 0;
+    g_TransientState.bathingResetTickCount = 0;
     g_TransientState.isBathingStateActive = false;
 
     s_structuresInitialized = false;    
@@ -1359,9 +1380,13 @@ void UpdateCoreSimulation() {
         g_State.wasRestrictedLastTick = context.freezeActive;
         g_State.accumulatedTimeMs = 0;
     }
+    // If we're still in a restricted state and the freeze variable is active, we update the frozen state variables to ensure they reflect the current gameplay context.
+    else if (g_State.isRestricted && g_State.isRestrictedVariable) {
+        UpdateFrozenStateVariables();
+    }
     // SLOW-PATH APP DECAY SIMULATION (Accumulates interval smoothly over normal open world play)
     else if (!context.freezeActive) {
-        g_State.accumulatedTimeMs += g_stateChangeTickIntervalMs;
+        g_State.accumulatedTimeMs += coreConfig.stateChangeTickIntervalMs;
 
         if (g_State.accumulatedTimeMs >= coreConfig.coreDrainTickIntervalMs) {
             float hoursDelta = CalculateTimescaleDelta(currentTotalMinutes);
