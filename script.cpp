@@ -42,8 +42,8 @@ Hash g_BlackjackScriptHash;
 Hash g_DominoesScriptHash;
 Hash g_FiveFingerFilletScriptHash;
 
-Hash g_BathingScriptHash;
-Hash g_BathMaidScriptHash;
+Hash g_BathingMoveNetworkHash;
+Hash g_BathMaidMoveNetworkHash;
 
 Hash GetKey(const char* key) {
 	Hash hash = MISC::GET_HASH_KEY(key);
@@ -95,8 +95,8 @@ void PrecomputeHashes() {
 		//{ 3052985748, "UNKNONW_HASH_RESTING_ON_KNEE" } // Placeholder for a hash that doesn't have a known string representation. This is a temporary measure until the correct string can be identified.
     };
 
-    g_BathingScriptHash = GetKey("bathing");
-    g_BathMaidScriptHash = GetKey("bath_maid");
+    g_BathingMoveNetworkHash = GetKey("Script_Mini_Game_Bathing_Deluxe");
+    g_BathMaidMoveNetworkHash = GetKey("Script_Mini_Game_Bathing_Regular");
 
     g_JailScriptHash = GetKey("bounty_jail");
 	g_CustomJailScriptHash = GetKey("net_bounty_jail");
@@ -105,12 +105,22 @@ void PrecomputeHashes() {
 	g_BlackjackScriptHash = GetKey("blackjack_core");
 	g_DominoesScriptHash = GetKey("dominoes_core");
 	g_FiveFingerFilletScriptHash = GetKey("five_finger_fillet");
-    
+
 	// additional hashes can be precomputed here if needed
 }
 
 int GetTotalInGameMinutes() {
     return (CLOCK::GET_CLOCK_HOURS() * 60) + CLOCK::GET_CLOCK_MINUTES();
+}
+
+bool IsInMoveNetwork(Ped playerPed, Hash moveNetwork) {
+    if (TASK::IS_TASK_MOVE_NETWORK_ACTIVE(playerPed)) {
+        Hash taskMoveNetworkId = TASK::_GET_TASK_MOVE_NETWORK_ID(playerPed);
+		WriteLog(LogLevel::Dev, "Player Move Network ID: " + std::to_string(taskMoveNetworkId) + ", Target Move Network ID: " + std::to_string(moveNetwork));
+        return (taskMoveNetworkId == moveNetwork);
+    }
+
+    return false;
 }
 
 bool IsInActiveScenerio(Ped playerPed, const std::unordered_map<Hash, std::string>& scenarioSet) {
@@ -183,35 +193,40 @@ bool IsPlayerPlayingTableMinigame() {
 }
 
 int GetPlayerBathingState(Ped playerPed) {
-	bool isBathingInitialised = (SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_BathingScriptHash) > 0);
-	WriteLog(LogLevel::Dev, "IsPlayerBathing check: isBathingInitialised=" + std::string(isBathingInitialised ? "true" : "false"));
 
-    if (isBathingInitialised) {
+    std::string bathingStateName = TASK::GET_TASK_MOVE_NETWORK_STATE(playerPed);
 
-        // Filter out the walking phase: Ensure Arthur is actually interacting with the tub scene
-		// This is a bit of a hack, but the bathing script doesn't provide a direct way to check if the player is actually in the bathhouse scene.
-        int bathHouseStatus = TASK::GET_SCRIPT_TASK_STATUS(playerPed, MISC::GET_HASH_KEY("WORLD_HUMAN_BATH_PLAYER"), false);  
-		WriteLog(LogLevel::Dev, "Bathing script task status: " + std::to_string(bathHouseStatus));
+    WriteLog(LogLevel::Dev, "Player bathing check: Current bathing state name: " + bathingStateName);
 
-        if (bathHouseStatus == 0) {
-            WriteLog(LogLevel::Dev, "Player is in the bathing script but not yet inside the bathhouse scene. Waiting for animation to start.");
-            return 0;
+    if (!VALID_BATHING_STATES.contains(bathingStateName)) {
+        WriteLog(LogLevel::Dev, "Player bathing check: Player is not in a bathing state.");
+
+        g_State.bathingState = 0;
+        g_State.cachedBathingMoney = 0; 
+
+        return 0;
+	}
+
+	// Player is in a bathing state, check if it's a standard or premium bath
+
+    if (g_State.cachedBathingMoney > MONEY::_MONEY_GET_CASH_BALANCE() || g_State.bathingState == 2) {
+        WriteLog(LogLevel::Dev, "Player bathing check: Player has paid for a premium bath. Setting bathing state to Premium Bathing.");
+        g_State.bathingState = 2; // Premium Bathing
+    }
+
+    if (g_State.bathingState < 2) {
+        if (g_State.bathingState < 1) {
+            g_State.cachedBathingMoney = MONEY::_MONEY_GET_CASH_BALANCE();
+            WriteLog(LogLevel::Dev, "Player bathing check: Player has entered a standard bathing state. Caching current money for future checks: " + std::to_string(g_State.cachedBathingMoney));
+        }
+        else {
+            WriteLog(LogLevel::Dev, "Player bathing check: Player is still in a standard bathing state. Cached bathing money: " + std::to_string(g_State.cachedBathingMoney));
         }
 
-		WriteLog(LogLevel::Dev, "Player is inside the bathhouse scene. Checking for deluxe bathing service...");
-
-		bool isMaidServiceActive = false;
-
-		// Check if the player is using the maid service bathing scenario, which indicates a deluxe bathing experience.
-        if (TASK::IS_TASK_MOVE_NETWORK_ACTIVE(playerPed)) {
-			WriteLog(LogLevel::Dev, "Deluxe Bathing active!");
-            isMaidServiceActive = true;
-        }		
-
-        return (isMaidServiceActive ? 2 : 1); // 2 = Deluxe Service, 1 = Standard Self-Wash
+        g_State.bathingState = 1; // Standard Self-Wash
     }
-   
-    return 0;
+
+	return g_State.bathingState;
 }
 
 float GetHorseDistanceFromPlayer(Ped playerPed, Ped horsePed) {
@@ -1148,6 +1163,9 @@ void ResetSimulationState() {
     g_State.cachedHealth = 100.0f;
     g_State.cachedStamina = 100.0f;
     g_State.cachedDeadEye = 100.0f;
+
+    g_State.bathingState = 0;
+    g_State.cachedBathingMoney = 0;
 
     g_State.cachedHorseHealth = 100.0f;
     g_State.cachedHorseStamina = 100.0f;

@@ -11,6 +11,9 @@ struct SimulationState {
     float cachedStamina = 100.0f;
     float cachedDeadEye = 100.0f;
 
+	int bathingState = 0;
+	int cachedBathingMoney = 0;
+
     bool wasSleepingDuringRestriction = false;
     bool wasAtCampDuringRestriction = false;
     bool wasInMinigameDuringRestriction = false;
