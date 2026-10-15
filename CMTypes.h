@@ -3,6 +3,7 @@
 
 struct SimulationState {
     bool isRestricted = false;
+	bool isRestrictedVariable = false;
 
     int cachedInGameTimeMinutes = 0;
     int accumulatedTimeMs = 0;
@@ -10,14 +11,18 @@ struct SimulationState {
     float cachedHealth = 100.0f;
     float cachedStamina = 100.0f;
     float cachedDeadEye = 100.0f;
+    int cachedMoney = 0;
+
+    int cachedBathingState = 0;
 
     bool wasSleepingDuringRestriction = false;
     bool wasAtCampDuringRestriction = false;
     bool wasInMinigameDuringRestriction = false;
     bool wasInMissionDuringRestriction = false;
-	float PostMissionDecayHoursRemaining = 0.0f;
-
+    bool isBathingDuringRestriction = false;
     bool wasRestrictedLastTick = false;
+	
+    float PostMissionDecayHoursRemaining = 0.0f;    
 
     bool hadHorse = false;
 
@@ -26,8 +31,8 @@ struct SimulationState {
 
     bool wasHorseLeadingLastTick = false;
 	bool wasHorseHitchedLastTick = false;
+    
     float accumulatedHorseLeadHealthReward = 0.0f;
-
     int accumulatedHorseHitchedImmobility = 0;
 
     int lastTickInGameMinutes = 0;
@@ -36,12 +41,18 @@ struct SimulationState {
     Ped lastKnownPlayerPed = 0;
 };
 
+struct TransientState {
+	int bathingResetTickCount = 0;
+	bool isBathingStateActive = false;
+};
+
 struct GameplayContext {
     bool freezeActive = false;
+    bool isFreezeVariable = false;
     bool isInMission = false;
     bool isInMinigame = false;
     bool isSleeping = false;
     bool isAtCamp = false;
     bool isJailed = false;
-    int bathingState = 0;
+    bool isBathing = false;
 };

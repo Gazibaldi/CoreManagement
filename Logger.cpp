@@ -94,7 +94,7 @@ bool HasDevLogCacheChanged(const GameplayContext& ctx) {
 		ctx.isAtCamp != g_LogCache.lastIsAtCamp ||
 		ctx.isSleeping != g_LogCache.lastIsSleeping ||
 		ctx.isJailed != g_LogCache.lastIsJailed ||
-		ctx.bathingState != g_LogCache.lastBathingState ||
+		ctx.isBathing != g_LogCache.lastIsBathing ||
         ctx.isInMission != g_LogCache.lastIsInMission ||
         ctx.isInMinigame != g_LogCache.lastIsInMinigame);
 }
@@ -104,7 +104,7 @@ void UpdateDevLogCache(const GameplayContext& ctx) {
 	g_LogCache.lastIsAtCamp = ctx.isAtCamp;
 	g_LogCache.lastIsSleeping = ctx.isSleeping;
 	g_LogCache.lastIsJailed = ctx.isJailed;
-	g_LogCache.lastBathingState = ctx.bathingState;
+	g_LogCache.lastIsBathing = ctx.isBathing;
 	g_LogCache.lastIsInMission = ctx.isInMission;
 	g_LogCache.lastIsInMinigame = ctx.isInMinigame;
 }
@@ -114,7 +114,7 @@ void ClearDevLogCache() {
 	g_LogCache.lastIsAtCamp = false;
 	g_LogCache.lastIsSleeping = false;
 	g_LogCache.lastIsJailed = false;
-	g_LogCache.lastBathingState = 0;
+	g_LogCache.lastIsBathing = false;
 	g_LogCache.lastIsInMission = false;
 	g_LogCache.lastIsInMinigame = false;
 }

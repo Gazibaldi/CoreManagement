@@ -57,8 +57,8 @@ extern std::atomic<bool> g_ShouldReloadConfig;
 
 extern std::string g_IniPath;
 
-extern std::atomic<int> g_coreDrainTickIntervalMs;
 extern std::atomic<int> g_stateChangeTickIntervalMs;
+extern std::atomic<int> g_bathingResetTicks;
 
 extern CoreConfigSettings g_CoreConfig;
 extern GeneralConfigSettings g_GeneralConfig;

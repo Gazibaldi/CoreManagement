@@ -12,7 +12,7 @@
 #include <fstream>
 #include "Config.h"
 
-std::string VERSION = "v0.7-ALPHA";
+std::string VERSION = "v0.8-ALPHA";
 
 std::mutex g_ConfigMutex;
 
@@ -27,8 +27,8 @@ std::atomic<bool> g_ShouldReloadConfig(false);
 
 std::string g_IniPath = ".\\CoreManagement.ini";
 
-std::atomic<int> g_coreDrainTickIntervalMs(5000);
 std::atomic<int> g_stateChangeTickIntervalMs(500);
+std::atomic<int> g_bathingResetTicks(40);
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {
     char defaultBuffer[32];
@@ -234,8 +234,8 @@ void LoadConfiguration() {
     else if (g_CoreConfig.logLevelRaw == static_cast<int>(LogLevel::Standard)) g_CoreConfig.currentLogLevel = LogLevel::Standard;
     else g_CoreConfig.currentLogLevel = LogLevel::Disabled;
 
-    g_coreDrainTickIntervalMs.store(g_CoreConfig.coreDrainTickIntervalMs);
-	g_stateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs);
+    g_stateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs);
+	g_bathingResetTicks.store(1000 / g_CoreConfig.stateChangeTickIntervalMs * 20); // 20 seconds of ticks for bathing reset logic, calculated based on the state change tick interval
 
     g_CurrentLogLevel.store(static_cast<int>(g_CoreConfig.logLevelRaw), std::memory_order_release);
 

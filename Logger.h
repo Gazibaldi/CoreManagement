@@ -14,7 +14,7 @@ struct DevLoggingCache {
     bool lastIsAtCamp = false;
     bool lastIsSleeping = false;
     bool lastIsJailed = false;
-    int  lastBathingState = 0;
+    bool lastIsBathing = false;
 	bool lastIsInMission = false;
 	bool lastIsInMinigame = false;
 };
