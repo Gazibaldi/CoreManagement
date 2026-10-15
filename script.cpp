@@ -446,10 +446,10 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
 
     // THE OVER-SLEEP UNFOCUS ROUTE (OverSleep Threshold Hours)
     if (elapsedHours >= OVERSLEEP_THRESHOLD_HOURS) {
-		// If current dead eye is higher than the fatigue boundary, apply the 15-point reduction penalty (10 points if in a hotel room)
+		// If current dead eye is higher than the fatigue boundary, apply the 15-point reduction penalty (5 points if in a hotel room)
         if (currentDeadEye > fatigueCap) {
-			WriteLog(LogLevel::Verbose, "Over-sleep detected. Dead Eye reduced by 15 points (10 if in a hotel room).");
-            return std::max(currentDeadEye - (isHotelRoom ? 10.0f : 15.0f), fatigueCap);
+			WriteLog(LogLevel::Verbose, "Over-sleep detected. Dead Eye reduced by 15 points (5 if in a hotel room).");
+            return std::max(currentDeadEye - (isHotelRoom ? 5.0f : 15.0f), fatigueCap);
         }
 
         return fatigueCap;
@@ -545,16 +545,6 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
     }
 }
 
-void BreakGoldCore(Ped playerPed, CoreIndex coreIndex) {
-	int index = static_cast<int>(coreIndex);
-
-	if (ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, index)) {
-        ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, index, 0);
-        ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, index, 100);
-		WriteLog(LogLevel::Standard, "Player's " + std::to_string(index) + " core has been broken and is no longer golden.");
-	}
-}
-
 void ApplyBatchTimeSkipDecay(
 	Ped playerPed, int elapsedMinutes, float startHealth, float startStamina, float startDeadEye, 
     float startHorseHealth, float startHorseStamina, bool processHorse,
@@ -623,22 +613,7 @@ void ApplyBatchTimeSkipDecay(
         bool isNighttime = (currentHour >= generalConfig.nightStartHour || currentHour < generalConfig.nightEndHour);
         bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
 
-        // OVER-SLEEP PUNISHMENT INTERCEPT (OverSleep Threshold Hours+)
-        if (elapsedHours >= OVERSLEEP_THRESHOLD_HOURS) {
-            if (isDeadEyeGold) {
-                // Forcefully break and remove the golden core overlay state!
-                BreakGoldCore(playerPed, CoreIndex::DeadEye);
-                WriteLog(LogLevel::Standard, "Player over-slept with a Golden Dead Eye Core. Revoking gold fortification status due to fatigue.");
-            }
-            else {
-                int finalDeadEye = static_cast<int>(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
-
-                WriteLog(LogLevel::Standard, "Player overslept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
-                ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
-            }
-        }
-        // REGULAR SLEEP ROUTE (< OverSleep Threshold Hours)
-        else if (!isDeadEyeGold) {
+        if (!isDeadEyeGold) {
             // Standard sleep replenishment only runs if the core isn't already golden
             int finalDeadEye = static_cast<int>(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
             
@@ -1054,7 +1029,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
             
         WriteLog(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye=" + std::to_string(targetDeadEye));
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), static_cast<int>(targetDeadEye));      
-    }    
+    }
 }
 
 bool IsHorseBeingLed(Ped playerPed, Ped horsePed) {
