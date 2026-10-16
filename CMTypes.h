@@ -44,6 +44,9 @@ struct SimulationState {
 struct TransientState {
 	int bathingResetTickCount = 0;
 	bool isBathingStateActive = false;
+
+    int jailedResetTickCount = 0;
+    bool isJailedStateActive = false;
 };
 
 struct GameplayContext {

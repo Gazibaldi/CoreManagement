@@ -12,7 +12,7 @@
 #include <fstream>
 #include "Config.h"
 
-std::string VERSION = "v0.8-ALPHA";
+std::string VERSION = "v0.9-ALPHA";
 
 std::mutex g_ConfigMutex;
 
@@ -29,6 +29,7 @@ std::string g_IniPath = ".\\CoreManagement.ini";
 
 std::atomic<int> g_stateChangeTickIntervalMs(500);
 std::atomic<int> g_bathingResetTicks(40);
+std::atomic<int> g_jailedResetTicks(40);
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {
     char defaultBuffer[32];
@@ -107,13 +108,13 @@ void BuildDefaultConfigFile() {
 
             << "[Modifiers]\n"
             << "; percentage based modifiers for decay points above (0.5 = 50% drain [5 decay becomes 2.5 decay])\n"
-            << "; SleepHealthMultiplier  - Decay rate multiplier for HEALTH when the player is asleep\n"
-            << "; NightDeadEyeMultiplier - Decay rate multiplier for the DEAD EYE during the night hours (NightStartHour -> NightEndHour)\n"
-            << "; RestrainedMultiplier   - Decay rate multiplier for the all cores if the player is in a restrained state (e.g., camp/jail/bath/barber)\n"
-            << ";                          In bathing scenarios this is just your HEALTH as bathing is rewarding for STAMINA and DEAD EYE\n"
-            << "SleepHealthMultiplier = " << g_PlayerConfig.sleepHealthMultiplier << "\n"
+            << "; HealthTimeSkipMultiplier - Decay rate multiplier for HEALTH when the player is asleep\n"
+            << "; NightDeadEyeMultiplier   - Decay rate multiplier for the DEAD EYE during the night hours (NightStartHour -> NightEndHour)\n"
+            << "; CampedMultiplier         - Decay rate multiplier for the all cores if the player is in a restrained state (e.g., camp/jail/bath/barber)\n"
+            << ";                            In bathing scenarios this is just your HEALTH as bathing is rewarding for STAMINA and DEAD EYE\n"
+            << "HealthTimeSkipMultiplier = " << g_PlayerConfig.healthTimeSkipMultiplier << "\n"
             << "NightDeadEyeMultiplier = " << g_PlayerConfig.nightDeadEyeMultiplier << "\n"
-            << "RestrainedMultiplier = " << g_PlayerConfig.restrainedMultiplier << "\n\n"
+            << "CampedMultiplier = " << g_PlayerConfig.campedMultiplier << "\n\n"
 
             << "[Floors]\n"
             << "; minimum core levels in the event of a time skip (fast-travel, minigames, sleep).\n"
@@ -122,9 +123,9 @@ void BuildDefaultConfigFile() {
             << "; for example, when you sleep for 12 hours you will awaken with minimum cores of:\n"
 			<< "; Health - 15.0\n" // todo: add stamina and dead eye values here too, as well as a non -sleep example for the player to understand the difference between sleep and non-sleep time skips
             << "HealthTimeSkipFloor = " << g_PlayerConfig.healthTimeSkipFloor << "\n"
-            << "RestrainedHealthFloor = " << g_PlayerConfig.restrainedHealthFloor << "\n"
-            << "RestrainedStaminaFloor = " << g_PlayerConfig.restrainedStaminaFloor << "\n"
-            << "RestrainedDeadEyeFloor = " << g_PlayerConfig.restrainedDeadEyeFloor << "\n\n"
+            << "CampedHealthFloor = " << g_PlayerConfig.campedHealthFloor << "\n"
+            << "CampedStaminaFloor = " << g_PlayerConfig.campedStaminaFloor << "\n"
+            << "CampedDeadEyeFloor = " << g_PlayerConfig.campedDeadEyeFloor << "\n\n"
 
             << "[HorseBaseDecay]\n"
             << "; Points decay per in-game hour\n"
@@ -141,8 +142,8 @@ void BuildDefaultConfigFile() {
             << "; is inactive for the corresponding gameplay type if EnableDuringMinigames is active. Always active for sleep and other events\n"
             << "; in general gameplay these are ignored and you can drop to 0.0\n"
             << "HorseHealthTimeSkipFloor = " << g_HorseConfig.healthTimeSkipFloor << "\n"
-            << "RestrainedHorseHealthFloor = " << g_HorseConfig.restrainedHealthFloor << "\n"
-            << "RestrainedHorseStaminaFloor = " << g_HorseConfig.restrainedStaminaFloor << "\n";
+            << "CampedHorseHealthFloor = " << g_HorseConfig.campedHealthFloor << "\n"
+            << "CampedHorseStaminaFloor = " << g_HorseConfig.campedStaminaFloor << "\n";
         outFile.close();
     }
 }
@@ -166,20 +167,20 @@ void LogConfiguration() {
         << "| Player: Health Base Awake Decay       | " << std::setw(10) << g_PlayerConfig.baseHealthDecay << " |\n"
         << "| Player: Stamina Base Awake Decay      | " << std::setw(10) << g_PlayerConfig.baseStaminaDecay << " |\n"
         << "| Player: Dead Eye Base Awake Decay     | " << std::setw(10) << g_PlayerConfig.baseDeadEyeDecay << " |\n"
-        << "| Player: Sleep Health Multiplier       | " << std::setw(10) << g_PlayerConfig.sleepHealthMultiplier << " |\n"
+        << "| Player: Sleep Health Multiplier       | " << std::setw(10) << g_PlayerConfig.healthTimeSkipMultiplier << " |\n"
         << "| Player: Night Dead Eye Multiplier     | " << std::setw(10) << g_PlayerConfig.nightDeadEyeMultiplier << " |\n"
-        << "| Player: Restrained Multiplier         | " << std::setw(10) << g_PlayerConfig.restrainedMultiplier << " |\n"
-        << "| Player: Health Sleep Floor            | " << std::setw(10) << g_PlayerConfig.healthTimeSkipFloor << " |\n"
-        << "| Player: Health Restrained Floor       | " << std::setw(10) << g_PlayerConfig.restrainedHealthFloor << " |\n"
-        << "| Player: Stamina Restrained Floor      | " << std::setw(10) << g_PlayerConfig.restrainedStaminaFloor << " |\n"
-        << "| Player: Dead Eye Restrained Floor     | " << std::setw(10) << g_PlayerConfig.restrainedDeadEyeFloor << " |\n"
+        << "| Player: Camped Multiplier             | " << std::setw(10) << g_PlayerConfig.campedMultiplier << " |\n"
+        << "| Player: Health Timeskip Floor         | " << std::setw(10) << g_PlayerConfig.healthTimeSkipFloor << " |\n"
+        << "| Player: Health Camped Floor           | " << std::setw(10) << g_PlayerConfig.campedHealthFloor << " |\n"
+        << "| Player: Stamina Camped Floor          | " << std::setw(10) << g_PlayerConfig.campedStaminaFloor << " |\n"
+        << "| Player: Dead Eye Camped Floor         | " << std::setw(10) << g_PlayerConfig.campedDeadEyeFloor << " |\n"
         << "| Horse: Health Base Decay              | " << std::setw(10) << g_HorseConfig.baseHealthDecay << " |\n"
         << "| Horse: Stamina Base Decay             | " << std::setw(10) << g_HorseConfig.baseStaminaDecay << " |\n"
         << "| Horse: Stamina Trot Multiplier        | " << std::setw(10) << g_HorseConfig.trotStaminaMultiplier << " |\n"
         << "| Horse: Stamina Gallop Multiplier      | " << std::setw(10) << g_HorseConfig.gallopStaminaMultiplier << " |\n"
-        << "| Horse: Health Sleep Floor             | " << std::setw(10) << g_HorseConfig.healthTimeSkipFloor << " |\n"
-        << "| Horse: Health Restrained Floor        | " << std::setw(10) << g_HorseConfig.restrainedHealthFloor << " |\n"
-        << "| Horse: Stamina Restrained Floor       | " << std::setw(10) << g_HorseConfig.restrainedStaminaFloor << " |\n"
+        << "| Horse: Health Timeskip Floor          | " << std::setw(10) << g_HorseConfig.healthTimeSkipFloor << " |\n"
+        << "| Horse: Health Camped Floor            | " << std::setw(10) << g_HorseConfig.campedHealthFloor << " |\n"
+        << "| Horse: Stamina Camped Floor           | " << std::setw(10) << g_HorseConfig.campedStaminaFloor << " |\n"
         << "+---------------------------------------+------------+\n";
 
     WriteLog(LogLevel::Verbose, "Internal Parameter Map Hydrated:" + table.str());
@@ -213,21 +214,21 @@ void LoadConfiguration() {
     g_PlayerConfig.baseHealthDecay = std::clamp(GetIniFloat("BaseDecayAwake", "HealthDecayBase", 3.5f, g_IniPath.c_str()), 1.0f, 100.0f);
     g_PlayerConfig.baseStaminaDecay = std::clamp(GetIniFloat("BaseDecayAwake", "StaminaDecayBase", 5.5f, g_IniPath.c_str()), 1.0f, 100.0f);
     g_PlayerConfig.baseDeadEyeDecay = std::clamp(GetIniFloat("BaseDecayAwake", "DeadEyeDecayBase", 4.16f, g_IniPath.c_str()), 1.0f, 100.0f);
-    g_PlayerConfig.sleepHealthMultiplier = std::clamp(GetIniFloat("Modifiers", "SleepHealthMultiplier", 0.5f, g_IniPath.c_str()), 0.01f, 10.0f);
+    g_PlayerConfig.healthTimeSkipMultiplier = std::clamp(GetIniFloat("Modifiers", "HealthTimeSkipMultiplier", 0.5f, g_IniPath.c_str()), 0.01f, 10.0f);
     g_PlayerConfig.nightDeadEyeMultiplier = std::clamp(GetIniFloat("Modifiers", "NightDeadEyeMultiplier", 1.3f, g_IniPath.c_str()), 1.0f, 10.0f);
-    g_PlayerConfig.restrainedMultiplier = std::clamp(GetIniFloat("Modifiers", "RestrainedMultiplier", 0.25f, g_IniPath.c_str()), 0.01f, 10.0f);
+    g_PlayerConfig.campedMultiplier = std::clamp(GetIniFloat("Modifiers", "CampedMultiplier", 0.25f, g_IniPath.c_str()), 0.01f, 10.0f);
     g_PlayerConfig.healthTimeSkipFloor = std::clamp(GetIniFloat("Floors", "HealthTimeSkipFloor", 15.0f, g_IniPath.c_str()), 1.0f, 15.0f);
-    g_PlayerConfig.restrainedHealthFloor = std::clamp(GetIniFloat("Floors", "RestrainedHealthFloor", 5.0f, g_IniPath.c_str()), 5.0f, 10.0f);
-    g_PlayerConfig.restrainedStaminaFloor = std::clamp(GetIniFloat("Floors", "RestrainedStaminaFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
-    g_PlayerConfig.restrainedDeadEyeFloor = std::clamp(GetIniFloat("Floors", "RestrainedDeadEyeFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
+    g_PlayerConfig.campedHealthFloor = std::clamp(GetIniFloat("Floors", "CampedHealthFloor", 5.0f, g_IniPath.c_str()), 5.0f, 10.0f);
+    g_PlayerConfig.campedStaminaFloor = std::clamp(GetIniFloat("Floors", "CampedStaminaFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
+    g_PlayerConfig.campedDeadEyeFloor = std::clamp(GetIniFloat("Floors", "CampedDeadEyeFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
 
     g_HorseConfig.baseHealthDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseHealthDecayBase", 3.5f, g_IniPath.c_str()), 1.0f, 100.0f);
     g_HorseConfig.baseStaminaDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", 5.5f, g_IniPath.c_str()), 1.0f, 100.0f);
     g_HorseConfig.trotStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", 1.3f, g_IniPath.c_str()), 1.0f, 10.0f);
     g_HorseConfig.gallopStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", 4.5f, g_IniPath.c_str()), 1.0f, 10.0f);
     g_HorseConfig.healthTimeSkipFloor = std::clamp(GetIniFloat("HorseFloors", "HorseHealthTimeSkipFloor", 15.0f, g_IniPath.c_str()), 1.0f, 15.0f);
-    g_HorseConfig.restrainedHealthFloor = std::clamp(GetIniFloat("HorseFloors", "RestrainedHealthFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
-    g_HorseConfig.restrainedStaminaFloor = std::clamp(GetIniFloat("HorseFloors", "RestrainedStaminaFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
+    g_HorseConfig.campedHealthFloor = std::clamp(GetIniFloat("HorseFloors", "CampedHealthFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
+    g_HorseConfig.campedStaminaFloor = std::clamp(GetIniFloat("HorseFloors", "CampedStaminaFloor", 5.0f, g_IniPath.c_str()), 1.0f, 10.0f);
 
     if (g_CoreConfig.logLevelRaw == static_cast<int>(LogLevel::Dev)) g_CoreConfig.currentLogLevel = LogLevel::Dev;
     else if (g_CoreConfig.logLevelRaw == static_cast<int>(LogLevel::Verbose)) g_CoreConfig.currentLogLevel = LogLevel::Verbose;
@@ -236,6 +237,7 @@ void LoadConfiguration() {
 
     g_stateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs);
 	g_bathingResetTicks.store(1000 / g_CoreConfig.stateChangeTickIntervalMs * 20); // 20 seconds of ticks for bathing reset logic, calculated based on the state change tick interval
+    g_jailedResetTicks.store(1000 / g_CoreConfig.stateChangeTickIntervalMs * 20); // 20 seconds of ticks for jailed reset logic, calculated based on the state change tick interval
 
     g_CurrentLogLevel.store(static_cast<int>(g_CoreConfig.logLevelRaw), std::memory_order_release);
 
