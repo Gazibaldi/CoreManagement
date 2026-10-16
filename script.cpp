@@ -61,7 +61,7 @@ void PrecomputeHashes() {
         { GetKey("WORLD_PLAYER_SLEEP_BEDROLL_ARTHUR"), "WORLD_PLAYER_SLEEP_BEDROLL_ARTHUR" },
         { GetKey("WORLD_PLAYER_SLEEP_BEDROLL_JOHN"), "WORLD_PLAYER_SLEEP_BEDROLL_JOHN" },
         { GetKey("WORLD_PLAYER_SLEEP_GROUND"), "WORLD_PLAYER_SLEEP_GROUND" },
-        { GetKey("PROP_PLAYER_SLEEP_BED"), "PROP_PLAYER_SLEEP_BED" },
+		{ GetKey("PROP_PLAYER_SLEEP_BED"), "PROP_PLAYER_SLEEP_BED" }, // hotel room bed
         { GetKey("PROP_PLAYER_SLEEP_BED_ARTHUR"), "PROP_PLAYER_SLEEP_BED_ARTHUR" },
         { GetKey("PROP_PLAYER_SLEEP_BED_JOHN"), "PROP_PLAYER_SLEEP_BED_JOHN" },
         { GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME"), "PROP_PLAYER_SLEEP_TENT_A_FRAME" },
@@ -93,7 +93,6 @@ void PrecomputeHashes() {
         { GetKey("PROP_CAMP_FIRE_SIT_ARTHUR"), "PROP_CAMP_FIRE_SIT_ARTHUR" },
         { GetKey("PROP_CAMP_FIRE_SIT_JOHN"), "PROP_CAMP_FIRE_SIT_JOHN" },
         { GetKey("WORLD_PLAYER_DYNAMIC_KNEEL"), "WORLD_PLAYER_DYNAMIC_KNEEL" }
-		//{ 3052985748, "UNKNONW_HASH_RESTING_ON_KNEE" } // Placeholder for a hash that doesn't have a known string representation. This is a temporary measure until the correct string can be identified.
     };
 
     g_BathingMoveNetworkHash = GetKey("Script_Mini_Game_Bathing_Deluxe");
@@ -124,7 +123,7 @@ bool IsInMoveNetwork(Ped playerPed, Hash moveNetwork) {
     return false;
 }
 
-bool IsInActiveScenerio(Ped playerPed, const std::unordered_map<Hash, std::string>& scenarioSet) {
+bool IsInActiveScenario(Ped playerPed, const std::unordered_map<Hash, std::string>& scenarioSet) {
     Hash activeScenario = TASK::_GET_SCENARIO_POINT_TYPE_PED_IS_USING(playerPed);
 	WriteLog(LogLevel::Dev, "Active scenario hash: " + std::to_string(activeScenario));
 
@@ -153,14 +152,14 @@ bool IsInActiveScenerio(Ped playerPed, const std::unordered_map<Hash, std::strin
 }
 
 bool IsInSleepScenario(Ped playerPed) {
-	bool isInSleepScenario = IsInActiveScenerio(playerPed, g_SleepScenarios);
+	bool isInSleepScenario = IsInActiveScenario(playerPed, g_SleepScenarios);
 	WriteLog(LogLevel::Dev, "IsInSleepScenario check: " + std::string(isInSleepScenario ? "true" : "false"));
 
 	return isInSleepScenario;
 }
 
 bool IsInCampScenario(Ped playerPed) {
-    bool isInCampScenario = IsInActiveScenerio(playerPed, g_CampScenarios);
+    bool isInCampScenario = IsInActiveScenario(playerPed, g_CampScenarios);
     WriteLog(LogLevel::Dev, "IsInCampScenario check: " + std::string(isInCampScenario ? "true" : "false"));
 
     return isInCampScenario;
