@@ -12,7 +12,7 @@
 #include <fstream>
 #include "Config.h"
 
-std::string VERSION = "v0.9-ALPHA";
+std::string VERSION = "v0.10-ALPHA";
 
 std::mutex g_ConfigMutex;
 
@@ -28,8 +28,6 @@ std::atomic<bool> g_ShouldReloadConfig(false);
 std::string g_IniPath = ".\\CoreManagement.ini";
 
 std::atomic<int> g_stateChangeTickIntervalMs(500);
-std::atomic<int> g_bathingResetTicks(40);
-std::atomic<int> g_jailedResetTicks(40);
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {
     char defaultBuffer[32];
@@ -149,7 +147,7 @@ void BuildDefaultConfigFile() {
 }
 
 void LogConfiguration() {  
-    if (g_CurrentLogLevel.load(std::memory_order_acquire) < static_cast<int>(LogLevel::Verbose))
+    if (g_CurrentLogLevel.load(std::memory_order_acquire) < static_cast<int>(LogLevel::Standard))
         return;
 
     std::ostringstream table;
@@ -183,7 +181,7 @@ void LogConfiguration() {
         << "| Horse: Stamina Camped Floor           | " << std::setw(10) << g_HorseConfig.campedStaminaFloor << " |\n"
         << "+---------------------------------------+------------+\n";
 
-    WriteLog(LogLevel::Verbose, "Internal Parameter Map Hydrated:" + table.str());
+    WriteLog(LogLevel::Standard, "Internal Parameter Map Hydrated:" + table.str());
 }
 
 void LoadConfiguration() {
@@ -236,9 +234,7 @@ void LoadConfiguration() {
     else g_CoreConfig.currentLogLevel = LogLevel::Disabled;
 
     g_stateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs);
-	g_bathingResetTicks.store(1000 / g_CoreConfig.stateChangeTickIntervalMs * 20); // 20 seconds of ticks for bathing reset logic, calculated based on the state change tick interval
-    g_jailedResetTicks.store(1000 / g_CoreConfig.stateChangeTickIntervalMs * 20); // 20 seconds of ticks for jailed reset logic, calculated based on the state change tick interval
-
+    
     g_CurrentLogLevel.store(static_cast<int>(g_CoreConfig.logLevelRaw), std::memory_order_release);
 
     LogConfiguration();

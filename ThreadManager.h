@@ -9,10 +9,9 @@
 #include <condition_variable>
 
 class ScriptThreadManager {
-public:
     std::thread iniWatcherThread;
     std::thread loggerThread;
-
+public:
     ScriptThreadManager() = default;
     ~ScriptThreadManager() = default;
 
