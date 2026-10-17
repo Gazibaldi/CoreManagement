@@ -147,7 +147,7 @@ void BuildDefaultConfigFile() {
 }
 
 void LogConfiguration() {  
-    if (g_CurrentLogLevel.load(std::memory_order_acquire) < static_cast<int>(LogLevel::Verbose))
+    if (g_CurrentLogLevel.load(std::memory_order_acquire) < static_cast<int>(LogLevel::Standard))
         return;
 
     std::ostringstream table;
@@ -181,7 +181,7 @@ void LogConfiguration() {
         << "| Horse: Stamina Camped Floor           | " << std::setw(10) << g_HorseConfig.campedStaminaFloor << " |\n"
         << "+---------------------------------------+------------+\n";
 
-    WriteLog(LogLevel::Verbose, "Internal Parameter Map Hydrated:" + table.str());
+    WriteLog(LogLevel::Standard, "Internal Parameter Map Hydrated:" + table.str());
 }
 
 void LoadConfiguration() {
