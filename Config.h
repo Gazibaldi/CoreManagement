@@ -31,13 +31,13 @@ struct PlayerConfigSettings {
     float baseHealthDecay = 3.5f;
     float baseStaminaDecay = 5.5f;
     float baseDeadEyeDecay = 4.16f;
-    float sleepHealthMultiplier = 0.5f;
+    float healthTimeSkipMultiplier = 0.5f;
     float nightDeadEyeMultiplier = 1.3f;
-    float restrainedMultiplier = 0.25f;
+    float campedMultiplier = 0.25f;
     float healthTimeSkipFloor = 15.0f;
-    float restrainedHealthFloor = 5.0f;
-    float restrainedStaminaFloor = 5.0f;
-    float restrainedDeadEyeFloor = 5.0f;
+    float campedHealthFloor = 5.0f;
+    float campedStaminaFloor = 5.0f;
+    float campedDeadEyeFloor = 5.0f;
 };
 
 struct HorseConfigSettings {
@@ -46,8 +46,8 @@ struct HorseConfigSettings {
     float trotStaminaMultiplier = 1.3f;
     float gallopStaminaMultiplier = 4.5f;
     float healthTimeSkipFloor = 15.0f;
-    float restrainedHealthFloor = 5.0f;
-    float restrainedStaminaFloor = 5.0f;
+    float campedHealthFloor = 5.0f;
+    float campedStaminaFloor = 5.0f;
 };
 
 extern std::mutex g_ConfigMutex;
@@ -59,6 +59,7 @@ extern std::string g_IniPath;
 
 extern std::atomic<int> g_stateChangeTickIntervalMs;
 extern std::atomic<int> g_bathingResetTicks;
+extern std::atomic<int> g_jailedResetTicks;
 
 extern CoreConfigSettings g_CoreConfig;
 extern GeneralConfigSettings g_GeneralConfig;
