@@ -473,7 +473,7 @@ float CalculateHorseSpeedStaminaDecayMultiplier(Ped horsePed, const HorseConfigS
         WriteLog(LogLevel::Verbose, "Active Horse: Trotting. Applying medium stamina multiplier.");
     }
     else {
-        WriteLog(LogLevel::Verbose, "Active Horse: Hitched, standing still, or grazing. Applying base decay.");
+        WriteLog(LogLevel::Verbose, "Active Horse: Grazing. Applying base decay.");
     }
 
     return speedMultiplier;
@@ -482,15 +482,9 @@ float CalculateHorseSpeedStaminaDecayMultiplier(Ped horsePed, const HorseConfigS
 float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerConfig, bool isPlayerSemiRestrained = false, bool applyPostMissionDecay = false) {
     float multiplier = 1.0f;
 
-    if (DoesPlayerHaveItem(g_OwlFeatherTrinketHash, "PROVISION_TRINKET_OWL_FEATHER"))
-        multiplier += PROVISION_TRINKET_OWL_FEATHER_PLAYER_HSD_MULTIPLIER;
-
-    if (DoesPlayerHaveItem(g_BearClawTalismanHash, "PROVISION_TALISMAN_BEAR_CLAW"))
-        multiplier += PROVISION_TALISMAN_BEAR_CLAW_PLAYER_H_MULTIPLIER;
-
     if (isPlayerSemiRestrained) {
         WriteLog(LogLevel::Verbose, "Player is semi-restrained. Applying restrained health decay multiplier.");
-        multiplier += playerConfig.campedMultiplier;
+        multiplier = playerConfig.campedMultiplier;
     }
 
     if (applyPostMissionDecay) {
@@ -498,26 +492,27 @@ float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerCon
         multiplier += POST_MISSION_DECAY_MULTIPLIER;
     }
 
+    if (DoesPlayerHaveItem(g_OwlFeatherTrinketHash, "PROVISION_TRINKET_OWL_FEATHER"))
+        multiplier -= PROVISION_TRINKET_OWL_FEATHER_PLAYER_HSD_MULTIPLIER;
+
+    if (DoesPlayerHaveItem(g_BearClawTalismanHash, "PROVISION_TALISMAN_BEAR_CLAW"))
+        multiplier -= PROVISION_TALISMAN_BEAR_CLAW_PLAYER_H_MULTIPLIER;    
+
     return multiplier;
 }
 
 float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, bool isPlayerSemiRestrained = false, bool applyPostMissionDecay = false) {
     float multiplier = 1.0f;
 
-    if (DoesPlayerHaveItem(g_OwlFeatherTrinketHash, "PROVISION_TRINKET_OWL_FEATHER"))
-        multiplier += PROVISION_TRINKET_OWL_FEATHER_PLAYER_HSD_MULTIPLIER;
-
-    if (DoesPlayerHaveItem(g_BisonHornTalismanHash, "PROVISION_TALISMAN_BISON_HORN"))
-        multiplier += PROVISION_TALISMAN_BISON_HORN_PLAYER_S_MULTIPLIER;
-
     if (isPlayerSemiRestrained) {
         WriteLog(LogLevel::Verbose, "Player is semi-restrained. Applying restrained stamina decay multiplier.");
-        multiplier += playerConfig.campedMultiplier;
+        multiplier = playerConfig.campedMultiplier;
     }
     else if (IsPlayerMounted(playerPed)) {
         float mountedStaminaMultiplier = GetPlayerMountedStaminaMultiplier(playerPed);
+        
         WriteLog(LogLevel::Verbose, "Player is mounted. Applying conditional mounted stamina decay multiplier: " + std::to_string(mountedStaminaMultiplier));
-        multiplier += mountedStaminaMultiplier;
+        multiplier = mountedStaminaMultiplier;
     }
 
     if (applyPostMissionDecay) {
@@ -525,31 +520,37 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
         multiplier += POST_MISSION_DECAY_MULTIPLIER;
     }
 
+    if (DoesPlayerHaveItem(g_OwlFeatherTrinketHash, "PROVISION_TRINKET_OWL_FEATHER"))
+        multiplier -= PROVISION_TRINKET_OWL_FEATHER_PLAYER_HSD_MULTIPLIER;
+
+    if (DoesPlayerHaveItem(g_BisonHornTalismanHash, "PROVISION_TALISMAN_BISON_HORN"))
+        multiplier -= PROVISION_TALISMAN_BISON_HORN_PLAYER_S_MULTIPLIER;
+
     return multiplier;
 }
 
 float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerConfig, bool isPlayerSemiRestrained = false, bool applyPostMissionDecay = false, bool isNighttime = false) {
     float multiplier = 1.0f;
 
-    if (DoesPlayerHaveItem(g_OwlFeatherTrinketHash, "PROVISION_TRINKET_OWL_FEATHER"))
-        multiplier += PROVISION_TRINKET_OWL_FEATHER_PLAYER_HSD_MULTIPLIER;
-
-    if (DoesPlayerHaveItem(g_AlligatorToothTalismanHash, "PROVISION_TALISMAN_ALLIGATOR_TOOTH"))
-        multiplier += PROVISION_TALISMAN_ALLIGATOR_TOOTH_PLAYER_D_MULTIPLIER;
-
     if (isPlayerSemiRestrained) {
         WriteLog(LogLevel::Verbose, "Player is semi-restrained. Applying restrained dead eye decay multiplier.");
-        multiplier += playerConfig.campedMultiplier;
+        multiplier = playerConfig.campedMultiplier;
     }
     else if (isNighttime) {
         WriteLog(LogLevel::Verbose, "Player is in nighttime. Applying night dead eye decay multiplier.");
-        multiplier += playerConfig.nightDeadEyeMultiplier;
+        multiplier = playerConfig.nightDeadEyeMultiplier;
     }
 
     if (applyPostMissionDecay) {
         WriteLog(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission dead eye decay multiplier.");
         multiplier += POST_MISSION_DECAY_MULTIPLIER;
     }
+
+    if (DoesPlayerHaveItem(g_OwlFeatherTrinketHash, "PROVISION_TRINKET_OWL_FEATHER"))
+        multiplier -= PROVISION_TRINKET_OWL_FEATHER_PLAYER_HSD_MULTIPLIER;
+
+    if (DoesPlayerHaveItem(g_AlligatorToothTalismanHash, "PROVISION_TALISMAN_ALLIGATOR_TOOTH"))
+        multiplier -= PROVISION_TALISMAN_ALLIGATOR_TOOTH_PLAYER_D_MULTIPLIER;
 
     return multiplier;
 }
@@ -629,23 +630,25 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
 float CalculateHorseHealthDecayMultiplier(Ped horsePed, const HorseConfigSettings& horseConfig, const PlayerConfigSettings& playerConfig, bool isPlayerSemiRestrained = false) {
     float multiplier = 1.0f;
 
-    if (DoesPlayerHaveItem(g_BoarTuskTalismanHash, "PROVISION_TALISMAN_BOAR_TUSK"))
-        multiplier += PROVISION_TALISMAN_BOAR_TUSK_HORSE_HS_MULTIPLIER;
-
     if (isPlayerSemiRestrained)
-        multiplier += playerConfig.campedMultiplier;
+        multiplier = playerConfig.campedMultiplier;
+
+    if (DoesPlayerHaveItem(g_BoarTuskTalismanHash, "PROVISION_TALISMAN_BOAR_TUSK"))
+        multiplier -= PROVISION_TALISMAN_BOAR_TUSK_HORSE_HS_MULTIPLIER;    
 
     return multiplier;
 }
 
 float CalculateHorseStaminaDecayMultiplier(Ped horsePed, const HorseConfigSettings& horseConfig, const PlayerConfigSettings& playerConfig, bool isPlayerSemiRestrained = false) {
-    float multiplier = CalculateHorseSpeedStaminaDecayMultiplier(horsePed, horseConfig);
-
-    if (DoesPlayerHaveItem(g_BoarTuskTalismanHash, "PROVISION_TALISMAN_BOAR_TUSK"))
-        multiplier += PROVISION_TALISMAN_BOAR_TUSK_HORSE_HS_MULTIPLIER;
+    float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained)
-        multiplier += playerConfig.campedMultiplier;
+        multiplier = playerConfig.campedMultiplier;
+    else 
+        multiplier = CalculateHorseSpeedStaminaDecayMultiplier(horsePed, horseConfig);
+
+    if (DoesPlayerHaveItem(g_BoarTuskTalismanHash, "PROVISION_TALISMAN_BOAR_TUSK"))
+        multiplier -= PROVISION_TALISMAN_BOAR_TUSK_HORSE_HS_MULTIPLIER;    
 
     return multiplier;
 }
