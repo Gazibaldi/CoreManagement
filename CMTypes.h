@@ -40,12 +40,6 @@ struct SimulationState {
 
     Ped lastKnownPlayerPed = 0;
 };
-
-struct TransientState {
-	int bathingResetTickCount = 0;
-	bool isBathingStateActive = false;
-};
-
 struct GameplayContext {
     bool freezeActive = false;
     bool isFreezeVariable = false;

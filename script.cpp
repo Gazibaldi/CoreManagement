@@ -25,7 +25,6 @@ enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
 
 SimulationState g_State;
-TransientState g_TransientState;
 
 static CoreConfigSettings    s_cachedCoreConfig;
 static GeneralConfigSettings s_cachedGeneralConfig;
@@ -821,9 +820,6 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
 		g_State.wasInMissionDuringRestriction = false;
         g_State.isBathingDuringRestriction = false;
 
-        g_TransientState.bathingResetTickCount = 0;
-		g_TransientState.isBathingStateActive = false;
-
 		// Reset the cached bathing state and money to prevent false positives on future bathing checks
 		g_State.cachedBathingState = 0;
         g_State.cachedMoney = 0;
@@ -1247,9 +1243,6 @@ void ResetSimulationState() {
     g_State.wasRestrictedLastTick = false;
 
     g_State.lastKnownPlayerPed = 0;
-
-    g_TransientState.bathingResetTickCount = 0;
-    g_TransientState.isBathingStateActive = false;
 
     for (auto& [type, monitor] : g_activeMonitors)
         monitor.Reset();
