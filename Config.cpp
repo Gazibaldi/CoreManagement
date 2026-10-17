@@ -28,8 +28,6 @@ std::atomic<bool> g_ShouldReloadConfig(false);
 std::string g_IniPath = ".\\CoreManagement.ini";
 
 std::atomic<int> g_stateChangeTickIntervalMs(500);
-std::atomic<int> g_bathingResetTicks(40);
-std::atomic<int> g_jailedResetTicks(40);
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {
     char defaultBuffer[32];
@@ -236,9 +234,7 @@ void LoadConfiguration() {
     else g_CoreConfig.currentLogLevel = LogLevel::Disabled;
 
     g_stateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs);
-	g_bathingResetTicks.store(1000 / g_CoreConfig.stateChangeTickIntervalMs * 20); // 20 seconds of ticks for bathing reset logic, calculated based on the state change tick interval
-    g_jailedResetTicks.store(1000 / g_CoreConfig.stateChangeTickIntervalMs * 20); // 20 seconds of ticks for jailed reset logic, calculated based on the state change tick interval
-
+    
     g_CurrentLogLevel.store(static_cast<int>(g_CoreConfig.logLevelRaw), std::memory_order_release);
 
     LogConfiguration();

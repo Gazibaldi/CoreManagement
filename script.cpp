@@ -19,6 +19,7 @@
 #include "ThreadManager.h"
 #include "CMTypes.h"
 #include "Constants.h"
+#include "TransientActivityMonitor.h"
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
@@ -34,14 +35,12 @@ static bool s_structuresInitialized = false;
 
 std::unordered_map<Hash, std::string> g_SleepScenarios{};
 std::unordered_map<Hash, std::string> g_CampScenarios{};
+std::unordered_map<TransientActivityType, TransientActivityMonitor> g_activeMonitors{};
 
 Hash g_PokerScriptHash;
 Hash g_BlackjackScriptHash;
 Hash g_DominoesScriptHash;
 Hash g_FiveFingerFilletScriptHash;
-
-Hash g_BathingMoveNetworkHash;
-Hash g_BathMaidMoveNetworkHash;
 
 Hash GetKey(const char* key) {
 	Hash hash = MISC::GET_HASH_KEY(key);
@@ -92,15 +91,41 @@ void PrecomputeHashes() {
         { GetKey("WORLD_PLAYER_DYNAMIC_KNEEL"), "WORLD_PLAYER_DYNAMIC_KNEEL" }
     };
 
-    g_BathingMoveNetworkHash = GetKey("Script_Mini_Game_Bathing_Deluxe");
-    g_BathMaidMoveNetworkHash = GetKey("Script_Mini_Game_Bathing_Regular");
-
     g_PokerScriptHash = GetKey("poker_core");
 	g_BlackjackScriptHash = GetKey("blackjack_core");
 	g_DominoesScriptHash = GetKey("dominoes_core");
 	g_FiveFingerFilletScriptHash = GetKey("five_finger_fillet");
 
 	// additional hashes can be precomputed here if needed
+}
+
+void InitialiseActivityMonitors() {
+	g_activeMonitors.emplace(TransientActivityType::Bathing, TransientActivityMonitor(
+		TransientActivityType::Bathing,
+		20, // 20 seconds threshold for bathing reset
+		[]() -> bool {
+            Ped playerPed = PLAYER::PLAYER_PED_ID();
+            std::string bathingStateName = TASK::GET_TASK_MOVE_NETWORK_STATE(playerPed);
+
+			WriteLog(LogLevel::Dev, "Bathing state check: current bathing state = " + bathingStateName);
+
+            return VALID_BATHING_STATES.contains(bathingStateName);
+		}
+	));
+	g_activeMonitors.emplace(TransientActivityType::Jail, TransientActivityMonitor(
+		TransientActivityType::Jail,
+		22, // 22 seconds threshold for jail reset
+		[]() -> bool {
+            Player playerId = PLAYER::PLAYER_ID();
+            bool isArrested = PLAYER::IS_PLAYER_BEING_ARRESTED(playerId, false);
+            bool isInCustody = !PLAYER::IS_PLAYER_PLAYING(playerId);
+
+            WriteLog(LogLevel::Dev, "IsPlayerBeingArrested check: isBeingArrested=" + std::string(isArrested ? "true" : "false") + ", isInCustody=" + std::string(isInCustody ? "true" : "false"));
+
+			return (isArrested && isInCustody);
+		}
+	));
+	// Additional monitors can be added here if needed
 }
 
 int GetTotalInGameMinutes() {
@@ -149,30 +174,14 @@ bool IsInCampScenario(Ped playerPed) {
     return isInCampScenario;
 }
 
-bool HasJailedStateResetPeriodExpired(bool isArrested, bool isInCustody) {
-    // If the player is still in a valid jailed state, we increase the tick count and return false (not expired).
-    if (isArrested && isInCustody)
-        return false;
-
-    // If the player has exited the jailed state, we increment the reset tick count and check if it has reached the threshold.
-    g_TransientState.jailedResetTickCount++;
-
-    // The jail cutscene can take circa 15 real time seconds to complete, so we allow a generous number of ticks before confirming the jailedd state has fully reset.
-    // The threshold is based on the state change tick interval (def: 500ms), which is configurable. The default is 20 seconds, so we allow 40 ticks before confirming the reset.
-    return (g_TransientState.jailedResetTickCount >= g_jailedResetTicks.load(std::memory_order_acquire));
-}
-
 bool IsPlayerArrested() {
-    Player playerId = PLAYER::PLAYER_ID();
-    bool isArrested = PLAYER::IS_PLAYER_BEING_ARRESTED(playerId, false);
-    bool isInCustody = !PLAYER::IS_PLAYER_PLAYING(playerId);
+    TransientActivityMonitor& jailMonitor = g_activeMonitors[TransientActivityType::Jail];
 
-    WriteLog(LogLevel::Dev, "IsPlayerBeingArrested check: isBeingArrested=" + std::string(isArrested ? "true" : "false") + ", isInCustody=" + std::string(isInCustody ? "true" : "false"));
-    
-    if (g_TransientState.isJailedStateActive) {
-        if (HasJailedStateResetPeriodExpired(isArrested, isInCustody)) {
-            g_TransientState.isJailedStateActive = false;
-            g_TransientState.jailedResetTickCount = 0;
+    if (jailMonitor.IsActive()) {
+        jailMonitor.MonitorCheck();
+
+        if (jailMonitor.IsExpired()) {
+            jailMonitor.Reset();
 
             WriteLog(LogLevel::Dev, "Player jailed check: Player has exited jail. Resetting transient jailed state.");
             return false;
@@ -181,17 +190,15 @@ bool IsPlayerArrested() {
         WriteLog(LogLevel::Dev, "Player jailed check: Player is still in jail");
         return true;
     }
-    else {  
-        if (isArrested && isInCustody)
-        {
-            g_TransientState.isJailedStateActive = true;
-			WriteLog(LogLevel::Dev, "Player is being arrested and is in custody.");
-			return true;
-		}
-        
+    else {
+        if(jailMonitor.ActivateMonitor()) {
+            WriteLog(LogLevel::Dev, "Player is being arrested and is in custody.");
+            return true;
+        }
+
         WriteLog(LogLevel::Dev, "Player is not being arrested or is not in custody.");
         return false;
-    }    
+    }
 }
 
 bool IsPlayerPlayingTableMinigame() {
@@ -206,19 +213,6 @@ bool IsPlayerPlayingTableMinigame() {
 	return (pokerThreads > 0 || blackjackThreads > 0 || dominoesThreads > 0 || fiveFingerFilletThreads > 0);
 }
 
-bool HasBathingStateResetPeriodExpired(const std::string& currentBathingState) {
-	// If the player is still in a valid bathing state, we increase the tick count and return false (not expired).
-	if (VALID_BATHING_STATES.contains(currentBathingState))
-        return false;
-	
-	// If the player has exited the bathing state, we increment the reset tick count and check if it has reached the threshold.
-    g_TransientState.bathingResetTickCount++;
-
-	// The deluxe maid cutscene can take circa 15 real time seconds to complete (in which the currentBathingState is Unknown), so we allow a generous number of ticks before confirming the bathing state has fully reset.
-	// The threshold is based on the state change tick interval (def: 500ms), which is configurable. The default is 20 seconds, so we allow 40 ticks before confirming the reset.
-	return (g_TransientState.bathingResetTickCount >= g_bathingResetTicks.load(std::memory_order_acquire));
-}
-
 bool IsPlayerBathing(Ped playerPed) {
 	// Issue, when purchasing deluxe bathing service, 
     // the player is in a different move network than the maid. 
@@ -227,31 +221,28 @@ bool IsPlayerBathing(Ped playerPed) {
     // This is annoying because it causes the drain freeze to be lifted during the cutscene, which is not intended as Unknown also states bathing is over.
 	// I need to track the state over a period of ticks to confirm the bathing is actually over and not just a transition to the next move network state.
 
-    std::string bathingStateName = TASK::GET_TASK_MOVE_NETWORK_STATE(playerPed);
+    TransientActivityMonitor& bathingMonitor = g_activeMonitors[TransientActivityType::Bathing];
 
-    if (g_TransientState.isBathingStateActive) {
-        if (HasBathingStateResetPeriodExpired(bathingStateName)) {
-			g_TransientState.isBathingStateActive = false;
-			g_TransientState.bathingResetTickCount = 0;
-            
+    if (bathingMonitor.IsActive()) {
+        bathingMonitor.MonitorCheck();
+
+        if (bathingMonitor.IsExpired()) {
+            bathingMonitor.Reset();
+
             WriteLog(LogLevel::Dev, "Player bathing check: Player has exited the bath. Resetting transient bathing state.");
             return false;
         }
-		
+
         WriteLog(LogLevel::Dev, "Player bathing check: Player is still in a bath");
         return true;
     }
     else {
-        WriteLog(LogLevel::Dev, "Player bathing check: Current bathing state name: " + bathingStateName);
-
-        if (VALID_BATHING_STATES.contains(bathingStateName)) {
-            g_TransientState.isBathingStateActive = true;
-
+        if (bathingMonitor.ActivateMonitor()) {
             WriteLog(LogLevel::Dev, "Player bathing check: Player is now in a bath.");
             return true;
         }
 
-		WriteLog(LogLevel::Dev, "Player bathing check: Player is not in a bath.");
+        WriteLog(LogLevel::Dev, "Player bathing check: Player is not in a bath.");
         return false;
     }
 }
@@ -528,7 +519,7 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
         float targetStamina = std::min(startStamina + staminaUplift, 100.0f);
 
         WriteLog(LogLevel::Verbose, "Bathing Stamina Uplift Reward Applied: " + std::to_string(targetStamina));
-        ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), targetStamina);
+        ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), static_cast<int>(targetStamina));
     }
 
     // Freeze standard drain and apply custom bath metrics
@@ -832,9 +823,6 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
 
         g_TransientState.bathingResetTickCount = 0;
 		g_TransientState.isBathingStateActive = false;
-
-        g_TransientState.jailedResetTickCount = 0;
-        g_TransientState.isJailedStateActive = false;
 
 		// Reset the cached bathing state and money to prevent false positives on future bathing checks
 		g_State.cachedBathingState = 0;
@@ -1263,8 +1251,8 @@ void ResetSimulationState() {
     g_TransientState.bathingResetTickCount = 0;
     g_TransientState.isBathingStateActive = false;
 
-    g_TransientState.jailedResetTickCount = 0;
-    g_TransientState.isJailedStateActive = false;
+    for (auto& [type, monitor] : g_activeMonitors)
+        monitor.Reset();
 
     s_structuresInitialized = false;    
 
@@ -1406,6 +1394,7 @@ void ScriptMain() {
 
     LoadConfiguration();
     PrecomputeHashes();
+    InitialiseActivityMonitors();
 
     // Start the INI watcher thread to monitor for configuration changes
     // Let the global manager handle spinning up the background watcher thread
