@@ -50,3 +50,11 @@ struct GameplayContext {
     bool isJailed = false;
     bool isBathing = false;
 };
+
+struct RDR_GUID
+{
+    ALIGN8 int data1;
+    ALIGN8 int data2;
+    ALIGN8 int data3;
+    ALIGN8 int data4;
+};

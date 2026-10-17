@@ -6,10 +6,9 @@
 
 #pragma once
 
-#include "..\CoreSDK\inc\natives.h"
+#include "CMNatives.h"
 #include "..\CoreSDK\inc\types.h"
 #include "..\CoreSDK\inc\enums.h"
-
 #include "..\CoreSDK\inc\main.h"
 
 void ScriptMain();
