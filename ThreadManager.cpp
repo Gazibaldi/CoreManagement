@@ -4,6 +4,9 @@
 
 #include <thread>
 #include <windows.h>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 #include "ThreadManager.h"
 #include "Config.h"
 #include "Logger.h"

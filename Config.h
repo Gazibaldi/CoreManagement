@@ -31,9 +31,19 @@ struct PlayerConfigSettings {
     float baseHealthDecay = 3.5f;
     float baseStaminaDecay = 5.5f;
     float baseDeadEyeDecay = 4.16f;
+
     float healthTimeSkipMultiplier = 0.5f;
     float nightDeadEyeMultiplier = 1.3f;
     float campedMultiplier = 0.25f;
+
+    float jogStaminaMultiplier = 1.2f;
+    float sprintStaminaMultiplier = 1.5f;
+
+
+    float mountWalkStaminaMultiplier = 0.8f;
+    float mountTrotStaminaMultiplier = 1.0f;
+    float mountGallopStaminaMultiplier = 1.2f;
+
     float healthTimeSkipFloor = 15.0f;
     float campedHealthFloor = 5.0f;
     float campedStaminaFloor = 5.0f;
@@ -43,8 +53,11 @@ struct PlayerConfigSettings {
 struct HorseConfigSettings {
     float baseHealthDecay = 3.5f;
     float baseStaminaDecay = 5.5f;
+
+    float grazeStaminaMultiplier = 0.7f;
     float trotStaminaMultiplier = 1.3f;
     float gallopStaminaMultiplier = 4.5f;
+
     float healthTimeSkipFloor = 15.0f;
     float campedHealthFloor = 5.0f;
     float campedStaminaFloor = 5.0f;

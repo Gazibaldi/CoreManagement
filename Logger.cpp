@@ -69,7 +69,7 @@ void TryWaitForLogQueueDrain() {
 
 void WriteLog(LogLevel requiredLevel, const std::string& message) {
     int systemLevel = g_CurrentLogLevel.load(std::memory_order_acquire);
-    if (static_cast<int>(systemLevel) < static_cast<int>(requiredLevel)) return;
+    if (systemLevel < static_cast<int>(requiredLevel)) return;
 
     SYSTEMTIME st;
     GetLocalTime(&st);
