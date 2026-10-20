@@ -450,6 +450,11 @@ bool IsPlayerBathing(Ped playerPed) {
     }
 }
 
+void RecordTrackingSnapshots(Ped playerPed) {
+	g_MovementTracker.RecordSnapshot(playerPed);
+	g_HorseManager.RecordSnapshot(playerPed);
+}
+
 GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings& generalConfig) {
     GameplayContext ctx;
 
@@ -470,9 +475,8 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     ctx.freezeActive = (ctx.isInMission || ctx.isInMinigame || isFallingOrGoingToDie || ctx.isSleeping || ctx.isBathing || ctx.isJailed);
     ctx.isFreezeVariable = ctx.isBathing; // Bathing is treated as a variable/semi freeze as we need to track deluxe upgrade across the next period of ticks
 
-	if (!ctx.freezeActive)
-        // Update the movement tracker with the current player state for this tick
-        g_MovementTracker.RecordSnapshot(playerPed);
+    if (!ctx.freezeActive)
+		RecordTrackingSnapshots(playerPed);
     
 	if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev) && HasDevLogCacheChanged(ctx)) {
         WriteLog(LogLevel::Dev, "Gameplay state evaluated: allowDrainInMissions=" + std::to_string(generalConfig.enableDuringMissions) + ", allowDrainInMinigames=" + std::to_string(generalConfig.enableDuringMinigames));
