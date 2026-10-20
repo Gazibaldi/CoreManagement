@@ -12,6 +12,12 @@
 #include <fstream>
 #include "Config.h"
 
+#ifdef DEVTEST
+const bool ALLOW_DEV_LOGGING = true;
+#else
+const bool ALLOW_DEV_LOGGING = false;
+#endif
+
 std::string VERSION = "v0.11-ALPHA";
 
 std::mutex g_ConfigMutex;
@@ -67,7 +73,7 @@ bool DoesFileExist(const std::string& filePath) {
 }
 
 int ValidateLogLevel(int value, int defaultValue) {
-	if (value == 0 || value == 1 || value == 2 || value == 2105) // 2105 is a hardcoded dev log level for very verbose debugging, not intended for gameplay
+	if (value == 0 || value == 1 || value == 2 || (ALLOW_DEV_LOGGING && value == 2105)) // 2105 is a hardcoded dev log level for very verbose debugging, not intended for gameplay (disabled in release builds)
         return value;
 
     return defaultValue;
@@ -97,10 +103,8 @@ void BuildDefaultConfigFile() {
             << "; in-game hour in which day officially begins\n"
             << "NightEndHour = " << defaultGeneralConfig.nightEndHour << "\n"
             << "; If 1 (true), core drain ticks continuously during story/world missions. \n"
-            << "; No catch-up math will trigger on mission completion.\n"
             << "EnableDuringMissions = " << static_cast<int>(defaultGeneralConfig.enableDuringMissions) << "\n"
             << "; If 1 (true), core drain ticks continuously while sitting at poker, blackjack, etc.\n"
-            << "; No catch-up math will trigger when standing up from the table.\n"
             << "EnableDuringMinigames = " << static_cast<int>(defaultGeneralConfig.enableDuringMinigames) << "\n\n"
 
             << "[BaseDecayAwake]\n"
@@ -232,7 +236,7 @@ void LoadConfiguration() {
                                                                                                                                                                                            // it's designed to be a fast loop, but not too fast 
                                                                                                                                                                                            // to avoid excessive CPU usage while not too slow to miss state changes
 
-	g_CoreConfig.logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", defaultCoreConfig.logLevelRaw, g_IniPath.c_str()), 1); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay, will effect fps). 
+	g_CoreConfig.logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", defaultCoreConfig.logLevelRaw, g_IniPath.c_str()), defaultCoreConfig.logLevelRaw); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay, will effect fps). 
                                                                                                                                         // Range is 0-2 for normal gameplay. 0=disabled, 1=standard, 2=verbose
     g_GeneralConfig.nightStartHour = std::clamp(GetIniInt("General", "NightStartHour", defaultGeneralConfig.nightStartHour, g_IniPath.c_str()), 0, 23); // clamp between 0 and 23
     g_GeneralConfig.nightEndHour = std::clamp(GetIniInt("General", "NightEndHour", defaultGeneralConfig.nightEndHour, g_IniPath.c_str()), 0, 23); // clamp between 0 and 23
