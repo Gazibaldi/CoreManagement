@@ -92,11 +92,11 @@ void BuildDefaultConfigFile() {
             << "; How often the main drain game simulation thread ticks (in milliseconds)\n"
             << "; Minimum interval is 5 seconds (5000 ms). Maximum is 5 mins (300000 ms)\n"
             << "coreDrainTickIntervalMs = " << defaultCoreConfig.coreDrainTickIntervalMs << "\n"
-            << "; How often the main state simulation should run (in milliseconds). \n"
+            << "; How often the main state simulation should run (in milliseconds)\n"
             << "; This should be low to capture mission triggers etc. The drain will be forced  in such cases\n"
             << "; Just leave it at 100 unless it causes performance issues\n"
             << "; Adjust log level first though as that is definitely the first place to gain performance\n"
-			<< "; Minimum is 100 ms (100 ms). Maximum interval is 1 second (1000 ms).\n"
+			<< "; Minimum is 0.1 seconds (100 ms). Maximum interval is 1 second (1000 ms)\n"
             << "stateChangeTickIntervalMs = " << defaultCoreConfig.stateChangeTickIntervalMs << "\n\n"
 
             << "[Logging]\n"
