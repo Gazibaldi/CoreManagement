@@ -341,3 +341,6 @@ healthchecksdb
 
 # plans
 plans/
+
+# tmp
+tmp/
