@@ -13,7 +13,7 @@ extern std::string VERSION;
 // Explicit extern linkage to look up your main configuration settings
 struct CoreConfigSettings {
     int coreDrainTickIntervalMs = 10000;
-    int stateChangeTickIntervalMs = 500;
+    int stateChangeTickIntervalMs = 100;
     int logLevelRaw = 1;
 
     LogLevel currentLogLevel = LogLevel::Standard;

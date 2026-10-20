@@ -90,12 +90,13 @@ void BuildDefaultConfigFile() {
         outFile << "; CoreManagement.ini " << VERSION << "\n\n"
             << "[Performance]\n"
             << "; How often the main drain game simulation thread ticks (in milliseconds)\n"
-            << "; Minimum interval is 5 seconds (5000 ms) max is 5 mins (300000 ms)\n"
+            << "; Minimum interval is 5 seconds (5000 ms). Maximum is 5 mins (300000 ms)\n"
             << "coreDrainTickIntervalMs = " << defaultCoreConfig.coreDrainTickIntervalMs << "\n"
             << "; How often the main state simulation should run (in milliseconds). \n"
             << "; This should be low to capture mission triggers etc. The drain will be forced  in such cases\n"
-            << "; Just leave it at 500 unless it causes performance issues\n"
+            << "; Just leave it at 100 unless it causes performance issues\n"
             << "; Adjust log level first though as that is definitely the first place to gain performance\n"
+			<< "; Minimum is 100 ms (100 ms). Maximum interval is 1 second (1000 ms).\n"
             << "stateChangeTickIntervalMs = " << defaultCoreConfig.stateChangeTickIntervalMs << "\n\n"
 
             << "[Logging]\n"
@@ -237,8 +238,8 @@ void LoadConfiguration() {
 		                                                                                                                                                                                // it's designed to be a slow loop as core drain 
                                                                                                                                                                                         // isn't really a real-time process        
         
-	g_CoreConfig.stateChangeTickIntervalMs = std::clamp(GetIniInt("Performance", "stateChangeTickIntervalMs", defaultCoreConfig.stateChangeTickIntervalMs, g_IniPath.c_str()), 500, 2000); // clamp between 0.5 and 2 second tick interval 
-                                                                                                                                                                                           // it's designed to be a fast loop, but not too fast 
+	g_CoreConfig.stateChangeTickIntervalMs = std::clamp(GetIniInt("Performance", "stateChangeTickIntervalMs", defaultCoreConfig.stateChangeTickIntervalMs, g_IniPath.c_str()), 100, 1000); // clamp between 0.1 and 1 second tick interval 
+	                                                                                                                                                                                       // it's designed to be a fast loop (very lightweight)
                                                                                                                                                                                            // to avoid excessive CPU usage while not too slow to miss state changes
 
 	g_CoreConfig.logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", defaultCoreConfig.logLevelRaw, g_IniPath.c_str()), defaultCoreConfig.logLevelRaw); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay, will effect fps). 
