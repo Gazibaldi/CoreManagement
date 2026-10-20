@@ -13,6 +13,8 @@
 #include <span>
 #include <unordered_map>
 #include <cstdlib>
+#include <array>
+#include "..\CoreSDK\inc\natives.h"
 #include "script.h"
 #include "Logger.h"
 #include "Config.h"
@@ -20,9 +22,8 @@
 #include "CMTypes.h"
 #include "Constants.h"
 #include "TransientActivityMonitor.h"
-#include "..\CoreSDK\inc\natives.h"
 #include "MovementVelocityTracker.h"
-#include <array>
+#include "HorseManager.h"
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
@@ -498,7 +499,9 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 }
 
 bool IsPlayerMounted(Ped playerPed) {
-    return (PED::GET_MOUNT(playerPed) != 0);
+    auto [horsePed, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed, ActiveHorseType::Mounted);
+    
+    return hasHorse;
 }
 
 float GetPlayerMountedStaminaMultiplier(const PlayerConfigSettings& playerConfig) {
@@ -909,7 +912,7 @@ void ApplyBatchTimeSkipDecay(
     // Compute Horse Core Reductions
 
 	if (processHorse) {
-        auto [activeHorse, hasHorse] = g_MovementTracker.GetActivePlayerHorse(playerPed);
+        auto [activeHorse, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed);
         if (hasHorse) {
             bool isHorseHealthGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(activeHorse, static_cast<int>(CoreIndex::Health));
             bool isHorseStaminaGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(activeHorse, static_cast<int>(CoreIndex::Stamina));
@@ -966,8 +969,9 @@ void ApplyBatchTimeSkipDecay(
         }
     }
 
-	// Reset the movement tracker after applying the batch decay to ensure accurate tracking for the next period
+	// Reset the tracker after applying the batch decay to ensure accurate tracking for the next period
 	g_MovementTracker.Reset();
+    g_HorseManager.ResetHitchedOrLedTracking();
 }
 
 void UpdateFrozenStateVariables() {
@@ -1027,7 +1031,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
 		g_State.cachedMoney = MONEY::_MONEY_GET_CASH_BALANCE();
 
 		// Cache horse base structures if the player is mounted or we have an active mount in the world
-        auto [activeHorse, hasHorse] = g_MovementTracker.GetActivePlayerHorse(playerPed);
+        auto [activeHorse, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed);
         if (hasHorse) {
             g_State.hadHorse = true;
             g_State.cachedHorseHealth = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health)));
@@ -1227,7 +1231,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 
 void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayContext& ctx, 
     const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig, const CoreConfigSettings& coreConfig) {
-    auto [horsePed, hasHorse] = g_MovementTracker.GetActivePlayerHorse(playerPed);
+    auto [horsePed, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed);
 
 	if (!hasHorse)
     {
@@ -1267,7 +1271,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 		// Apply a small bonus if the horse is well-fed or health is golden to reward the player for good care
         // This rewards the player for using hitching posts around the world.
         
-        if (g_MovementTracker.IsHorseHitched(coreConfig)) {
+        if (g_HorseManager.IsHorseHitched(coreConfig)) {
             WriteLog(LogLevel::Standard, "Active Horse is securely hitched. Freezing stamina core decay completely.");
 
             // Give a little bonus to stamina is horse is well fed
@@ -1279,7 +1283,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), static_cast<int>(targetStamina));
             }
         }
-		else if (g_MovementTracker.IsHorseBeingLed(coreConfig)) {
+		else if (g_HorseManager.IsHorseBeingLed(coreConfig)) {
 			float reward = (HORSE_LEAD_REWARD_PER_GAME_HOUR * hoursDelta);
             targetStamina = std::min(currentStamina + reward, 100.0f);
 
@@ -1318,7 +1322,7 @@ void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const Gene
 		WriteLog(LogLevel::Verbose, "Player Live Core Values: Health=" + std::to_string(liveHealth) + ", Stamina=" + std::to_string(liveStamina) + ", DeadEye=" + std::to_string(liveDeadEye));
 
         // We check horse baseline stats live too
-        auto [activeHorse, hasHorse] = g_MovementTracker.GetActivePlayerHorse(playerPed);
+        auto [activeHorse, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed);
 
         float liveHorseHealth = hasHorse ? static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health))) : 0.0f;
         float liveHorseStamina = hasHorse ? static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina))) : 0.0f;
@@ -1375,6 +1379,7 @@ void ResetSimulationState() {
         monitor.Reset();
 
 	g_MovementTracker.Reset();
+    g_HorseManager.ResetHitchedOrLedTracking();
 
     s_structuresInitialized = false;    
 
@@ -1496,6 +1501,7 @@ void UpdateCoreSimulation() {
                 // Only clear accumulation on successful simulation cycles!
                 g_State.accumulatedTimeMs = 0;
 				g_MovementTracker.Reset();
+				g_HorseManager.ResetHitchedOrLedTracking();
             } 
             // If the delta is negative, it indicates a macro time jump (e.g., train, stagecoach, or fast travel)
 			else {

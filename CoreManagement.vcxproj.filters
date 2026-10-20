@@ -9,6 +9,7 @@
     <ClCompile Include="ThreadManager.cpp" />
     <ClCompile Include="TransientActivityMonitor.cpp" />
     <ClCompile Include="MovementVelocityTracker.cpp" />
+    <ClCompile Include="HorseManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="script.h" />
@@ -24,6 +25,7 @@
     <ClInclude Include="Constants.h" />
     <ClInclude Include="TransientActivityMonitor.h" />
     <ClInclude Include="MovementVelocityTracker.h" />
+    <ClInclude Include="HorseManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">
