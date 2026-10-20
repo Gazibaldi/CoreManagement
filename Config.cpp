@@ -73,8 +73,13 @@ bool DoesFileExist(const std::string& filePath) {
 }
 
 int ValidateLogLevel(int value, int defaultValue) {
-	if (value == 0 || value == 1 || value == 2 || (ALLOW_DEV_LOGGING && value == 2105)) // 2105 is a hardcoded dev log level for very verbose debugging, not intended for gameplay (disabled in release builds)
+    // 2105 is a hardcoded dev log level for very verbose debugging, not intended for gameplay (disabled in release builds)
+    if (value == 0 || value == 1 || value == 2 || value == 2105) {
+        if (!ALLOW_DEV_LOGGING && value == 2105)
+            return 2; // If dev logging is not allowed, revert to Verbose
+
         return value;
+    }
 
     return defaultValue;
 }

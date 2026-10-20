@@ -58,7 +58,7 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
     return m_HorseSum / static_cast<float>(m_HorseSamples);
 }
 
-[[nodiscard]] void MovementVelocityTracker::Reset() noexcept {
+[[nodiscard]] void MovementVelocityTracker::ResetSnapshot() noexcept {
 	WriteLog(LogLevel::Dev, "Resetting MovementVelocityTracker state.");
 
 	std::lock_guard<std::mutex> guard(m_Lock);

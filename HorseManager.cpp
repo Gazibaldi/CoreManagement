@@ -103,7 +103,7 @@ std::tuple<Ped, bool> HorseManager::GetLedHorseFromPlayer(Ped playerPed) noexcep
 }
 
 void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
-    WriteLog(LogLevel::Dev, "Recording movement snapshot for horse.");
+    WriteLog(LogLevel::Dev, "Recording hitched/led snapshot for horse.");
     std::lock_guard<std::mutex> guard(m_Lock);
 
     // Check if the player has an active horse (saddled only)
@@ -121,9 +121,8 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
         }
         else {
             WriteLog(LogLevel::Dev, "Horse is mobile. Resetting immobile sample count.");
-            m_HorseImmobileSamples = 0;
 
-            // Track led horse samples to determine if the horse is being led
+            // horse is moving, test for being led by the player
             auto [horsePed, isBeingLed] = GetLedHorseFromPlayer(playerPed);
             if (isBeingLed) {
                 WriteLog(LogLevel::Dev, "Player is leading the horse.");
@@ -139,11 +138,10 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
     }
 }
 
-[[nodiscard]] void HorseManager::ResetHitchedOrLedTracking() noexcept {
-    WriteLog(LogLevel::Dev, "Resetting HorseManager Hitched/Led state.");
+[[nodiscard]] void HorseManager::ResetSnapshot() noexcept {
+	WriteLog(LogLevel::Dev, "Resetting horse hitched/led snapshot.");
 
-    std::lock_guard<std::mutex> guard(m_Lock);
-    
-    m_HorseImmobileSamples = 0;
-    m_HorseLedSamples = 0;
+	std::lock_guard<std::mutex> guard(m_Lock);
+	m_HorseImmobileSamples = 0;
+	m_HorseLedSamples = 0;
 }

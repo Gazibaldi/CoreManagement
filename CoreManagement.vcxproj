@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="HorseManager.cpp" />
+    <ClCompile Include="InventoryManager.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="main.cpp" />
@@ -30,6 +31,7 @@
     <ClInclude Include="Config.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="HorseManager.h" />
+    <ClInclude Include="InventoryManager.h" />
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="MovementVelocityTracker.h" />

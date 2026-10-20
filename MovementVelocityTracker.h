@@ -20,6 +20,6 @@ public:
 
     [[nodiscard]] float GetPlayerOnFootSpeed() noexcept;
     [[nodiscard]] float GetHorseAverageSpeed() noexcept;
-    [[nodiscard]] void Reset() noexcept;
+    [[nodiscard]] void ResetSnapshot() noexcept;
 
 };

@@ -25,7 +25,7 @@ public:
     [[nodiscard]] std::tuple<Ped, bool> GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType = ActiveHorseType::Both) noexcept;
     [[nodiscard]] bool IsHorseHitched(const CoreConfigSettings& coreConfig) noexcept;
     [[nodiscard]] bool IsHorseBeingLed(const CoreConfigSettings& coreConfig) noexcept;
-    [[nodiscard]] void ResetHitchedOrLedTracking() noexcept;
+    [[nodiscard]] void ResetSnapshot() noexcept;
 };
 
 extern HorseManager g_HorseManager;

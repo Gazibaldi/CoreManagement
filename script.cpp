@@ -24,6 +24,7 @@
 #include "TransientActivityMonitor.h"
 #include "MovementVelocityTracker.h"
 #include "HorseManager.h"
+#include "InventoryManager.h"
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
@@ -32,6 +33,7 @@ enum class HorseTackSlot : int { Saddle = 2, Stirrups = 6 };
 
 SimulationState g_State;
 MovementVelocityTracker g_MovementTracker;
+InventoryManager g_InventoryManager;
 
 static CoreConfigSettings    s_cachedCoreConfig;
 static GeneralConfigSettings s_cachedGeneralConfig;
@@ -43,29 +45,10 @@ std::array<Hash, 17> g_SleepScenarios{};
 std::array<Hash, 16> g_CampScenarios{};
 std::unordered_map<TransientActivityType, TransientActivityMonitor> g_activeMonitors{};
 
-std::array<PlayerPassiveModifier, 4> g_PlayerPassiveModifiers{};
-
-std::array<TackModifier, 12> g_StirrupModifiers{};
-std::array<TackModifier, 24> g_SaddleModifiers{};
-
 Hash g_PokerScriptHash;
 Hash g_BlackjackScriptHash;
 Hash g_DominoesScriptHash;
 Hash g_FiveFingerFilletScriptHash;
-
-Hash g_NullSlotHash;
-
-Hash g_CharacterHash;
-Hash g_wardrobeSlotHash;
-
-Hash g_ActiveHorseSlotHash;
-
-Hash GetKey(const char* key) {
-	Hash hash = MISC::GET_HASH_KEY(key);
-	WriteLog(LogLevel::Dev, "Precomputed hash for key '" + std::string(key) + "': " + std::to_string(hash));
-    
-    return hash;
-}
 
 void PrecomputeHashes() {
 	// Precompute hashes here to avoid repeated calls to MISC::GET_HASH_KEY during gameplay.
@@ -109,80 +92,7 @@ void PrecomputeHashes() {
         { GetKey("WORLD_PLAYER_DYNAMIC_KNEEL") }
     } };
 
-    g_PlayerPassiveModifiers = { {
-            { "UPGRADE_TRINKET_OWL_FEATHER",          GetKey("UPGRADE_TRINKET_OWL_FEATHER"), 0.15f, 0.15f, 0.15f },
-            { "PROVISION_TALISMAN_BEAR_CLAW",         GetKey("PROVISION_TALISMAN_BEAR_CLAW"), 0.10f, 0.00f, 0.00f },
-            { "PROVISION_TALISMAN_BISON_HORN",        GetKey("PROVISION_TALISMAN_BISON_HORN"), 0.00f, 0.10f, 0.00f },
-            { "PROVISION_TALISMAN_ALLIGATOR_TOOTH",   GetKey("PROVISION_TALISMAN_ALLIGATOR_TOOTH"), 0.00f, 0.00f, 0.10f }
-        } };
-
-    g_StirrupModifiers = { {
-        { "UPGRADE_HORSE_STIRRUPS_FILLIES",         GetKey("UPGRADE_HORSE_STIRRUPS_FILLIES"), 0.00f, 0.00f },
-        { "UPGRADE_HORSE_STIRRUPS_BAROQUE",         GetKey("UPGRADE_HORSE_STIRRUPS_BAROQUE"), 0.00f, 0.05f },
-        { "UPGRADE_HORSE_STIRRUPS_SLIM_LINE_IRON",  GetKey("UPGRADE_HORSE_STIRRUPS_SLIM_LINE_IRON"), 0.00f, 0.10f },
-        { "UPGRADE_HORSE_STIRRUPS_SLIM_LINE",       GetKey("UPGRADE_HORSE_STIRRUPS_SLIM_LINE"), 0.00f, 0.15f },
-        { "UPGRADE_HORSE_STIRRUPS_DEEP_FLANGE",     GetKey("UPGRADE_HORSE_STIRRUPS_DEEP_FLANGE"), 0.00f, 0.20f },
-        { "UPGRADE_HORSE_STIRRUPS_IRON_ROUND",      GetKey("UPGRADE_HORSE_STIRRUPS_IRON_ROUND"), 0.00f, 0.25f },
-        { "UPGRADE_HORSE_STIRRUPS_OXBOW",           GetKey("UPGRADE_HORSE_STIRRUPS_OXBOW"), 0.00f, 0.30f },
-        { "UPGRADE_HORSE_STIRRUPS_OXBOW_TAPADERA",  GetKey("UPGRADE_HORSE_STIRRUPS_OXBOW_TAPADERA"), 0.00f, 0.35f },
-        { "UPGRADE_HORSE_STIRRUPS_BELL",            GetKey("UPGRADE_HORSE_STIRRUPS_BELL"), 0.00f, 0.40f },
-        { "UPGRADE_HORSE_STIRRUPS_SAFETY",          GetKey("UPGRADE_HORSE_STIRRUPS_SAFETY"), 0.00f, 0.40f },
-        { "UPGRADE_HORSE_STIRRUPS_BELL_TAPADERA",   GetKey("UPGRADE_HORSE_STIRRUPS_BELL_TAPADERA"), 0.00f, 0.45f },
-        { "UPGRADE_HORSE_STIRRUPS_HOODED",          GetKey("UPGRADE_HORSE_STIRRUPS_HOODED"), 0.00f, 0.50f }
-    } };
-
-    g_SaddleModifiers = { {
-            // ==========================================
-            // STANDARD / UPGRADED STABLE SADDLES
-            // ==========================================
-            { "SADDLE_KNELLER_DAKOTA_STOCK",            GetKey("SADDLE_KNELLER_DAKOTA_STOCK"), 0.04f, 0.08f },
-            { "SADDLE_KNELLER_DAKOTA_IMPROVED",         GetKey("SADDLE_KNELLER_DAKOTA_IMPROVED"), 0.12f, 0.16f },
-
-            { "SADDLE_KNELLER_MOTHER_HUBBARD_STOCK",    GetKey("SADDLE_KNELLER_MOTHER_HUBBARD_STOCK"), 0.06f, 0.04f },
-            { "SADDLE_KNELLER_MOTHER_HUBBARD_IMPROVED", GetKey("SADDLE_KNELLER_MOTHER_HUBBARD_IMPROVED"), 0.14f, 0.12f },
-
-            { "SADDLE_LUMLEY_MCLELLAND_STOCK",          GetKey("SADDLE_LUMLEY_MCLELLAND_STOCK"), 0.04f, 0.06f },
-            { "SADDLE_LUMLEY_MCLELLAND_IMPROVED",       GetKey("SADDLE_LUMLEY_MCLELLAND_IMPROVED"), 0.14f, 0.18f },
-
-            { "SADDLE_LUMLEY_RANCH_CUTTER_STOCK",       GetKey("SADDLE_LUMLEY_RANCH_CUTTER_STOCK"), 0.08f, 0.04f },
-            { "SADDLE_LUMLEY_RANCH_CUTTER_IMPROVED",    GetKey("SADDLE_LUMLEY_RANCH_CUTTER_IMPROVED"), 0.14f, 0.12f },
-
-            { "SADDLE_STENGER_ROPER_STOCK",             GetKey("SADDLE_STENGER_ROPER_STOCK"), 0.10f, 0.04f },
-            { "SADDLE_STENGER_ROPER_IMPROVED",          GetKey("SADDLE_STENGER_ROPER_IMPROVED"), 0.18f, 0.12f },
-
-            { "SADDLE_GERDEN_TRAIL_STOCK",              GetKey("SADDLE_GERDEN_TRAIL_STOCK"), 0.04f, 0.10f },
-            { "SADDLE_GERDEN_TRAIL_IMPROVED",           GetKey("SADDLE_GERDEN_TRAIL_IMPROVED"), 0.12f, 0.18f },
-
-            { "SADDLE_GERDEN_VAQUERO_STOCK",            GetKey("SADDLE_GERDEN_VAQUERO_STOCK"), 0.06f, 0.08f },
-            { "SADDLE_GERDEN_VAQUERO_IMPROVED",         GetKey("SADDLE_GERDEN_VAQUERO_IMPROVED"), 0.14f, 0.16f },
-
-            // ==========================================
-            // TRAPPER CRAFTED SADDLES
-            // ==========================================
-            { "SADDLE_BEAVER_ROPING",                   GetKey("SADDLE_BEAVER_ROPING"), 0.26f, 0.20f },
-            { "SADDLE_ALLIGATOR_CUTTER",                GetKey("SADDLE_ALLIGATOR_CUTTER"), 0.24f, 0.20f },
-            { "SADDLE_BOAR_MOTHER_HUBBARD",             GetKey("SADDLE_BOAR_MOTHER_HUBBARD"), 0.22f, 0.20f },
-            { "SADDLE_COUGAR_MCLELLAND",                GetKey("SADDLE_COUGAR_MCLELLAND"), 0.20f, 0.22f },
-            { "SADDLE_PANTHER_TRAIL",                   GetKey("SADDLE_PANTHER_TRAIL"), 0.20f, 0.26f },
-            { "SADDLE_RATTLESNAKE_VAQUERO",             GetKey("SADDLE_RATTLESNAKE_VAQUERO"), 0.22f, 0.24f },
-            { "SADDLE_BEAR_DAKOTA",                     GetKey("SADDLE_BEAR_DAKOTA"), 0.20f, 0.24f },
-
-            // ==========================================
-            // SPECIAL EDITION / ULTIMATE EDITION SADDLES
-            // ==========================================
-            { "SADDLE_NUEVO_PARAISO",                   GetKey("SADDLE_NUEVO_PARAISO"), 0.12f, 0.12f },
-            { "SADDLE_HIGH_PLAINS_CUTTING",             GetKey("SADDLE_HIGH_PLAINS_CUTTING"), 0.12f, 0.12f },
-
-            // ==========================================
-            // PASSIVE INVENTORY ITEMS / TALISMANS
-            // ==========================================
-            { "PROVISION_TALISMAN_BOAR_TUSK",           GetKey("PROVISION_TALISMAN_BOAR_TUSK"), 0.10f, 0.10f, true }
-        } };
-
-    g_NullSlotHash = GetKey("SLOTID_NONE");
-
-    g_CharacterHash = GetKey("CHARACTER");
-    g_ActiveHorseSlotHash = GetKey("SLOTID_ACTIVE_HORSE");
+    g_InventoryManager.ComputeHashes();
 
     g_PokerScriptHash = GetKey("poker_core");
 	g_BlackjackScriptHash = GetKey("blackjack_core");
@@ -298,111 +208,67 @@ bool IsPlayerArrested() {
     }
 }
 
-RDR_GUID GetPlayerInventoryGUID() {
-    RDR_GUID emptyGuid{}; // Create a blank container
-    RDR_GUID playerGuid{};
+//RDR_GUID GetPlayerInventoryGUID() {
+//    RDR_GUID emptyGuid{}; // Create a blank container
+//    RDR_GUID playerGuid{};
+//
+//    // 1 = Player Inventory ID
+//    if(INVENTORY::INVENTORY_GET_GUID_FROM_ITEMID(1, (Any*)&emptyGuid, g_CharacterHash, g_NullSlotHash, (Any*)&playerGuid))
+//        return playerGuid;
+//
+//    return RDR_GUID{};
+//}
+//
+//RDR_GUID GetHorseInventoryGUID() {
+//    /*RDR_GUID playerGuid = GetPlayerInventoryGUID();
+//    RDR_GUID horseGuid{};
+//
+//    if (playerGuid.IsInvalid()) {
+//        WriteLog(LogLevel::Dev, "GetHorseInventoryGUID failed: Parent player inventory GUID is invalid.");
+//        return RDR_GUID{};
+//    }*/
+//
+//    RDR_GUID emptyGuid{}; // Create a blank container
+//    RDR_GUID horseGuid{};
+//
+//    // 1 = Player Inventory ID
+//    if (INVENTORY::INVENTORY_GET_GUID_FROM_ITEMID(1, (Any*)&emptyGuid, g_ActiveHorseSlotHash, g_NullSlotHash, (Any*)&horseGuid))
+//        return horseGuid;
+//
+//    return RDR_GUID{};
+//}
 
-    // 1 = Player Inventory ID
-    if(INVENTORY::INVENTORY_GET_GUID_FROM_ITEMID(1, (Any*)&emptyGuid, g_CharacterHash, g_NullSlotHash, (Any*)&playerGuid))
-        return playerGuid;
+//bool DoesInventoryContainItem(int invID, Hash itemHash, const std::string& itemName) {
+//    RDR_ITEMINFO itemInfo{};
+//
+//    WriteLog(LogLevel::Dev, "Checking for item: " + itemName + " (hash: " + std::to_string(itemHash) + ")");
+//
+//    int count = INVENTORY::_INVENTORY_GET_INVENTORY_ITEM_COUNT_WITH_ITEMID(invID, itemHash, false);
+//	
+//    if (count > 0) {
+//		WriteLog(LogLevel::Dev, "Item " + itemName + " found in inventory. Count: " + std::to_string(count));
+//		return true;
+//	}
+//    else
+//    {
+//		WriteLog(LogLevel::Dev, "Item " + itemName + " not found in inventory.");
+//		return false;
+//    }
+//}
+//
+//bool DoesPlayerHaveItem(Hash itemHash, const std::string& itemName) {
+//   return DoesInventoryContainItem(1, itemHash, itemName);
+//}
+//
+//bool DoesHorseHaveItem(Ped horsePed, HorseTackSlot slot, Hash itemHash, const std::string& itemName) {
+//    int invID = INVENTORY::_INVENTORY_GET_INVENTORY_ID_FROM_PED(horsePed);
+//
+//	WriteLog(LogLevel::Dev, "Horse inventory ID: " + std::to_string(invID));
+//
+//	return DoesInventoryContainItem(invID, itemHash, itemName);
+//}
 
-    return RDR_GUID{};
-}
 
-RDR_GUID GetHorseInventoryGUID() {
-    /*RDR_GUID playerGuid = GetPlayerInventoryGUID();
-    RDR_GUID horseGuid{};
-
-    if (playerGuid.IsInvalid()) {
-        WriteLog(LogLevel::Dev, "GetHorseInventoryGUID failed: Parent player inventory GUID is invalid.");
-        return RDR_GUID{};
-    }*/
-
-    RDR_GUID emptyGuid{}; // Create a blank container
-    RDR_GUID horseGuid{};
-
-    // 1 = Player Inventory ID
-    if (INVENTORY::INVENTORY_GET_GUID_FROM_ITEMID(1, (Any*)&emptyGuid, g_ActiveHorseSlotHash, g_NullSlotHash, (Any*)&horseGuid))
-        return horseGuid;
-
-    return RDR_GUID{};
-}
-
-bool DoesInventoryContainItem(int invID, Hash itemHash, const std::string& itemName) {
-    RDR_ITEMINFO itemInfo{};
-
-    WriteLog(LogLevel::Dev, "Checking for item: " + itemName + " (hash: " + std::to_string(itemHash) + ")");
-
-    int count = INVENTORY::_INVENTORY_GET_INVENTORY_ITEM_COUNT_WITH_ITEMID(invID, itemHash, false);
-	
-    if (count > 0) {
-		WriteLog(LogLevel::Dev, "Item " + itemName + " found in inventory. Count: " + std::to_string(count));
-		return true;
-	}
-    else
-    {
-		WriteLog(LogLevel::Dev, "Item " + itemName + " not found in inventory.");
-		return false;
-    }
-}
-
-bool DoesPlayerHaveItem(Hash itemHash, const std::string& itemName) {
-   return DoesInventoryContainItem(1, itemHash, itemName);
-}
-
-bool DoesHorseHaveItem(Ped horsePed, HorseTackSlot slot, Hash itemHash, const std::string& itemName) {
-    int invID = INVENTORY::_INVENTORY_GET_INVENTORY_ID_FROM_PED(horsePed);
-
-	WriteLog(LogLevel::Dev, "Horse inventory ID: " + std::to_string(invID));
-
-	return DoesInventoryContainItem(invID, itemHash, itemName);
-}
-
-CombinedPlayerCoreModifiers GetActivePlayerPassiveModifiers() {
-    CombinedPlayerCoreModifiers modifiers{};
-
-    for (const auto& passive : g_PlayerPassiveModifiers) {
-        // All talismans/trinkets live in the wardrobe data tree branch
-        if (DoesPlayerHaveItem(passive.itemHash, std::string(passive.name))) {
-            modifiers.totalHealthReduction += passive.healthCoreMod;
-            modifiers.totalStaminaReduction += passive.staminaCoreMod;
-            modifiers.totalDeadEyeReduction += passive.deadEyeCoreMod;
-        }
-    }
-
-    return modifiers;
-}
-
-CombinedTackModifiers GetActiveHorseTackModifiers(Ped horsePed) {
-    CombinedTackModifiers modifiers{};
-
-     // Scan for Stirrups
-    for (const auto& stirrup : g_StirrupModifiers) {
-        if (DoesHorseHaveItem(horsePed, HorseTackSlot::Stirrups, stirrup.itemHash, std::string(stirrup.name))) {
-            modifiers.totalStaminaReduction += stirrup.staminaCoreMod;
-            break;
-        }
-    }
-
-    // Scan for Saddles & Horse Player Passives
-    for (const auto& saddle : g_SaddleModifiers) {
-        bool hasItem = false;
-
-        if (saddle.isPlayerPassive) {
-            hasItem = DoesPlayerHaveItem(saddle.itemHash, std::string(saddle.name));
-        }
-        else {
-            hasItem = DoesHorseHaveItem(horsePed, HorseTackSlot::Saddle, saddle.itemHash, std::string(saddle.name));
-        }
-
-        if (hasItem) {
-            modifiers.totalHealthReduction += saddle.healthCoreMod;
-            modifiers.totalStaminaReduction += saddle.staminaCoreMod;
-        }
-    }
-
-    return modifiers;
-}
 
 bool IsPlayerPlayingTableMinigame() {
 
@@ -563,7 +429,7 @@ float CalculateHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horse
     return speedMultiplier;
 }
 
-float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerConfig, bool isPlayerSemiRestrained = false, bool applyPostMissionDecay = false) {
+float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerConfig, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained) {
@@ -576,14 +442,14 @@ float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerCon
         multiplier += POST_MISSION_DECAY_MULTIPLIER;
     }
     
-    CombinedPlayerCoreModifiers passives = GetActivePlayerPassiveModifiers();
+    CombinedPlayerCoreModifiers passives = g_InventoryManager.GetActivePlayerPassiveModifiers();
 	WriteLog(LogLevel::Verbose, "Active player passive modifiers: Health Reduction = " + std::to_string(passives.totalHealthReduction));
     multiplier -= passives.totalHealthReduction;
 
 	return std::max(multiplier, 0.1f);
 }
 
-float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, bool isPlayerSemiRestrained = false, bool applyPostMissionDecay = false) {
+float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained) {
@@ -608,14 +474,14 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
         multiplier += POST_MISSION_DECAY_MULTIPLIER;
     }
 
-    CombinedPlayerCoreModifiers passives = GetActivePlayerPassiveModifiers();
+    CombinedPlayerCoreModifiers passives = g_InventoryManager.GetActivePlayerPassiveModifiers();
     WriteLog(LogLevel::Verbose, "Active player passive modifiers: Stamina Reduction = " + std::to_string(passives.totalStaminaReduction));
     multiplier -= passives.totalStaminaReduction;
 
     return std::max(multiplier, 0.1f);
 }
 
-float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerConfig, bool isPlayerSemiRestrained = false, bool applyPostMissionDecay = false, bool isNighttime = false) {
+float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerConfig, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false, bool isNighttime = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained) {
@@ -632,7 +498,7 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
         multiplier += POST_MISSION_DECAY_MULTIPLIER;
     }
 
-    CombinedPlayerCoreModifiers passives = GetActivePlayerPassiveModifiers();
+    CombinedPlayerCoreModifiers passives = g_InventoryManager.GetActivePlayerPassiveModifiers();
     WriteLog(LogLevel::Verbose, "Active player passive modifiers: Dead Eye Reduction = " + std::to_string(passives.totalDeadEyeReduction));
     multiplier -= passives.totalDeadEyeReduction;
 
@@ -658,7 +524,7 @@ float CalculatePlayerStaminaSleepReplenish(float currentStamina, float elapsedHo
 		WriteLog(LogLevel::Standard, "Daytime wilderness sleep detected. Stamina uplift capped at 50 points.");
 	}
 
-    float finalStamina = currentStamina + uplift;
+	float finalStamina = std::max(currentStamina + uplift, 1.0f);
     return std::min(finalStamina, 100.0f); // Standard full core ceiling
 }
 
@@ -706,7 +572,7 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
         return currentDeadEye;
 
     float uplift = elapsedHours * 5.0f;
-    float finalDeadEye = currentDeadEye + uplift;
+    float finalDeadEye = std::max(currentDeadEye + uplift, 1.0f);
 
     return std::min(finalDeadEye, focusCap);
 }
@@ -718,7 +584,7 @@ float CalculateHorseHealthDecayMultiplier(Ped horsePed, const PlayerConfigSettin
         multiplier = playerConfig.campedMultiplier;
 
     // Registry resolves both the physical saddle and the player's Boar Tusk Talisman automatically
-    CombinedTackModifiers tack = GetActiveHorseTackModifiers(horsePed);
+    CombinedTackModifiers tack = g_InventoryManager.GetActiveHorseTackModifiers(horsePed);
     multiplier -= tack.totalHealthReduction;
 
     return std::max(multiplier, 0.1f);
@@ -732,7 +598,7 @@ float CalculateHorseStaminaDecayMultiplier(Ped horsePed, const HorseConfigSettin
     else 
         multiplier = CalculateHorseSpeedStaminaDecayMultiplier(horseConfig);
 
-    CombinedTackModifiers tack = GetActiveHorseTackModifiers(horsePed);
+    CombinedTackModifiers tack = g_InventoryManager.GetActiveHorseTackModifiers(horsePed);
     multiplier -= tack.totalStaminaReduction;
 
     return std::max(multiplier, 0.1f);
@@ -749,7 +615,7 @@ float CalculateHorseStaminaSleepReplenish(float currentStamina, float elapsedHou
         WriteLog(LogLevel::Standard, "Daytime wilderness sleep detected. Horse Stamina uplift capped at 50 points.");
     }
 
-    float finalStamina = currentStamina + uplift;
+    float finalStamina = std::max(currentStamina + uplift, 1.0f);
     return std::min(finalStamina, 100.0f); // Standard full core ceiling
 }
 
@@ -836,13 +702,26 @@ void ApplyBatchTimeSkipDecay(
         elapsedHours = TIMESKIP_MAX_HOURS;
     }
 
+	// Post-mission decay is only applied if the player has remaining post-mission decay hours and they are not sleeping
+	// This ensures that post-mission decay does not interfere with the sleep replenishment logic
+	// minigames are still subject to post-mission decay if the player has remaining hours
+    bool applyPostMissionDecay = (g_State.PostMissionDecayHoursRemaining > 0.0f && !wasSleeping);
+
+    if (applyPostMissionDecay) {
+        g_State.PostMissionDecayHoursRemaining -= elapsedHours;
+        WriteLog(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: " + std::to_string(g_State.PostMissionDecayHoursRemaining));
+
+        // Ensure that the remaining hours do not go below zero
+        g_State.PostMissionDecayHoursRemaining = std::max(g_State.PostMissionDecayHoursRemaining, 0.0f);
+    }
+
     bool isHealthGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::Health));
     bool isStaminaGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::Stamina));
     bool isDeadEyeGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::DeadEye));
 
 	// Health Core Decay Logic
     if (!isHealthGold) {
-        float activeHealthDecay = playerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(playerConfig);
+        float activeHealthDecay = playerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(playerConfig, applyPostMissionDecay   );
         float targetHealth = startHealth - (elapsedHours * activeHealthDecay);
 
         float minHealthFloor = wasSleeping ? playerConfig.healthTimeSkipFloor : playerConfig.campedHealthFloor;
@@ -878,7 +757,7 @@ void ApplyBatchTimeSkipDecay(
     }
     else if (!isStaminaGold) {
         // Standard macro transit decay (Trains/Stagecoaches/Jail/Barber)
-        float activeStaminaDecay = playerConfig.baseStaminaDecay * CalculatePlayerStaminaDecayMultiplier(playerConfig, playerPed);
+        float activeStaminaDecay = playerConfig.baseStaminaDecay * CalculatePlayerStaminaDecayMultiplier(playerConfig, playerPed, applyPostMissionDecay);
 
         float targetStamina = startStamina - (elapsedHours * activeStaminaDecay);
         targetStamina = std::max(targetStamina, playerConfig.campedStaminaFloor);
@@ -904,7 +783,7 @@ void ApplyBatchTimeSkipDecay(
     else if (!isDeadEyeGold) {
         // Standard macro transit decay (Trains/Stagecoaches/Jail/Barber)
 		// Don't apply nighttime multiplier here, as the player may have moved across the day/night boundary during the time skip, and we want to avoid over-penalizing them for that.
-        float activeDeadEyeDecay = playerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(playerConfig);
+        float activeDeadEyeDecay = playerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(playerConfig, applyPostMissionDecay);
 
         float targetDeadEye = startDeadEye - (elapsedHours * activeDeadEyeDecay);        
         targetDeadEye = std::max(targetDeadEye, playerConfig.campedDeadEyeFloor);
@@ -974,8 +853,8 @@ void ApplyBatchTimeSkipDecay(
     }
 
 	// Reset the tracker after applying the batch decay to ensure accurate tracking for the next period
-	g_MovementTracker.Reset();
-    g_HorseManager.ResetHitchedOrLedTracking();
+	g_MovementTracker.ResetSnapshot();
+    g_HorseManager.ResetSnapshot();
 }
 
 void UpdateFrozenStateVariables() {
@@ -1190,7 +1069,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 	}
 
     if (!isHealthGold) {
-        float activeHealthDecay = playerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(playerConfig, ctx.isAtCamp, applyPostMissionDecay);
+        float activeHealthDecay = playerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(playerConfig, applyPostMissionDecay, ctx.isAtCamp);
 
         float targetHealth = currentHealth - (activeHealthDecay * hoursDelta);
 
@@ -1205,7 +1084,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
     }
 
 	if (!isStaminaGold) {
-        float activeStaminaDecay = playerConfig.baseStaminaDecay * CalculatePlayerStaminaDecayMultiplier(playerConfig, playerPed, ctx.isAtCamp, applyPostMissionDecay);            
+        float activeStaminaDecay = playerConfig.baseStaminaDecay * CalculatePlayerStaminaDecayMultiplier(playerConfig, playerPed, applyPostMissionDecay, ctx.isAtCamp);            
 
         float targetStamina = currentStamina - (activeStaminaDecay * hoursDelta);
         float minStaminaFloor = ctx.isAtCamp ? playerConfig.campedStaminaFloor : 0.0f;
@@ -1219,7 +1098,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 
     if (!isDeadEyeGold) {
         // Normal Open-World, Nighttime, or Semi-Restrained Decay Route
-        float activeDeadEyeDecay = playerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(playerConfig, ctx.isAtCamp, applyPostMissionDecay, isNighttime);
+        float activeDeadEyeDecay = playerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(playerConfig, applyPostMissionDecay, ctx.isAtCamp, isNighttime);
 
         float targetDeadEye = currentDeadEye - (activeDeadEyeDecay * hoursDelta);
         float minDeadEyeFloor = ctx.isAtCamp ? playerConfig.campedDeadEyeFloor : 0.0f;
@@ -1280,7 +1159,8 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
             // Give a little bonus to stamina is horse is well fed
             if (isHorseHealthGold || currentHealth >= HORSE_HITCHED_HEALTH_REQ) {
-				float reward = (HORSE_HITCHED_REWARD_PER_GAME_HOUR * hoursDelta);
+                // Ensure a minimum reward of 1.0f to prevent zero reward scenarios
+				float reward = std::max(HORSE_HITCHED_REWARD_PER_GAME_HOUR * hoursDelta, 1.0f); 
                 targetStamina = std::min(currentStamina + reward, 100.0f);
 
 				WriteLog(LogLevel::Verbose, "Horse is well-fed or has golden health. Applying hitched bonus: +" + std::to_string(reward) + " to stamina core. Horse Stamina updated to: " + std::to_string(targetStamina));
@@ -1288,7 +1168,8 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
             }
         }
 		else if (g_HorseManager.IsHorseBeingLed(coreConfig)) {
-			float reward = (HORSE_LEAD_REWARD_PER_GAME_HOUR * hoursDelta);
+            // Ensure a minimum reward of 1.0f to prevent zero reward scenarios
+			float reward = std::max(HORSE_LEAD_REWARD_PER_GAME_HOUR * hoursDelta, 1.0f); 
             targetStamina = std::min(currentStamina + reward, 100.0f);
 
             WriteLog(LogLevel::Standard, "Active Horse is being led by the player. Applying cached reward: +" + std::to_string(reward) + ". Horse Stamina updated to: " + std::to_string(targetStamina));
@@ -1307,6 +1188,9 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
             WriteLog(LogLevel::Standard, "Horse Core Sync Tick: Stamina=" + std::to_string(targetStamina));
 
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), static_cast<int>(targetStamina));
+
+			//not hitched or led, so we reset the tracking to ensure accurate decay calculations for the next tick
+			g_HorseManager.ResetSnapshot();
         }
     }    
 }
@@ -1382,8 +1266,8 @@ void ResetSimulationState() {
     for (auto& [type, monitor] : g_activeMonitors)
         monitor.Reset();
 
-	g_MovementTracker.Reset();
-    g_HorseManager.ResetHitchedOrLedTracking();
+	g_MovementTracker.ResetSnapshot();
+    g_HorseManager.ResetSnapshot();
 
     s_structuresInitialized = false;    
 
@@ -1504,8 +1388,7 @@ void UpdateCoreSimulation() {
 
                 // Only clear accumulation on successful simulation cycles!
                 g_State.accumulatedTimeMs = 0;
-				g_MovementTracker.Reset();
-				g_HorseManager.ResetHitchedOrLedTracking();
+				g_MovementTracker.ResetSnapshot();
             } 
             // If the delta is negative, it indicates a macro time jump (e.g., train, stagecoach, or fast travel)
 			else {
