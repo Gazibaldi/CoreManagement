@@ -15,7 +15,7 @@ public:
     ScriptThreadManager() = default;
     ~ScriptThreadManager() = default;
 
-    void Initialize();
+    void Initialise();
 
     void Shutdown(bool isGameExiting = false);
 };

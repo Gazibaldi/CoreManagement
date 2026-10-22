@@ -35,7 +35,7 @@ static CoreConfigSettings    s_cachedCoreConfig;
 static GeneralConfigSettings s_cachedGeneralConfig;
 static PlayerConfigSettings  s_cachedPlayerConfig;
 static HorseConfigSettings   s_cachedHorseConfig;
-static bool s_structuresInitialized = false;
+static bool s_structuresInitialised = false;
 
 std::array<Hash, 17> g_SleepScenarios{};
 std::array<Hash, 16> g_CampScenarios{};
@@ -986,12 +986,12 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
 
 float CalculateTimescaleDelta(int currentTotalMinutes)
 {
-    // Safe Initialization (Fails fast on frame 1 using the unified structure state)
+    // Safe Initialisation (Fails fast on frame 1 using the unified structure state)
     if (!g_State.timescaleDeltaInitialised) {
         g_State.lastTickInGameMinutes = currentTotalMinutes;
         g_State.timescaleDeltaInitialised = true;
 
-        WriteLog(LogLevel::Dev, "Timescale delta initialized. Baseline in-game minutes: " + std::to_string(g_State.lastTickInGameMinutes));
+        WriteLog(LogLevel::Dev, "Timescale delta initialised. Baseline in-game minutes: " + std::to_string(g_State.lastTickInGameMinutes));
         return 0.0f;
     }
 
@@ -1236,6 +1236,7 @@ void ResetSimulationState() {
     g_State.cachedInGameTimeMinutes = GetTotalInGameMinutes();
     g_State.lastTickInGameMinutes = 0;
     g_State.timescaleDeltaInitialised = false;
+    g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::NotSet;
     g_State.msPerInGameMinute = GetCurrentGameTimeScale();
 
     g_State.accumulatedTimeMs = 0;
@@ -1269,16 +1270,16 @@ void ResetSimulationState() {
 	g_MovementTracker.ResetSnapshot();
     g_HorseManager.ResetSnapshot();
 
-    s_structuresInitialized = false;    
+    s_structuresInitialised = false;    
 
     ClearDevLogCache();
 }
 
 void CheckForConfigChange() {
-    if (g_ShouldReloadConfig.load(std::memory_order_acquire) || !s_structuresInitialized) {
+    if (g_ShouldReloadConfig.load(std::memory_order_acquire) || !s_structuresInitialised) {
         // Log an accurate message based on WHY we are filling the cache
-        if (!s_structuresInitialized)
-            WriteLog(LogLevel::Verbose, "Initializing local simulation configuration cache for the first time...");
+        if (!s_structuresInitialised)
+            WriteLog(LogLevel::Verbose, "Initialising local simulation configuration cache for the first time...");
         else
             WriteLog(LogLevel::Standard, "Dynamic hot-reload requested. Updating configuration cache...");
 
@@ -1291,11 +1292,11 @@ void CheckForConfigChange() {
         s_cachedPlayerConfig = g_PlayerConfig;
         s_cachedHorseConfig = g_HorseConfig;
 
-        s_structuresInitialized = true;
+        s_structuresInitialised = true;
 
 		// refresh the transient active monitors with the new configuration values
 		for (auto& [type, monitor] : g_activeMonitors)
-            monitor.RefreshThreshold();
+            monitor.RefreshThreshold(g_State.isRestricted);
 
 		// Update the timescale delta baseline to ensure accurate calculations after a config reload
         SetGameTimeScale();
@@ -1325,11 +1326,11 @@ bool IsInSaveLoadState(Ped playerPed) {
         return true;
     } 
     // RE-ANCHOR ENGINE (Game start)
-    else if(!g_State.timescaleDeltaInitialised) {
+    else if (!g_State.timescaleDeltaInitialised) {
         WriteLog(LogLevel::Standard, "Simulation baseline calibrated. Anchoring timestamps...");
 
-		g_State.cachedInGameTimeMinutes = GetTotalInGameMinutes();
-		g_State.msPerInGameMinute = GetCurrentGameTimeScale();
+        g_State.cachedInGameTimeMinutes = GetTotalInGameMinutes();
+        g_State.msPerInGameMinute = GetCurrentGameTimeScale();
         g_State.lastTickInGameMinutes = g_State.cachedInGameTimeMinutes;
         g_State.accumulatedTimeMs = 0;
 
@@ -1341,14 +1342,14 @@ bool IsInSaveLoadState(Ped playerPed) {
 
     g_State.lastKnownPlayerPed = playerPed;
 
-	return false;
+    return false;
 }
 
 void UpdateCoreSimulation() {
     Ped playerPed = PLAYER::PLAYER_PED_ID();
 
-	if (IsInSaveLoadState(playerPed))
-		return;
+    if (IsInSaveLoadState(playerPed))
+        return;
 
     CheckForConfigChange();
 
@@ -1361,16 +1362,16 @@ void UpdateCoreSimulation() {
     GameplayContext context = EvaluateGameplayState(playerPed, generalConfig);
     int currentTotalMinutes = GetTotalInGameMinutes();
 
-	// FAST-PATH BOUNDARY TRANSITIONS (Forcing immediate responses to missions or travel updates)
+    // FAST-PATH BOUNDARY TRANSITIONS (Forcing immediate responses to missions or travel updates)
     if (context.freezeActive != g_State.wasRestrictedLastTick) {
         WriteLog(LogLevel::Standard, "Fundamental state boundary flipped! Forcing immediate cache transition process.");
-        
+
         HandleStateTransitions(playerPed, context, currentTotalMinutes, generalConfig, playerConfig, horseConfig);
 
         g_State.wasRestrictedLastTick = context.freezeActive;
         g_State.accumulatedTimeMs = 0;
     }
-	// If we are in a restricted state and monitoring transient variables, we need to update the frozen state variables based on the cached values.
+    // If we are in a restricted state and monitoring transient variables, we need to update the frozen state variables based on the cached values.
     else if (g_State.isRestricted && g_State.MonitorTransientVariablesDuringRestriction) {
         UpdateTransientFreezeStateVariables();
 
@@ -1381,10 +1382,10 @@ void UpdateCoreSimulation() {
     // SLOW-PATH APP DECAY SIMULATION (Accumulates interval smoothly over normal open world play)
     else if (!context.freezeActive) {
         g_State.accumulatedTimeMs += coreConfig.stateChangeTickIntervalMs;
-		WriteLog(LogLevel::Verbose, "Accumulated time for core simulation: " + std::to_string(g_State.accumulatedTimeMs) + " ms");
+        WriteLog(LogLevel::Verbose, "Accumulated time for core simulation: " + std::to_string(g_State.accumulatedTimeMs) + " ms");
 
         if (g_State.accumulatedTimeMs >= coreConfig.coreDrainTickIntervalMs) {
-			WriteLog(LogLevel::Verbose, "Core drain tick interval reached. Processing core simulation...");
+            WriteLog(LogLevel::Verbose, "Core drain tick interval reached. Processing core simulation...");
 
             float hoursDelta = CalculateTimescaleDelta(currentTotalMinutes);
 
@@ -1395,7 +1396,7 @@ void UpdateCoreSimulation() {
             }
             // If time actually moved forward in the engine space, process simulation and reset
             else if (hoursDelta > 0.0f && hoursDelta < 24.0f) {
-				WriteLog(LogLevel::Standard, "Processing normal core simulation for elapsed hours: " + std::to_string(hoursDelta));
+                WriteLog(LogLevel::Standard, "Processing normal core simulation for elapsed hours: " + std::to_string(hoursDelta));
 
                 ProcessPlayerSimulation(playerPed, hoursDelta, context, generalConfig, playerConfig);
                 ProcessHorseSimulation(playerPed, hoursDelta, context, playerConfig, horseConfig, coreConfig);
@@ -1403,10 +1404,10 @@ void UpdateCoreSimulation() {
                 g_MovementTracker.ResetSnapshot();
 
                 // Only clear accumulation on successful simulation cycles!
-                g_State.accumulatedTimeMs = 0;				
-            } 
+                g_State.accumulatedTimeMs = 0;
+            }
             // If the delta is negative, it indicates a macro time jump (e.g., train, stagecoach, or fast travel)
-			else {
+            else {
                 WriteLog(LogLevel::Standard, "Macro time jump detected during active play (Train/Stagecoach). Triggering batch catch-up.");
 
                 // We force a manual time skip evaluation using the global cache states
@@ -1420,7 +1421,36 @@ void UpdateCoreSimulation() {
             WriteLog(LogLevel::Dev, "Updating last tick in-game minutes from " + std::to_string(g_State.lastTickInGameMinutes) + " to " + std::to_string(currentTotalMinutes));
             g_State.lastTickInGameMinutes = currentTotalMinutes;
         }
-    }    
+    }
+}
+
+int CalculateStateChangeTickIntervalMs() {
+	int normalTickInterval = g_StateChangeTickIntervalMs.load(std::memory_order_acquire);
+	int restrictedTickInterval = g_StateChangeTickIntervalRestrictedMs.load(std::memory_order_acquire);
+
+
+	// Safe Initialisation (mainly for logging purposes) - we want to log the first tick interval used to ensure we have a baseline for debugging
+    if (g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::NotSet) {
+        g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Standard;
+        WriteLog(LogLevel::Verbose, "State Change Interval Initialised: Using standard tick interval of " + std::to_string(normalTickInterval) + " ms");
+    }
+
+	// If we are entering a restricted state, we want to use the restricted tick interval for faster processing of core simulation
+    if (g_State.isRestricted && g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Standard) {
+        g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Restricted;
+        WriteLog(LogLevel::Verbose, "State Change Interval Change: Restricted state active. Using restricted tick interval of " + std::to_string(restrictedTickInterval) + " ms");
+    }
+	// If we are exiting a restricted state, we want to use the standard tick interval for normal gameplay
+    else if (!g_State.isRestricted && g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Restricted) {
+        g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Standard;
+        WriteLog(LogLevel::Verbose, "State Change Interval Change: Restricted state inactive. Using standard tick interval of " + std::to_string(normalTickInterval) + " ms");
+    }
+
+	// If we are in the same state as before, we just return the current tick interval without logging
+    if(g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Standard)
+        return normalTickInterval;
+
+    return restrictedTickInterval;
 }
 
 void ScriptMain() {
@@ -1433,12 +1463,12 @@ void ScriptMain() {
     
     // Start the INI watcher thread to monitor for configuration changes
     // Let the global manager handle spinning up the background watcher thread
-    g_ThreadManager.Initialize();    
+    g_ThreadManager.Initialise();    
 
     WriteLog(LogLevel::Standard, "==== Core Drain Management Simulation Engine Initialised Successfully [" + VERSION + "] ====");	
         
     while (true) {
         UpdateCoreSimulation();
-        scriptWait(g_StateChangeTickIntervalMs.load(std::memory_order_acquire));
+        scriptWait(CalculateStateChangeTickIntervalMs());
     }
 }

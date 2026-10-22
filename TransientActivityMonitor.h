@@ -40,13 +40,13 @@ public:
     {
         // Internal tick math based on your global interval configuration
 		m_ThresholdSeconds = thresholdSeconds;
-        RefreshThreshold();
+		RefreshThreshold(false); // default to unrestricted threshold until the first tick cycle
     }
 
     bool ActivateMonitor() noexcept;
     void MonitorCheck() noexcept;
     void Reset() noexcept;
-    void RefreshThreshold() noexcept;
+    void RefreshThreshold(bool isRestricted) noexcept;
 
     // Read-only Getters (Fully encapsulated)
     [[nodiscard]] constexpr bool IsActive() const noexcept { return m_IsActive; }

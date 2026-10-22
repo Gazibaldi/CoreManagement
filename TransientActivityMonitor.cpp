@@ -32,7 +32,8 @@ void TransientActivityMonitor::Reset() noexcept {
 	m_IsExpired = false;
 }
 
-void TransientActivityMonitor::RefreshThreshold() noexcept {
+void TransientActivityMonitor::RefreshThreshold(bool isRestricted) noexcept {
     // Recalculate the threshold based on the current global configuration
-    m_MaxTicksThreshold = (1000 / g_StateChangeTickIntervalMs.load(std::memory_order_acquire)) * m_ThresholdSeconds;
+	int intervalMs = isRestricted ? g_StateChangeTickIntervalRestrictedMs.load(std::memory_order_acquire) : g_StateChangeTickIntervalMs.load(std::memory_order_acquire);    
+    m_MaxTicksThreshold = (1000 / intervalMs) * m_ThresholdSeconds;
 }

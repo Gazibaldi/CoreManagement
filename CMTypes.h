@@ -10,11 +10,12 @@ enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
 enum class PlayerSpeed : int { Jog = 3, Sprint = 5 };
 enum class BathingState : int { NotBathing = 0, StandardBathing = 1, DeluxeBathing = 2 };
+enum class StateChangeIntervalType : int { NotSet, Standard, Restricted };
 
 struct SimulationState {
     bool isRestricted = false;
 	bool MonitorTransientVariablesDuringRestriction = false;
-
+	
     int cachedInGameTimeMinutes = 0;
     int accumulatedTimeMs = 0;
 
@@ -41,6 +42,7 @@ struct SimulationState {
 
     int lastTickInGameMinutes = 0;
     bool timescaleDeltaInitialised = false;
+    StateChangeIntervalType stateChangeTickIntervalMsType = StateChangeIntervalType::NotSet;
     int msPerInGameMinute = 2000;
 
     Ped lastKnownPlayerPed = 0;

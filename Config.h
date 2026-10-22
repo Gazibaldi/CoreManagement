@@ -13,6 +13,7 @@ extern std::string VERSION;
 struct CoreConfigSettings {
     int coreDrainTickIntervalMs = 10000;
     int stateChangeTickIntervalMs = 500;
+    float restrictedStateChangeTickIntervalMultiplier = 1.0f;
     int logLevelRaw = 1;
 
     LogLevel currentLogLevel = LogLevel::Standard;
@@ -71,6 +72,7 @@ extern std::atomic<bool> g_ShouldReloadConfig;
 extern std::string g_IniPath;
 
 extern std::atomic<int> g_StateChangeTickIntervalMs;
+extern std::atomic<int> g_StateChangeTickIntervalRestrictedMs;
 extern std::atomic<int> g_GameTimescaleMS;
 
 extern CoreConfigSettings g_CoreConfig;

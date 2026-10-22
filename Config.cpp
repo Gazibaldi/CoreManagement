@@ -40,6 +40,7 @@ std::string g_IniPath = ".\\CoreManagement.ini";
 
 std::atomic<int> g_GameTimescaleMS(2000);
 std::atomic<int> g_StateChangeTickIntervalMs(500);
+std::atomic<int> g_StateChangeTickIntervalRestrictedMs(500);
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {
     char defaultBuffer[32];
@@ -99,7 +100,12 @@ void BuildDefaultConfigFile() {
             << "; Just leave it at 500 unless it causes performance issues\n"
             << "; Adjust log level first though as that is definitely the first place to gain performance\n"
 			<< "; Minimum is 0.1 seconds (100 ms). Maximum interval is 1 second (1000 ms)\n"
-            << "stateChangeTickIntervalMs = " << defaultCoreConfig.stateChangeTickIntervalMs << "\n\n"
+            << "stateChangeTickIntervalMs = " << defaultCoreConfig.stateChangeTickIntervalMs << "\n"
+            << "; This multiplier is applied to the state change tick interval when the player is in mission or minigame state\n"
+            << "; The higher the value, the more the state change tick interval is increased, resulting in slower state changes but higher performance\n"
+            << "; Only active if EnableDuringMissions or EnableDuringMinigames is false\n"
+			<< "; Minimum is 1.0 (no change). Maximum is 3.0 (3x slower)\n"
+            << "restrictedStateChangeTickIntervalMultiplier = " << defaultCoreConfig.restrictedStateChangeTickIntervalMultiplier << "\n\n"
 
             << "[Logging]\n"
             << "; 0 = Disabled (Max performance), 1 = Standard, 2 = Verbose (Not recommended for normal play)\n"
@@ -183,51 +189,52 @@ void LogConfiguration() {
 
     std::ostringstream table;
     table << std::fixed << std::setprecision(2)
-        << "\n\n+-------------------------------------------+------------+\n"
-        << "| Configuration Parameter                   |      Value |\n"
-        << "+-------------------------------------------+------------+\n"
-        << "| Logging: Log Level                        | " << std::setw(10) << g_CoreConfig.logLevelRaw << " |\n"
-        << "|                                           |            |\n"
-        << "| Performance: Drain Tick Interval (ms)     | " << std::setw(10) << g_CoreConfig.coreDrainTickIntervalMs << " |\n"
-        << "| Performance: State Tick Interval (ms)     | " << std::setw(10) << g_CoreConfig.stateChangeTickIntervalMs << " |\n"
-        << "|                                           |            |\n"
-        << "| General: In-Game Minute (ms)              | " << std::setw(10) << g_GeneralConfig.msPerInGameMinute << " |\n"
-        << "| General: Night Start Hour                 | " << std::setw(10) << g_GeneralConfig.nightStartHour << " |\n"
-        << "| General: Night End Hour                   | " << std::setw(10) << g_GeneralConfig.nightEndHour << " |\n"
-        << "| General: Drain Enabled for Missions       | " << std::setw(10) << static_cast<int>(g_GeneralConfig.enableDuringMissions) << " |\n"
-        << "| General: Drain Enabled for Mini-games     | " << std::setw(10) << static_cast<int>(g_GeneralConfig.enableDuringMinigames) << " |\n"
-        << "|                                           |            |\n"
-        << "| Player: Health Base Awake Decay           | " << std::setw(10) << g_PlayerConfig.baseHealthDecay << " |\n"
-        << "| Player: Stamina Base Awake Decay          | " << std::setw(10) << g_PlayerConfig.baseStaminaDecay << " |\n"
-        << "| Player: Dead Eye Base Awake Decay         | " << std::setw(10) << g_PlayerConfig.baseDeadEyeDecay << " |\n"
-        << "|                                           |            |\n"
-        << "| Player: Sleep Health Multiplier           | " << std::setw(10) << g_PlayerConfig.healthTimeSkipMultiplier << " |\n"
-        << "| Player: Night Dead Eye Multiplier         | " << std::setw(10) << g_PlayerConfig.nightDeadEyeMultiplier << " |\n"
-        << "| Player: Camped/Restrained Multiplier      | " << std::setw(10) << g_PlayerConfig.campedMultiplier << " |\n"
-        << "|                                           |            |\n"
-        << "| Player: Jog Stamina Multiplier            | " << std::setw(10) << g_PlayerConfig.jogStaminaMultiplier << " |\n"
-        << "| Player: Sprint Stamina Multiplier         | " << std::setw(10) << g_PlayerConfig.sprintStaminaMultiplier << " |\n"
-        << "|                                           |            |\n"
-		<< "| Player: Mounted Walk Stamina Multiplier   | " << std::setw(10) << g_PlayerConfig.mountWalkStaminaMultiplier << " |\n"
-        << "| Player: Mounted Trot Stamina Multiplier   | " << std::setw(10) << g_PlayerConfig.mountTrotStaminaMultiplier << " |\n"
-        << "| Player: Mounted Gallop Stamina Multiplier | " << std::setw(10) << g_PlayerConfig.mountGallopStaminaMultiplier << " |\n"
-        << "|                                           |            |\n"
-        << "| Player: Health Timeskip Floor             | " << std::setw(10) << g_PlayerConfig.healthTimeSkipFloor << " |\n"
-        << "| Player: Health Camped Floor               | " << std::setw(10) << g_PlayerConfig.campedHealthFloor << " |\n"
-        << "| Player: Stamina Camped Floor              | " << std::setw(10) << g_PlayerConfig.campedStaminaFloor << " |\n"
-        << "| Player: Dead Eye Camped Floor             | " << std::setw(10) << g_PlayerConfig.campedDeadEyeFloor << " |\n"
-        << "|                                           |            |\n"
-        << "| Horse: Health Base Decay                  | " << std::setw(10) << g_HorseConfig.baseHealthDecay << " |\n"
-        << "| Horse: Stamina Base Decay                 | " << std::setw(10) << g_HorseConfig.baseStaminaDecay << " |\n"
-        << "|                                           |            |\n"
-		<< "| Horse: Stamina Graze Multiplier           | " << std::setw(10) << g_HorseConfig.grazeStaminaMultiplier << " |\n"
-        << "| Horse: Stamina Trot Multiplier            | " << std::setw(10) << g_HorseConfig.trotStaminaMultiplier << " |\n"
-        << "| Horse: Stamina Gallop Multiplier          | " << std::setw(10) << g_HorseConfig.gallopStaminaMultiplier << " |\n"
-        << "|                                           |            |\n"
-        << "| Horse: Health Timeskip Floor              | " << std::setw(10) << g_HorseConfig.healthTimeSkipFloor << " |\n"
-        << "| Horse: Health Camped Floor                | " << std::setw(10) << g_HorseConfig.campedHealthFloor << " |\n"
-        << "| Horse: Stamina Camped Floor               | " << std::setw(10) << g_HorseConfig.campedStaminaFloor << " |\n"
-        << "+-------------------------------------------+------------+\n";
+        << "\n\n+---------------------------------------------+------------+\n"
+        << "| Configuration Parameter                     |      Value |\n"
+        << "+---------------------------------------------+------------+\n"
+        << "| Logging: Log Level                          | " << std::setw(10) << g_CoreConfig.logLevelRaw << " |\n"
+        << "|                                             |            |\n"
+        << "| Performance: Drain Tick Interval (ms)       | " << std::setw(10) << g_CoreConfig.coreDrainTickIntervalMs << " |\n"
+        << "| Performance: State Tick Interval (ms)       | " << std::setw(10) << g_CoreConfig.stateChangeTickIntervalMs << " |\n"
+        << "| Performance: State Tick Interval Multiplier | " << std::setw(10) << g_CoreConfig.restrictedStateChangeTickIntervalMultiplier << " |\n"
+        << "|                                             |            |\n"
+        << "| General: In-Game Minute (ms)                | " << std::setw(10) << g_GeneralConfig.msPerInGameMinute << " |\n"
+        << "| General: Night Start Hour                   | " << std::setw(10) << g_GeneralConfig.nightStartHour << " |\n"
+        << "| General: Night End Hour                     | " << std::setw(10) << g_GeneralConfig.nightEndHour << " |\n"
+        << "| General: Drain Enabled for Missions         | " << std::setw(10) << static_cast<int>(g_GeneralConfig.enableDuringMissions) << " |\n"
+        << "| General: Drain Enabled for Mini-games       | " << std::setw(10) << static_cast<int>(g_GeneralConfig.enableDuringMinigames) << " |\n"
+        << "|                                             |            |\n"
+        << "| Player: Health Base Awake Decay             | " << std::setw(10) << g_PlayerConfig.baseHealthDecay << " |\n"
+        << "| Player: Stamina Base Awake Decay            | " << std::setw(10) << g_PlayerConfig.baseStaminaDecay << " |\n"
+        << "| Player: Dead Eye Base Awake Decay           | " << std::setw(10) << g_PlayerConfig.baseDeadEyeDecay << " |\n"
+        << "|                                             |            |\n"
+        << "| Player: Sleep Health Multiplier             | " << std::setw(10) << g_PlayerConfig.healthTimeSkipMultiplier << " |\n"
+        << "| Player: Night Dead Eye Multiplier           | " << std::setw(10) << g_PlayerConfig.nightDeadEyeMultiplier << " |\n"
+        << "| Player: Camped/Restrained Multiplier        | " << std::setw(10) << g_PlayerConfig.campedMultiplier << " |\n"
+        << "|                                             |            |\n"
+        << "| Player: Jog Stamina Multiplier              | " << std::setw(10) << g_PlayerConfig.jogStaminaMultiplier << " |\n"
+        << "| Player: Sprint Stamina Multiplier           | " << std::setw(10) << g_PlayerConfig.sprintStaminaMultiplier << " |\n"
+        << "|                                             |            |\n"
+		<< "| Player: Mounted Walk Stamina Multiplier     | " << std::setw(10) << g_PlayerConfig.mountWalkStaminaMultiplier << " |\n"
+        << "| Player: Mounted Trot Stamina Multiplier     | " << std::setw(10) << g_PlayerConfig.mountTrotStaminaMultiplier << " |\n"
+        << "| Player: Mounted Gallop Stamina Multiplier   | " << std::setw(10) << g_PlayerConfig.mountGallopStaminaMultiplier << " |\n"
+        << "|                                             |            |\n"
+        << "| Player: Health Timeskip Floor               | " << std::setw(10) << g_PlayerConfig.healthTimeSkipFloor << " |\n"
+        << "| Player: Health Camped Floor                 | " << std::setw(10) << g_PlayerConfig.campedHealthFloor << " |\n"
+        << "| Player: Stamina Camped Floor                | " << std::setw(10) << g_PlayerConfig.campedStaminaFloor << " |\n"
+        << "| Player: Dead Eye Camped Floor               | " << std::setw(10) << g_PlayerConfig.campedDeadEyeFloor << " |\n"
+        << "|                                             |            |\n"
+        << "| Horse: Health Base Decay                    | " << std::setw(10) << g_HorseConfig.baseHealthDecay << " |\n"
+        << "| Horse: Stamina Base Decay                   | " << std::setw(10) << g_HorseConfig.baseStaminaDecay << " |\n"
+        << "|                                             |            |\n"
+		<< "| Horse: Stamina Graze Multiplier             | " << std::setw(10) << g_HorseConfig.grazeStaminaMultiplier << " |\n"
+        << "| Horse: Stamina Trot Multiplier              | " << std::setw(10) << g_HorseConfig.trotStaminaMultiplier << " |\n"
+        << "| Horse: Stamina Gallop Multiplier            | " << std::setw(10) << g_HorseConfig.gallopStaminaMultiplier << " |\n"
+        << "|                                             |            |\n"
+        << "| Horse: Health Timeskip Floor                | " << std::setw(10) << g_HorseConfig.healthTimeSkipFloor << " |\n"
+        << "| Horse: Health Camped Floor                  | " << std::setw(10) << g_HorseConfig.campedHealthFloor << " |\n"
+        << "| Horse: Stamina Camped Floor                 | " << std::setw(10) << g_HorseConfig.campedStaminaFloor << " |\n"
+        << "+---------------------------------------------+------------+\n";
 
     WriteLog(LogLevel::Standard, "Internal Parameter Map Hydrated:" + table.str());
 }
@@ -249,6 +256,8 @@ void LoadConfiguration() {
 	g_CoreConfig.stateChangeTickIntervalMs = std::clamp(GetIniInt("Performance", "stateChangeTickIntervalMs", defaultCoreConfig.stateChangeTickIntervalMs, g_IniPath.c_str()), 100, 1000); // clamp between 0.1 and 1 second tick interval 
 	                                                                                                                                                                                       // it's designed to be a fast loop (very lightweight)
                                                                                                                                                                                            // to avoid excessive CPU usage while not too slow to miss state changes
+	g_CoreConfig.restrictedStateChangeTickIntervalMultiplier = std::clamp(GetIniFloat("Performance", "restrictedStateChangeTickIntervalMultiplier", 
+                                                                   defaultCoreConfig.restrictedStateChangeTickIntervalMultiplier, g_IniPath.c_str()), 1.0f, 3.0f); // clamp between 1.0 and 3.0 multiplier
 
 	g_CoreConfig.logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", defaultCoreConfig.logLevelRaw, g_IniPath.c_str()), defaultCoreConfig.logLevelRaw); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay, will effect fps). 
                                                                                                                                                                     // Range is 0-2 for normal gameplay. 0=disabled, 1=standard, 2=verbose
@@ -309,7 +318,10 @@ void LoadConfiguration() {
 	}
 
 	g_GameTimescaleMS.store(g_GeneralConfig.msPerInGameMinute, std::memory_order_release);
-    g_StateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs, std::memory_order_release);    
+    
+    g_StateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs, std::memory_order_release);
+    g_StateChangeTickIntervalRestrictedMs.store(static_cast<int>(g_CoreConfig.stateChangeTickIntervalMs * g_CoreConfig.restrictedStateChangeTickIntervalMultiplier), std::memory_order_release);
+    
     g_CurrentLogLevel.store(static_cast<int>(g_CoreConfig.logLevelRaw), std::memory_order_release);
 
     LogConfiguration();

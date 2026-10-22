@@ -62,7 +62,7 @@ void IniWatcherThread() {
     }
 }
 
-void ScriptThreadManager::Initialize() {
+void ScriptThreadManager::Initialise() {
     // ALWAYS clean up any existing thread before starting a new one (reloads persist the global manager)
     Shutdown();
 
