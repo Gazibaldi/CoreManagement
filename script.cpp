@@ -276,11 +276,16 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     bool isInMinigame = IsPlayerPlayingTableMinigame();
     bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
     
-    ctx.isBathing = IsPlayerBathing(playerPed);
-    ctx.isJailed = IsPlayerArrested();
-	ctx.isSleeping = IsInSleepScenario(playerPed);
-	ctx.isAtCamp = IsInCampScenario(playerPed);
-	ctx.isInTimeWarp = g_State.msPerInGameMinute > GetCurrentGameTimeScale();
+	// Only check the following states if the player is not already in a restricted state (e.g., in a mission or minigame)
+    // they can't be happening if we are restricted
+    if (!g_State.isRestricted) {
+        ctx.isBathing = IsPlayerBathing(playerPed);
+        ctx.isJailed = IsPlayerArrested();
+        ctx.isSleeping = IsInSleepScenario(playerPed);
+        ctx.isAtCamp = IsInCampScenario(playerPed);
+    }
+
+    ctx.isInTimeWarp = g_State.msPerInGameMinute > GetCurrentGameTimeScale();
     
     // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
     ctx.isInMission = isInMission && !generalConfig.enableDuringMissions;
@@ -1425,8 +1430,7 @@ void ScriptMain() {
     LoadConfiguration();
     PrecomputeHashes();
     InitialiseActivityMonitors();
-    SetGameTimeScale();
-
+    
     // Start the INI watcher thread to monitor for configuration changes
     // Let the global manager handle spinning up the background watcher thread
     g_ThreadManager.Initialize();    
