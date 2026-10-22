@@ -21,21 +21,17 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
     // Check if the player is mounted on a horse
     auto [horsePed, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed, ActiveHorseType::Mounted);
     if (hasHorse) {
-        WriteLog(LogLevel::Dev, "Player is mounted on horse.");
-
         float horseSpeed = ENTITY::GET_ENTITY_SPEED(horsePed);
 
-        horseSpeed = std::max(horseSpeed, 0.0f); // Ensure non-negative speed
+        horseSpeed = std::max(horseSpeed, 0.0f);
 
         m_HorseSum += horseSpeed;
         m_HorseSamples++;
     }
     else {
-        WriteLog(LogLevel::Dev, "Player is on foot.");
-
         float playerSpeed = ENTITY::GET_ENTITY_SPEED(playerPed);
 
-        playerSpeed = std::max(playerSpeed, 0.0f); // Ensure non-negative speed
+        playerSpeed = std::max(playerSpeed, 0.0f);
 
         m_PlayerFootSum += playerSpeed;
         m_PlayerFootSamples++;

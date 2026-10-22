@@ -13,11 +13,9 @@
 
 std::string g_LogPath = ".\\CoreManagement.log";
 
-// Shared orchestration variables instantiated here
 std::mutex g_LogQueueMutex;
 std::condition_variable g_LogCV;
 
-// Private, file-isolated synchronization variables (not exposed to script.cpp)
 static std::queue<std::string> s_LogQueue;
 
 DevLoggingCache g_LogCache;

@@ -6,25 +6,40 @@
 
 #include <mutex>
 #include <tuple>
-#include "Config.h"
 
-enum class ActiveHorseType : int { Mounted, Active, Both };
+enum class ActiveHorseType : int { Mounted, Active, Either };
 
 class HorseManager {
     int m_HorseImmobileSamples = 0;
-    int m_HorseLedSamples = 0;
+    int m_HorseLeadSamples = 0;
+	int m_HorseSamples = 0;
+
+	float m_HorseHitchedReward = 0.0f;
+	float m_HorseLeadReward = 0.0f;
 
     std::mutex m_Lock;
 
+    enum class HorseSampleType : int { Lead, Hitched };
+
+    std::tuple<Ped, bool> GetPlayerMountedHorse(Ped playerPed) noexcept;
+    std::tuple<Ped, bool> GetPlayerActiveHorse(Ped playerPed, bool includeMounted) noexcept;
+
     float GetHorseDistanceFromPlayer(Ped playerPed, Ped horsePed) noexcept;
-    std::tuple<Ped, bool> GetLedHorseFromPlayer(Ped playerPed) noexcept;
+    bool IsBeingLedByPlayer(Ped playerPed, Ped horsePed) noexcept;
+    bool TestSampleThreshold(int samples, HorseSampleType sampleType) noexcept;
+	void OnReset() noexcept;
 
 public:
     void RecordSnapshot(Ped playerPed) noexcept;
 
-    [[nodiscard]] std::tuple<Ped, bool> GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType = ActiveHorseType::Both) noexcept;
-    [[nodiscard]] bool IsHorseHitched(const CoreConfigSettings& coreConfig) noexcept;
-    [[nodiscard]] bool IsHorseBeingLed(const CoreConfigSettings& coreConfig) noexcept;
+    [[nodiscard]] std::tuple<Ped, bool> GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType = ActiveHorseType::Either) noexcept;
+    
+    [[nodiscard]] bool IsHorseHitched() noexcept;
+    [[nodiscard]] bool IsHorseBeingLed() noexcept;
+    
+    [[nodiscard]] float GetHorseHitchedReward(float hoursDelta) noexcept;
+    [[nodiscard]] float GetHorseLeadReward(float hoursDelta) noexcept;
+    
     [[nodiscard]] void ResetSnapshot() noexcept;
 };
 

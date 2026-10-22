@@ -2,6 +2,7 @@
         Copyright © 2026 Gary Tweddle / Gazibaldi.This program is free software : you can redistribute it and /or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
 */
 
+#include "..\CoreSDK\inc\types.h"
 #include "InventoryManager.h"
 #include "Logger.h"
 
@@ -15,82 +16,171 @@ Hash GetKey(const char* key) {
 void InventoryManager::ComputeHashes() noexcept {
     m_NullSlotHash = GetKey("SLOTID_NONE");
     m_CharacterHash = GetKey("CHARACTER");
-    
-    m_ActiveHorseSlotHash = GetKey("SLOTID_ACTIVE_HORSE");
     m_SatchelSlotHash = GetKey("SLOTID_SATCHEL");
-	m_WardrobeSlotHash = GetKey("SLOTID_WARDROBE");
-	m_WardrobeContainerHash = GetKey("WARDROBE");
-	m_UpgradeSlotHash = GetKey("SLOTID_UPGRADES");
+    m_WardrobeContainerHash = GetKey("WARDROBE");
+    m_WardrobeSlotHash = GetKey("SLOTID_WARDROBE");
+	m_ActiveHorseSlotHash = GetKey("SLOTID_ACTIVE_HORSE");
 
     m_PlayerPassiveModifiers = { {
-            { "PROVISION_TRINKET_OWL_FEATHER",          GetKey("PROVISION_TRINKET_OWL_FEATHER"), 0.15f, 0.15f, 0.15f },
-            { "PROVISION_TALISMAN_BEAR_CLAW",         GetKey("PROVISION_TALISMAN_BEAR_CLAW"), 0.10f, 0.00f, 0.00f },
-            { "PROVISION_TRINKET_BISON_HORN",        GetKey("PROVISION_TRINKET_BISON_HORN"), 0.00f, 0.10f, 0.00f },
-            { "PROVISION_TALISMAN_ALLIGATOR_TOOTH",   GetKey("PROVISION_TALISMAN_ALLIGATOR_TOOTH"), 0.00f, 0.00f, 0.10f }
+            { "PROVISION_TRINKET_OWL_FEATHER",        GetKey("PROVISION_TRINKET_OWL_FEATHER"), 0.15f, 0.15f, 0.15f }, // Fits in SLOTID_SATCHEL
+            { "PROVISION_TALISMAN_BEAR_CLAW",         GetKey("PROVISION_TALISMAN_BEAR_CLAW"), 0.10f, 0.00f, 0.00f }, // Fits in WARDROBE
+            { "PROVISION_TALISMAN_BUFFALO_HORN",      GetKey("PROVISION_TALISMAN_BUFFALO_HORN"), 0.00f, 0.10f, 0.00f }, // Fits in SLOTID_SATCHEL
+            { "PROVISION_TALISMAN_ALLIGATOR_TOOTH",   GetKey("PROVISION_TALISMAN_ALLIGATOR_TOOTH"), 0.00f, 0.00f, 0.10f } // Fits in WARDROBE
         } };
 
+
+    // TODO: Need to get confirmation of the correct mapping to entry to name
     m_StirrupModifiers = { {
-        { "UPGRADE_HORSE_STIRRUPS_FILLIES",         GetKey("UPGRADE_HORSE_STIRRUPS_FILLIES"), 0.00f, 0.00f },
-        { "UPGRADE_HORSE_STIRRUPS_BAROQUE",         GetKey("UPGRADE_HORSE_STIRRUPS_BAROQUE"), 0.00f, 0.05f },
-        { "UPGRADE_HORSE_STIRRUPS_SLIM_LINE_IRON",  GetKey("UPGRADE_HORSE_STIRRUPS_SLIM_LINE_IRON"), 0.00f, 0.10f },
-        { "UPGRADE_HORSE_STIRRUPS_SLIM_LINE",       GetKey("UPGRADE_HORSE_STIRRUPS_SLIM_LINE"), 0.00f, 0.15f },
-        { "UPGRADE_HORSE_STIRRUPS_DEEP_FLANGE",     GetKey("UPGRADE_HORSE_STIRRUPS_DEEP_FLANGE"), 0.00f, 0.20f },
-        { "UPGRADE_HORSE_STIRRUPS_IRON_ROUND",      GetKey("UPGRADE_HORSE_STIRRUPS_IRON_ROUND"), 0.00f, 0.25f },
-        { "UPGRADE_HORSE_STIRRUPS_OXBOW",           GetKey("UPGRADE_HORSE_STIRRUPS_OXBOW"), 0.00f, 0.30f },
-        { "UPGRADE_HORSE_STIRRUPS_OXBOW_TAPADERA",  GetKey("UPGRADE_HORSE_STIRRUPS_OXBOW_TAPADERA"), 0.00f, 0.35f },
-        { "UPGRADE_HORSE_STIRRUPS_BELL",            GetKey("UPGRADE_HORSE_STIRRUPS_BELL"), 0.00f, 0.40f },
-        { "UPGRADE_HORSE_STIRRUPS_SAFETY",          GetKey("UPGRADE_HORSE_STIRRUPS_SAFETY"), 0.00f, 0.40f },
-        { "UPGRADE_HORSE_STIRRUPS_BELL_TAPADERA",   GetKey("UPGRADE_HORSE_STIRRUPS_BELL_TAPADERA"), 0.00f, 0.45f },
-        { "UPGRADE_HORSE_STIRRUPS_HOODED",          GetKey("UPGRADE_HORSE_STIRRUPS_HOODED"), 0.00f, 0.50f }
+        { "HORSE_EQUIPMENT_STIRRUP_NEW_000",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_000"), 0.00f, 0.00f }, // FILLIES
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_001",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_001"), 0.00f, 0.05f }, // BAROQUE
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_002",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_002"), 0.00f, 0.10f }, // SLIM LINE IRON
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_003",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_003"), 0.00f, 0.15f }, // SLIM LINE
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_004",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_004"), 0.00f, 0.20f }, // DEEP ROPER
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_005",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_006"), 0.00f, 0.30f }, // BELLED OXBOW
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_006",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_007"), 0.00f, 0.35f }, // OXBOW
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_007",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_008"), 0.00f, 0.40f }, // BELL
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_008",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_009"), 0.00f, 0.40f }, // SAFETY
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_009",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_010"), 0.00f, 0.45f }, // TAPADERA
+		{ "HORSE_EQUIPMENT_STIRRUP_NEW_010",         GetKey("HORSE_EQUIPMENT_STIRRUP_NEW_011"), 0.00f, 0.50f }  // HOODED
     } };
 
     m_SaddleModifiers = { {
-            // ==========================================
-            // STANDARD / UPGRADED STABLE SADDLES
-            // ==========================================
-            { "SADDLE_KNELLER_DAKOTA_STOCK",            GetKey("SADDLE_KNELLER_DAKOTA_STOCK"), 0.04f, 0.08f },
-            { "SADDLE_KNELLER_DAKOTA_IMPROVED",         GetKey("SADDLE_KNELLER_DAKOTA_IMPROVED"), 0.12f, 0.16f },
+        // ==========================================
+        // TRAPPER CRAFTED SADDLES
+        // ==========================================
+		{ "HORSE_EQUIPMENT_MOTHERHUBBARD_01_SPECIAL_NEW_SADDLE_000",         GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_SPECIAL_NEW_SADDLE_000"), 0.22f, 0.20f }, // BOAR MOTHER HUBBARD
+        { "HORSE_EQUIPMENT_WESTERN_01_SPECIAL_NEW_SADDLE_000",               GetKey("HORSE_EQUIPMENT_WESTERN_01_SPECIAL_NEW_SADDLE_000"), 0.26f, 0.20f }, // BEAVER ROPING
+        { "HORSE_EQUIPMENT_WESTERN_02_SPECIAL_NEW_SADDLE_000",               GetKey("HORSE_EQUIPMENT_WESTERN_02_SPECIAL_NEW_SADDLE_000"), 0.20f, 0.26f }, // PANTHER TRAIL
+        { "HORSE_EQUIPMENT_WESTERN_03_SPECIAL_NEW_SADDLE_000",               GetKey("HORSE_EQUIPMENT_WESTERN_03_SPECIAL_NEW_SADDLE_000"), 0.24f, 0.20f }, // ALLIGATOR CUTTER
+		{ "HORSE_EQUIPMENT_WESTERN_04_SPECIAL_NEW_SADDLE_000",               GetKey("HORSE_EQUIPMENT_WESTERN_04_SPECIAL_NEW_SADDLE_000"), 0.20f, 0.24f }, // BEAR DAKOTA
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_SPECIAL_NEW_SADDLE_000",             GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_SPECIAL_NEW_SADDLE_000"), 0.20f, 0.22f }, // COUGAR MCLELLAND
+		{ "HORSE_EQUIPMENT_CHARRO_01_SPECIAL_NEW_SADDLE_000",                GetKey("HORSE_EQUIPMENT_CHARRO_01_SPECIAL_NEW_SADDLE_000"), 0.22f, 0.24f }, // RATTLESNAKE VAQUERO
+        
+        // ==========================================
+        // STANDARD / UPGRADED STABLE SADDLES
+        // ==========================================
+        // Kneller Mother Hubbard Saddle (Stock)
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_000",            GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_000"), 0.06f, 0.04f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_001",            GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_001"), 0.06f, 0.04f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_002",            GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_002"), 0.06f, 0.04f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_003",            GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_003"), 0.06f, 0.04f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_004",            GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_004"), 0.06f, 0.04f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_005",            GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_STOCK_NEW_SADDLE_005"), 0.06f, 0.04f },
 
-            { "SADDLE_KNELLER_MOTHER_HUBBARD_STOCK",    GetKey("SADDLE_KNELLER_MOTHER_HUBBARD_STOCK"), 0.06f, 0.04f },
-            { "SADDLE_KNELLER_MOTHER_HUBBARD_IMPROVED", GetKey("SADDLE_KNELLER_MOTHER_HUBBARD_IMPROVED"), 0.14f, 0.12f },
+        // Kneller Mother Hubbard Saddle (Improved)
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_000",         GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_000"), 0.14f, 0.12f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_001",         GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_001"), 0.14f, 0.12f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_002",         GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_002"), 0.14f, 0.12f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_003",         GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_003"), 0.14f, 0.12f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_004",         GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_004"), 0.14f, 0.12f },
+        { "HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_005",         GetKey("HORSE_EQUIPMENT_MOTHERHUBBARD_01_IMPROVED_NEW_SADDLE_005"), 0.14f, 0.12f },
 
-            { "SADDLE_LUMLEY_MCLELLAND_STOCK",          GetKey("SADDLE_LUMLEY_MCLELLAND_STOCK"), 0.04f, 0.06f },
-            { "SADDLE_LUMLEY_MCLELLAND_IMPROVED",       GetKey("SADDLE_LUMLEY_MCLELLAND_IMPROVED"), 0.14f, 0.18f },
+        // Stenger Roping Saddle(Stock)
+        { "HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_000",                  GetKey("HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_000"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_001",                  GetKey("HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_001"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_002",                  GetKey("HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_002"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_003",                  GetKey("HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_003"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_004",                  GetKey("HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_004"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_005",                  GetKey("HORSE_EQUIPMENT_WESTERN_01_STOCK_NEW_SADDLE_005"), 0.10f, 0.04f },
 
-            { "SADDLE_LUMLEY_RANCH_CUTTER_STOCK",       GetKey("SADDLE_LUMLEY_RANCH_CUTTER_STOCK"), 0.08f, 0.04f },
-            { "SADDLE_LUMLEY_RANCH_CUTTER_IMPROVED",    GetKey("SADDLE_LUMLEY_RANCH_CUTTER_IMPROVED"), 0.14f, 0.12f },
+        // Stenger Roping Saddle(Impoved)
+        { "HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_000",               GetKey("HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_000"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_001",               GetKey("HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_001"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_002",               GetKey("HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_002"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_003",               GetKey("HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_003"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_004",               GetKey("HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_004"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_005",               GetKey("HORSE_EQUIPMENT_WESTERN_01_IMPROVED_NEW_SADDLE_005"), 0.18f, 0.12f },
 
-            { "SADDLE_STENGER_ROPER_STOCK",             GetKey("SADDLE_STENGER_ROPER_STOCK"), 0.10f, 0.04f },
-            { "SADDLE_STENGER_ROPER_IMPROVED",          GetKey("SADDLE_STENGER_ROPER_IMPROVED"), 0.18f, 0.12f },
+        // Gerden Trail Saddle (Stock)
+        { "HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_000",                  GetKey("HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_000"), 0.04f, 0.10f },
+        { "HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_001",                  GetKey("HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_001"), 0.04f, 0.10f },
+        { "HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_002",                  GetKey("HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_002"), 0.04f, 0.10f },
+        { "HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_003",                  GetKey("HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_003"), 0.04f, 0.10f },
+        { "HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_004",                  GetKey("HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_004"), 0.04f, 0.10f },
+        { "HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_005",                  GetKey("HORSE_EQUIPMENT_WESTERN_02_STOCK_NEW_SADDLE_005"), 0.04f, 0.10f },
 
-            { "SADDLE_GERDEN_TRAIL_STOCK",              GetKey("SADDLE_GERDEN_TRAIL_STOCK"), 0.04f, 0.10f },
-            { "SADDLE_GERDEN_TRAIL_IMPROVED",           GetKey("SADDLE_GERDEN_TRAIL_IMPROVED"), 0.12f, 0.18f },
+        // Gerden Trail Saddle (Improved)
+        { "HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_000",               GetKey("HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_000"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_001",               GetKey("HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_001"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_002",               GetKey("HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_002"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_003",               GetKey("HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_003"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_004",               GetKey("HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_004"), 0.18f, 0.12f },
+        { "HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_005",               GetKey("HORSE_EQUIPMENT_WESTERN_02_IMPROVED_NEW_SADDLE_005"), 0.18f, 0.12f },
 
-            { "SADDLE_GERDEN_VAQUERO_STOCK",            GetKey("SADDLE_GERDEN_VAQUERO_STOCK"), 0.06f, 0.08f },
-            { "SADDLE_GERDEN_VAQUERO_IMPROVED",         GetKey("SADDLE_GERDEN_VAQUERO_IMPROVED"), 0.14f, 0.16f },
+        // Lumley Ranch Cutter Saddle (Stock)
+        { "HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_000",                  GetKey("HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_000"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_001",                  GetKey("HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_001"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_002",                  GetKey("HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_002"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_003",                  GetKey("HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_003"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_004",                  GetKey("HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_004"), 0.10f, 0.04f },
+        { "HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_005",                  GetKey("HORSE_EQUIPMENT_WESTERN_03_STOCK_NEW_SADDLE_005"), 0.10f, 0.04f },
 
-            // ==========================================
-            // TRAPPER CRAFTED SADDLES
-            // ==========================================
-            { "SADDLE_BEAVER_ROPING",                   GetKey("SADDLE_BEAVER_ROPING"), 0.26f, 0.20f },
-            { "SADDLE_ALLIGATOR_CUTTER",                GetKey("SADDLE_ALLIGATOR_CUTTER"), 0.24f, 0.20f },
-            { "SADDLE_BOAR_MOTHER_HUBBARD",             GetKey("SADDLE_BOAR_MOTHER_HUBBARD"), 0.22f, 0.20f },
-            { "SADDLE_COUGAR_MCLELLAND",                GetKey("SADDLE_COUGAR_MCLELLAND"), 0.20f, 0.22f },
-            { "SADDLE_PANTHER_TRAIL",                   GetKey("SADDLE_PANTHER_TRAIL"), 0.20f, 0.26f },
-            { "SADDLE_RATTLESNAKE_VAQUERO",             GetKey("SADDLE_RATTLESNAKE_VAQUERO"), 0.22f, 0.24f },
-            { "SADDLE_BEAR_DAKOTA",                     GetKey("SADDLE_BEAR_DAKOTA"), 0.20f, 0.24f },
+        // Lumley Ranch Cutter Saddle (Improved)
+        { "HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_000",               GetKey("HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_000"), 0.12f, 0.18f },
+        { "HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_001",               GetKey("HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_001"), 0.12f, 0.18f },
+        { "HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_002",               GetKey("HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_002"), 0.12f, 0.18f },
+        { "HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_003",               GetKey("HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_003"), 0.12f, 0.18f },
+        { "HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_004",               GetKey("HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_004"), 0.12f, 0.18f },
+        { "HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_005",               GetKey("HORSE_EQUIPMENT_WESTERN_03_IMPROVED_NEW_SADDLE_005"), 0.12f, 0.18f },
 
-            // ==========================================
-            // SPECIAL EDITION / ULTIMATE EDITION SADDLES
-            // ==========================================
-            { "SADDLE_NUEVO_PARAISO",                   GetKey("SADDLE_NUEVO_PARAISO"), 0.12f, 0.12f },
-            { "SADDLE_HIGH_PLAINS_CUTTING",             GetKey("SADDLE_HIGH_PLAINS_CUTTING"), 0.12f, 0.12f },
+        // Kneller Dakota Saddle (Stock)
+        { "HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_000",                  GetKey("HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_000"), 0.04f, 0.08f },
+        { "HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_001",                  GetKey("HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_001"), 0.04f, 0.08f },
+        { "HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_002",                  GetKey("HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_002"), 0.04f, 0.08f },
+        { "HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_003",                  GetKey("HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_003"), 0.04f, 0.08f },
+        { "HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_004",                  GetKey("HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_004"), 0.04f, 0.08f },
+        { "HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_005",                  GetKey("HORSE_EQUIPMENT_WESTERN_04_STOCK_NEW_SADDLE_005"), 0.04f, 0.08f },
 
-            // ==========================================
-            // PASSIVE INVENTORY ITEMS / TALISMANS
-            // ==========================================
-            { "PROVISION_TALISMAN_BOAR_TUSK",           GetKey("PROVISION_TALISMAN_BOAR_TUSK"), 0.10f, 0.10f, true }
-        } };
+        // Kneller Dakota Saddle (Improved)
+        { "HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_000",               GetKey("HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_000"), 0.12f, 0.16f },
+        { "HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_001",               GetKey("HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_001"), 0.12f, 0.16f },
+        { "HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_002",               GetKey("HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_002"), 0.12f, 0.16f },
+        { "HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_003",               GetKey("HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_003"), 0.12f, 0.16f },
+        { "HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_004",               GetKey("HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_004"), 0.12f, 0.16f },
+        { "HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_005",               GetKey("HORSE_EQUIPMENT_WESTERN_04_IMPROVED_NEW_SADDLE_005"), 0.12f, 0.16f },
+
+        // Lumley McClelland Saddle (Stock)
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_000",                GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_000"), 0.04f, 0.06f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_001",                GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_001"), 0.04f, 0.06f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_002",                GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_002"), 0.04f, 0.06f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_003",                GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_003"), 0.04f, 0.06f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_004",                GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_004"), 0.04f, 0.06f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_005",                GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_STOCK_NEW_SADDLE_005"), 0.04f, 0.06f },
+
+        // Lumley McClelland Saddle (Improved)
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_000",            GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_000"), 0.14f, 0.18f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_001",            GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_001"), 0.14f, 0.18f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_002",            GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_002"), 0.14f, 0.18f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_003",            GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_003"), 0.14f, 0.18f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_004",            GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_004"), 0.14f, 0.18f },
+        { "HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_005",            GetKey("HORSE_EQUIPMENT_MCCLELLAN_01_IMPROVED_NEW_SADDLE_005"), 0.14f, 0.18f },
+
+        // Gerden Vaquero Saddle (Stock)
+        { "HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_000",                  GetKey("HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_000"), 0.06f, 0.08f },
+        { "HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_001",                  GetKey("HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_001"), 0.06f, 0.08f },
+        { "HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_002",                  GetKey("HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_002"), 0.06f, 0.08f },
+        { "HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_003",                  GetKey("HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_003"), 0.06f, 0.08f },
+        { "HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_004",                  GetKey("HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_004"), 0.06f, 0.08f },
+        { "HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_005",                  GetKey("HORSE_EQUIPMENT_CHARRO_01_STOCK_NEW_SADDLE_005"), 0.06f, 0.08f },
+
+        // Gerden Vaquero Saddle (Improved)
+        { "HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_000",               GetKey("HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_000"), 0.14f, 0.16f },
+        { "HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_001",               GetKey("HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_001"), 0.14f, 0.16f },
+        { "HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_002",               GetKey("HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_002"), 0.14f, 0.16f },
+        { "HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_003",               GetKey("HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_003"), 0.14f, 0.16f },
+        { "HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_004",               GetKey("HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_004"), 0.14f, 0.16f },
+        { "HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_005",               GetKey("HORSE_EQUIPMENT_CHARRO_01_IMPROVED_NEW_SADDLE_005"), 0.14f, 0.16f },
+
+        // ==========================================
+        // SPECIAL EDITION / ULTIMATE EDITION SADDLES
+        // ==========================================
+        { "SADDLE_NUEVO_PARAISO",                   GetKey("SADDLE_NUEVO_PARAISO"), 0.12f, 0.12f }, //TODO: the key is wrong
+
+        // ==========================================
+        // PASSIVE INVENTORY ITEMS / TALISMANS
+        // ==========================================
+        { "PROVISION_TALISMAN_BOAR_TUSK",           GetKey("PROVISION_TALISMAN_BOAR_TUSK"), 0.10f, 0.10f, true } // Fits in WARDROBE
+    } };
 }
 
 [[nodiscard]] RDR_GUID InventoryManager::GetPlayerInventoryItemGUID(Hash itemHash, RDR_GUID guid, Hash slotId) noexcept {
@@ -98,7 +188,7 @@ void InventoryManager::ComputeHashes() noexcept {
     
     INVENTORY::INVENTORY_GET_GUID_FROM_ITEMID(1, (Any*)&guid, itemHash, slotId, (Any*)&outGuid);
 
-	WriteLog(LogLevel::Dev, "Retrieved player inventory item GUID for item hash " + std::to_string(itemHash) + ": " + outGuid.ToString());
+	WriteLog(LogLevel::Dev, "Retrieved inventory item GUID for item hash " + std::to_string(itemHash) + ": " + outGuid.ToString());
     
     return outGuid;
 }
@@ -144,47 +234,25 @@ void InventoryManager::ComputeHashes() noexcept {
 
     if (!invGuid.IsInvalid()) {
         slotInfo.guid = invGuid;
-        slotInfo.slotId = m_SatchelSlotHash;
-
+        
         Hash group = GetItemGroup(itemHash);
         switch (group)
         {
-        case 0xC2286F01: // CLOTHING
-            if (!INVENTORY::_INVENTORY_FITS_SLOT_ID(itemHash, m_WardrobeSlotHash)) {
-                WriteLog(LogLevel::Dev, "Item does not fit in wardrobe slot. Attempting to retrieve GUID from wardrobe container (hash: " + std::to_string(itemHash) + ")");
-                slotInfo.guid = GetPlayerInventoryItemGUID(m_WardrobeContainerHash, slotInfo.guid, m_WardrobeSlotHash);
-                slotInfo.slotId = INVENTORY::_GET_DEFAULT_ITEM_SLOT_INFO(itemHash, m_WardrobeContainerHash);
-            }
-            else {
-                WriteLog(LogLevel::Dev, "Item fits in wardrobe slot. Using wardrobe slot hash (hash: " + std::to_string(itemHash) + ")");
-                slotInfo.slotId = m_WardrobeSlotHash;
-            }
+		case 0x8A291148: // HORSE
+            WriteLog(LogLevel::Dev, "Item (hash: " + std::to_string(itemHash) + ") fits horse wardrobe container (hash: " + std::to_string(m_WardrobeContainerHash) + ")");
+            slotInfo.guid = GetPlayerInventoryItemGUID(m_WardrobeContainerHash, slotInfo.guid, m_ActiveHorseSlotHash);
+            slotInfo.slotId = INVENTORY::_GET_DEFAULT_ITEM_SLOT_INFO(itemHash, m_WardrobeContainerHash);
             break;
-        case 0x95A6F147: // HORSE 
-            WriteLog(LogLevel::Dev, "Item is a horse item. Using active horse slot hash (hash: " + std::to_string(itemHash) + ")");
-            slotInfo.slotId = m_ActiveHorseSlotHash;
+		case 0xC2286F01: // CLOTHING (WARDROBE)
+            WriteLog(LogLevel::Dev, "Item (hash: " + std::to_string(itemHash) + ") fits wardrobe container (hash: " + std::to_string(m_WardrobeContainerHash) + ")");
+            slotInfo.guid = GetPlayerInventoryItemGUID(m_WardrobeContainerHash, slotInfo.guid, m_WardrobeSlotHash);
+            slotInfo.slotId = INVENTORY::_GET_DEFAULT_ITEM_SLOT_INFO(itemHash, m_WardrobeContainerHash);
             break;
-        case 0x80FB92CD: // UPGRADE
-            if (INVENTORY::_INVENTORY_FITS_SLOT_ID(itemHash, m_UpgradeSlotHash)) {
-                WriteLog(LogLevel::Dev, "Item fits in upgrade slot. Using upgrade slot hash (hash: " + std::to_string(itemHash) + ")");
-                slotInfo.slotId = m_UpgradeSlotHash;
-            }
+		case 0xDE7B48B3: // SATCHEL
+            WriteLog(LogLevel::Dev, "Item (hash: " + std::to_string(itemHash) + ") fits in satchel slot (hash: " + std::to_string(m_SatchelSlotHash) + ")");
+            slotInfo.slotId = m_SatchelSlotHash;
             break;
         default:
-            WriteLog(LogLevel::Dev, "Item group is unrecognized. Attempting to determine appropriate slot.");
-
-            if (INVENTORY::_INVENTORY_FITS_SLOT_ID(itemHash, m_SatchelSlotHash)) {
-                WriteLog(LogLevel::Dev, "Item fits in satchel slot. Using satchel slot hash (hash: " + std::to_string(itemHash) + ")");
-                slotInfo.slotId = m_SatchelSlotHash;
-            }
-            else if (INVENTORY::_INVENTORY_FITS_SLOT_ID(itemHash, m_WardrobeSlotHash)) {
-                WriteLog(LogLevel::Dev, "Item fits in wardrobe slot. Using wardrobe slot hash (hash: " + std::to_string(itemHash) + ")");
-                slotInfo.slotId = m_WardrobeSlotHash;
-            }
-            else {
-                WriteLog(LogLevel::Dev, "Item does not fit in any recognized slot. Using default slot info (hash: " + std::to_string(itemHash) + ")");
-                slotInfo.slotId = INVENTORY::_GET_DEFAULT_ITEM_SLOT_INFO(itemHash, m_CharacterHash);
-            }
             break;
         }
     }
@@ -192,7 +260,7 @@ void InventoryManager::ComputeHashes() noexcept {
     return slotInfo;
 }
 
-[[nodiscard]] bool InventoryManager::DoesPlayerHaveItem(Hash itemHash, const std::string& itemName) noexcept {
+[[nodiscard]] bool InventoryManager::DoesPlayerHaveItem(Hash itemHash, const std::string& itemName) noexcept {    
     RDR_SLOTINFO slotInfo = GetItemSlotInfo(itemHash);
 
     if (slotInfo.IsInvalid()) {
@@ -200,20 +268,23 @@ void InventoryManager::ComputeHashes() noexcept {
         return false;
     }
 
-    RDR_GUID invGuid = GetPlayerInventoryItemGUID(itemHash, slotInfo.guid, slotInfo.slotId);
+    RDR_GUID itemGuid = GetPlayerInventoryItemGUID(itemHash, slotInfo.guid, slotInfo.slotId);
 
-    if(invGuid.IsInvalid()) {
-		WriteLog(LogLevel::Dev, "Player does not have item: " + itemName + " (hash: " + std::to_string(itemHash) + ")");
+    if(itemGuid.IsInvalid()) {
+		WriteLog(LogLevel::Verbose, "Player does not have item: " + itemName + "(hash: " + std::to_string(itemHash) + ") in their inventory");
         return false;
     }
+    else {
+        // Sanity check to ensure the GUID is valid before returning
+        bool result = INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&itemGuid);
 
-	RDR_GUID outGuid{};
+		if(!result)
+            WriteLog(LogLevel::Verbose, "Item " + itemName + "(hash: " + std::to_string(itemHash) + ") is in player inventory but did not pass the GUID validity check");
+        else
+            WriteLog(LogLevel::Verbose, "Player has item: " + itemName + "(hash: " + std::to_string(itemHash) + ") in their inventory. Adding core passive modifiers");
 
-	bool result = INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&slotInfo.guid);
-        
-    WriteLog(LogLevel::Dev, "Item " + itemName + (result ? " found" : " not found") + " in inventory.");
-	
-    return result;
+        return result;
+    }
 }
 
 [[nodiscard]] bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std::string& itemName) noexcept {
@@ -224,33 +295,32 @@ void InventoryManager::ComputeHashes() noexcept {
         return false;
     }
 
-    RDR_GUID invGuid = GetPlayerInventoryItemGUID(itemHash, slotInfo.guid, slotInfo.slotId);
+    RDR_GUID itemGuid = GetPlayerInventoryItemGUID(itemHash, slotInfo.guid, slotInfo.slotId);
 
-    if (invGuid.IsInvalid()) {
-        WriteLog(LogLevel::Dev, "Player does not have item: " + itemName + " (hash: " + std::to_string(itemHash) + ")");
+	WriteLog(LogLevel::Dev, "Inventory item: " + itemName + "(hash: " + std::to_string(itemHash) + ") has GUID: " + itemGuid.ToString());
+
+    if (itemGuid.IsInvalid()) {
+        WriteLog(LogLevel::Verbose, "Horse does not have item: " + itemName + "(hash: " + std::to_string(itemHash) + ") in their inventory");
         return false;
     }
+    else {
+        // Sanity check to ensure the GUID is valid before returning
+        bool result = INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&itemGuid);
 
-    RDR_GUID outGuid{};
+        if (!result)
+            WriteLog(LogLevel::Verbose, "Item " + itemName + "(hash: " + std::to_string(itemHash) + ") is in horse inventory but did not pass the GUID validity check");
+        else
+            WriteLog(LogLevel::Verbose, "Horse has item: " + itemName + "(hash: " + std::to_string(itemHash) + ") in their inventory. Adding core passive modifiers");
 
-    WriteLog(LogLevel::Dev, "Checking for item: " + itemName + " (hash: " + std::to_string(itemHash) + ")");
-
-    if (!INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&slotInfo.guid)) {
-        WriteLog(LogLevel::Dev, "GUID is invalid for player inventory. Item " + itemName + " not found.");
-        return false;
+        return result;
     }
-
-    bool result = INVENTORY::INVENTORY_GET_GUID_FROM_ITEMID(1, (Any*)&slotInfo.guid, itemHash, slotInfo.slotId, (Any*)&outGuid);
-
-    WriteLog(LogLevel::Dev, "Item " + itemName + (result ? " found" : " not found") + " in inventory.");
-    return result;
 }
 
 [[nodiscard]] CombinedPlayerCoreModifiers InventoryManager::GetActivePlayerPassiveModifiers() noexcept {
     CombinedPlayerCoreModifiers modifiers{};
 
     for (const auto& passive : m_PlayerPassiveModifiers) {
-        // All talismans/trinkets live in the wardrobe data tree branch
+		WriteLog(LogLevel::Verbose, "Checking for player passive item: " + std::string(passive.name) + " (hash: " + std::to_string(passive.itemHash) + ")");
         if (DoesPlayerHaveItem(passive.itemHash, std::string(passive.name))) {
             modifiers.totalHealthReduction += passive.healthCoreMod;
             modifiers.totalStaminaReduction += passive.staminaCoreMod;
@@ -264,8 +334,13 @@ void InventoryManager::ComputeHashes() noexcept {
 [[nodiscard]] CombinedTackModifiers InventoryManager::GetActiveHorseTackModifiers(Ped horsePed) noexcept {
     CombinedTackModifiers modifiers{};
 
+	return modifiers;
+
+
+	// TODO: this just checks for items in the inventory not if they are equipped. Need to check if the horse has the item equipped instead of just in inventory.
     // Scan for Stirrups
     for (const auto& stirrup : m_StirrupModifiers) {
+		WriteLog(LogLevel::Verbose, "Checking for horse stirrup item: " + std::string(stirrup.name) + " (hash: " + std::to_string(stirrup.itemHash) + ")");
         if (DoesHorseHaveItem(horsePed, stirrup.itemHash, std::string(stirrup.name))) {
             modifiers.totalStaminaReduction += stirrup.staminaCoreMod;
             break;
@@ -274,12 +349,15 @@ void InventoryManager::ComputeHashes() noexcept {
 
     // Scan for Saddles & Horse Player Passives
     for (const auto& saddle : m_SaddleModifiers) {
+		WriteLog(LogLevel::Verbose, "Checking for horse saddle item: " + std::string(saddle.name) + " (hash: " + std::to_string(saddle.itemHash) + ")");
         bool hasItem = false;
 
         if (saddle.isPlayerPassive)
             hasItem = DoesPlayerHaveItem(saddle.itemHash, std::string(saddle.name));
         else
+        {
             hasItem = DoesHorseHaveItem(horsePed, saddle.itemHash, std::string(saddle.name));
+        }
 
         if (hasItem) {
             modifiers.totalHealthReduction += saddle.healthCoreMod;

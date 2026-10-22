@@ -92,12 +92,10 @@ void ScriptThreadManager::Shutdown(bool isGameExiting) {
 
     // Wait for the thread to completely finish executing
     if (iniWatcherThread.joinable()) {
-        if (isGameExiting) {
+        if (isGameExiting) 
             iniWatcherThread.detach();
-        }
-        else {
+        else
             iniWatcherThread.join(); // Safe to join during a reload because thread is fully responsive!
-        }
     }
 
     if (loggerThread.joinable()) {

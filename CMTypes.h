@@ -6,9 +6,14 @@
 #include <string_view>
 #include "..\CoreSDK\inc\types.h"
 
+enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
+enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
+enum class PlayerSpeed : int { Jog = 3, Sprint = 5 };
+enum class BathingState : int { NotBathing = 0, StandardBathing = 1, DeluxeBathing = 2 };
+
 struct SimulationState {
     bool isRestricted = false;
-	bool isRestrictedVariable = false;
+	bool MonitorTransientVariablesDuringRestriction = false;
 
     int cachedInGameTimeMinutes = 0;
     int accumulatedTimeMs = 0;
@@ -18,13 +23,13 @@ struct SimulationState {
     float cachedDeadEye = 100.0f;
     int cachedMoney = 0;
 
-    int cachedBathingState = 0;
+    BathingState restrictedBathingState = BathingState::NotBathing;
 
     bool wasSleepingDuringRestriction = false;
     bool wasAtCampDuringRestriction = false;
     bool wasInMinigameDuringRestriction = false;
     bool wasInMissionDuringRestriction = false;
-    bool isBathingDuringRestriction = false;
+    bool wasInTimeWarpDuringRestriction = false;
     bool wasRestrictedLastTick = false;
 	
     float PostMissionDecayHoursRemaining = 0.0f;    
@@ -36,18 +41,20 @@ struct SimulationState {
 
     int lastTickInGameMinutes = 0;
     bool timescaleDeltaInitialised = false;
+    int msPerInGameMinute = 2000;
 
     Ped lastKnownPlayerPed = 0;
 };
 struct GameplayContext {
     bool freezeActive = false;
-    bool isFreezeVariable = false;
+    bool monitorTransientVarsDuringFreeze = false;
     bool isInMission = false;
     bool isInMinigame = false;
     bool isSleeping = false;
     bool isAtCamp = false;
     bool isJailed = false;
     bool isBathing = false;
+	bool isInTimeWarp = false;
 };
 
 struct PlayerPassiveModifier {

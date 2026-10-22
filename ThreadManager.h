@@ -15,10 +15,8 @@ public:
     ScriptThreadManager() = default;
     ~ScriptThreadManager() = default;
 
-    // Spawns your background threads on script boot
     void Initialize();
 
-    // Safely tears down and joins background threads
     void Shutdown(bool isGameExiting = false);
 };
 

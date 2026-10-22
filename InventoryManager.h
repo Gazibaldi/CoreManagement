@@ -17,7 +17,6 @@ struct RDR_GUID
     alignas(8) int data3;
     alignas(8) int data4;
 
-    // C++20 Spaceship operator for clean, reliable equality evaluations
     auto operator<=>(const RDR_GUID&) const = default;
 
     bool IsInvalid() const {
@@ -60,11 +59,10 @@ class InventoryManager {
     Hash m_SatchelSlotHash;
     Hash m_WardrobeSlotHash;
     Hash m_WardrobeContainerHash;
-    Hash m_UpgradeSlotHash;
 
     std::array<PlayerPassiveModifier, 4> m_PlayerPassiveModifiers{};
     std::array<TackModifier, 12> m_StirrupModifiers{};
-    std::array<TackModifier, 24> m_SaddleModifiers{};
+    std::array<TackModifier, 93> m_SaddleModifiers{};
 
     [[nodiscard]] RDR_GUID GetPlayerInventoryItemGUID(Hash item, RDR_GUID guid, Hash slotId) noexcept;
     [[nodiscard]] RDR_GUID GetPlayerInventoryGUID() noexcept;

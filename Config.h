@@ -10,16 +10,16 @@
 
 extern std::string VERSION;
 
-// Explicit extern linkage to look up your main configuration settings
 struct CoreConfigSettings {
     int coreDrainTickIntervalMs = 10000;
-    int stateChangeTickIntervalMs = 100;
+    int stateChangeTickIntervalMs = 500;
     int logLevelRaw = 1;
 
     LogLevel currentLogLevel = LogLevel::Standard;
 };
 
 struct GeneralConfigSettings {
+    int msPerInGameMinute = 2000;
     int nightStartHour = 20;
     int nightEndHour = 6;
 
@@ -70,7 +70,8 @@ extern std::atomic<bool> g_ShouldReloadConfig;
 
 extern std::string g_IniPath;
 
-extern std::atomic<int> g_stateChangeTickIntervalMs;
+extern std::atomic<int> g_StateChangeTickIntervalMs;
+extern std::atomic<int> g_GameTimescaleMS;
 
 extern CoreConfigSettings g_CoreConfig;
 extern GeneralConfigSettings g_GeneralConfig;

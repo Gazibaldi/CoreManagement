@@ -38,7 +38,8 @@ std::atomic<bool> g_ShouldReloadConfig(false);
 
 std::string g_IniPath = ".\\CoreManagement.ini";
 
-std::atomic<int> g_stateChangeTickIntervalMs(500);
+std::atomic<int> g_GameTimescaleMS(2000);
+std::atomic<int> g_StateChangeTickIntervalMs(500);
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {
     char defaultBuffer[32];
@@ -91,10 +92,11 @@ void BuildDefaultConfigFile() {
             << "[Performance]\n"
             << "; How often the main drain game simulation thread ticks (in milliseconds)\n"
             << "; Minimum interval is 5 seconds (5000 ms). Maximum is 5 mins (300000 ms)\n"
+            << "; Recommendation: keep this as a multiple of the msPerInGameMinute to ensure clean hour based decay delta\n"
             << "coreDrainTickIntervalMs = " << defaultCoreConfig.coreDrainTickIntervalMs << "\n"
             << "; How often the main state simulation should run (in milliseconds)\n"
             << "; This should be low to capture mission triggers etc. The drain will be forced  in such cases\n"
-            << "; Just leave it at 100 unless it causes performance issues\n"
+            << "; Just leave it at 500 unless it causes performance issues\n"
             << "; Adjust log level first though as that is definitely the first place to gain performance\n"
 			<< "; Minimum is 0.1 seconds (100 ms). Maximum interval is 1 second (1000 ms)\n"
             << "stateChangeTickIntervalMs = " << defaultCoreConfig.stateChangeTickIntervalMs << "\n\n"
@@ -104,9 +106,14 @@ void BuildDefaultConfigFile() {
             << "LogLevel = " << defaultCoreConfig.logLevelRaw << "\n\n"
 
             << "[General]\n"
+            << "; length of in-game minute in real-time milliseconds (vanilla: 2000ms - 2 seconds)\n"
+            << "; Minimum interval is 2 seconds (2000 ms). Maximum is 60 seconds (60000 ms)\n"
+           	<< "msPerInGameMinute = " << defaultGeneralConfig.msPerInGameMinute << "\n"
             << "; in-game hour in which night officially begins\n"
+            << "; valid range : 18 - 22 (6pm - 10pm)\n"
             << "NightStartHour = " << defaultGeneralConfig.nightStartHour << "\n"
             << "; in-game hour in which day officially begins\n"
+            << "; valid range 4 - 8 (4am - 8am)"
             << "NightEndHour = " << defaultGeneralConfig.nightEndHour << "\n"
             << "; If 1 (true), core drain ticks continuously during story/world missions. \n"
             << "EnableDuringMissions = " << static_cast<int>(defaultGeneralConfig.enableDuringMissions) << "\n"
@@ -184,6 +191,7 @@ void LogConfiguration() {
         << "| Performance: Drain Tick Interval (ms)     | " << std::setw(10) << g_CoreConfig.coreDrainTickIntervalMs << " |\n"
         << "| Performance: State Tick Interval (ms)     | " << std::setw(10) << g_CoreConfig.stateChangeTickIntervalMs << " |\n"
         << "|                                           |            |\n"
+        << "| General: In-Game Minute (ms)              | " << std::setw(10) << g_GeneralConfig.msPerInGameMinute << " |\n"
         << "| General: Night Start Hour                 | " << std::setw(10) << g_GeneralConfig.nightStartHour << " |\n"
         << "| General: Night End Hour                   | " << std::setw(10) << g_GeneralConfig.nightEndHour << " |\n"
         << "| General: Drain Enabled for Missions       | " << std::setw(10) << static_cast<int>(g_GeneralConfig.enableDuringMissions) << " |\n"
@@ -243,9 +251,11 @@ void LoadConfiguration() {
                                                                                                                                                                                            // to avoid excessive CPU usage while not too slow to miss state changes
 
 	g_CoreConfig.logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", defaultCoreConfig.logLevelRaw, g_IniPath.c_str()), defaultCoreConfig.logLevelRaw); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay, will effect fps). 
-                                                                                                                                        // Range is 0-2 for normal gameplay. 0=disabled, 1=standard, 2=verbose
-    g_GeneralConfig.nightStartHour = std::clamp(GetIniInt("General", "NightStartHour", defaultGeneralConfig.nightStartHour, g_IniPath.c_str()), 0, 23); // clamp between 0 and 23
-    g_GeneralConfig.nightEndHour = std::clamp(GetIniInt("General", "NightEndHour", defaultGeneralConfig.nightEndHour, g_IniPath.c_str()), 0, 23); // clamp between 0 and 23
+                                                                                                                                                                    // Range is 0-2 for normal gameplay. 0=disabled, 1=standard, 2=verbose
+
+    g_GeneralConfig.msPerInGameMinute = std::clamp(GetIniInt("General", "MsPerInGameMinute", defaultGeneralConfig.msPerInGameMinute, g_IniPath.c_str()), 2000, 60000); // clamp between 2000ms (2 seconds) and 60000ms (60 seconds)
+    g_GeneralConfig.nightStartHour = std::clamp(GetIniInt("General", "NightStartHour", defaultGeneralConfig.nightStartHour, g_IniPath.c_str()), 18, 22); // clamp between 18 and 22 (6pm - 10pm)
+    g_GeneralConfig.nightEndHour = std::clamp(GetIniInt("General", "NightEndHour", defaultGeneralConfig.nightEndHour, g_IniPath.c_str()), 4, 8); // clamp between 4 and 8 (4am - 8am)
     g_GeneralConfig.enableDuringMissions = GetIniBool("General", "EnableDuringMissions", defaultGeneralConfig.enableDuringMissions, g_IniPath.c_str());
     g_GeneralConfig.enableDuringMinigames = GetIniBool("General", "EnableDuringMinigames", defaultGeneralConfig.enableDuringMinigames, g_IniPath.c_str());
 
@@ -298,8 +308,8 @@ void LoadConfiguration() {
 		break;
 	}
 
-    g_stateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs);
-    
+	g_GameTimescaleMS.store(g_GeneralConfig.msPerInGameMinute, std::memory_order_release);
+    g_StateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs, std::memory_order_release);    
     g_CurrentLogLevel.store(static_cast<int>(g_CoreConfig.logLevelRaw), std::memory_order_release);
 
     LogConfiguration();

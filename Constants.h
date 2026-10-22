@@ -8,10 +8,8 @@
 #include <string>
 
 const float HORSE_HITCHED_HEALTH_REQ = 60.0f;
-const float HORSE_HITCHED_REWARD_PER_GAME_HOUR = 1.0f;
-const float HORSE_LEAD_REWARD_PER_GAME_HOUR = 10.0f;
 
-const float POST_MISSION_DECAY_MULTIPLIER = 0.2f;
+const float POST_MISSION_DECAY_ADDITIVE_MULTIPLIER = 0.2f;
 const float POST_MISSION_DECAY_HOURS = 1.0f;
 
 const float OVERSLEEP_THRESHOLD_HOURS = 12.0f;
