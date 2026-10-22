@@ -1371,9 +1371,11 @@ void UpdateCoreSimulation() {
     // SLOW-PATH APP DECAY SIMULATION (Accumulates interval smoothly over normal open world play)
     else if (!context.freezeActive) {
         g_State.accumulatedTimeMs += coreConfig.stateChangeTickIntervalMs;
-		WriteLog(LogLevel::Dev, "Accumulated time for core simulation: " + std::to_string(g_State.accumulatedTimeMs) + " ms");
+		WriteLog(LogLevel::Verbose, "Accumulated time for core simulation: " + std::to_string(g_State.accumulatedTimeMs) + " ms");
 
         if (g_State.accumulatedTimeMs >= coreConfig.coreDrainTickIntervalMs) {
+			WriteLog(LogLevel::Verbose, "Core drain tick interval reached. Processing core simulation...");
+
             float hoursDelta = CalculateTimescaleDelta(currentTotalMinutes);
 
             if (hoursDelta == 0.0f) {
