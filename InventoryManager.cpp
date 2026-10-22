@@ -279,9 +279,9 @@ void InventoryManager::ComputeHashes() noexcept {
         bool result = INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&itemGuid);
 
 		if(!result)
-            WriteLog(LogLevel::Verbose, "Item " + itemName + "(hash: " + std::to_string(itemHash) + ") is in player inventory but did not pass the GUID validity check");
+            WriteLog(LogLevel::Verbose, "Item " + itemName + " (hash: " + std::to_string(itemHash) + ") is in player inventory but did not pass the GUID validity check");
         else
-            WriteLog(LogLevel::Verbose, "Player has item: " + itemName + "(hash: " + std::to_string(itemHash) + ") in their inventory. Adding core passive modifiers");
+            WriteLog(LogLevel::Verbose, "Player has item: " + itemName + " (hash: " + std::to_string(itemHash) + ") in their inventory. Adding core passive modifiers");
 
         return result;
     }
@@ -297,10 +297,10 @@ void InventoryManager::ComputeHashes() noexcept {
 
     RDR_GUID itemGuid = GetPlayerInventoryItemGUID(itemHash, slotInfo.guid, slotInfo.slotId);
 
-	WriteLog(LogLevel::Dev, "Inventory item: " + itemName + "(hash: " + std::to_string(itemHash) + ") has GUID: " + itemGuid.ToString());
+	WriteLog(LogLevel::Dev, "Inventory item: " + itemName + " (hash: " + std::to_string(itemHash) + ") has GUID: " + itemGuid.ToString());
 
     if (itemGuid.IsInvalid()) {
-        WriteLog(LogLevel::Verbose, "Horse does not have item: " + itemName + "(hash: " + std::to_string(itemHash) + ") in their inventory");
+        WriteLog(LogLevel::Verbose, "Horse does not have item: " + itemName + " (hash: " + std::to_string(itemHash) + ") in their inventory");
         return false;
     }
     else {
@@ -308,9 +308,9 @@ void InventoryManager::ComputeHashes() noexcept {
         bool result = INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&itemGuid);
 
         if (!result)
-            WriteLog(LogLevel::Verbose, "Item " + itemName + "(hash: " + std::to_string(itemHash) + ") is in horse inventory but did not pass the GUID validity check");
+            WriteLog(LogLevel::Verbose, "Item " + itemName + " (hash: " + std::to_string(itemHash) + ") is in horse inventory but did not pass the GUID validity check");
         else
-            WriteLog(LogLevel::Verbose, "Horse has item: " + itemName + "(hash: " + std::to_string(itemHash) + ") in their inventory. Adding core passive modifiers");
+            WriteLog(LogLevel::Verbose, "Horse has item: " + itemName + " (hash: " + std::to_string(itemHash) + ") in their inventory. Adding core passive modifiers");
 
         return result;
     }
