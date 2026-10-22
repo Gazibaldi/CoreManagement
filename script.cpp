@@ -277,7 +277,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
     
 	// Only check the following states if the player is not already in a restricted state (e.g., in a mission or minigame)
-    // they can't be happening if we are restricted
+    // they can't be happening/change if we are restricted
     if (!g_State.isRestricted) {
         ctx.isBathing = IsPlayerBathing(playerPed);
         ctx.isJailed = IsPlayerArrested();
