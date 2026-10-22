@@ -275,21 +275,21 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     bool isInMission = MISC::GET_MISSION_FLAG();
     bool isInMinigame = IsPlayerPlayingTableMinigame();
     bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
-    
-	// Only check the following states if the player is not already in a restricted state (e.g., in a mission or minigame)
-    // they can't be happening/change if we are restricted
-    if (!g_State.isRestricted) {
-        ctx.isBathing = IsPlayerBathing(playerPed);
-        ctx.isJailed = IsPlayerArrested();
-        ctx.isSleeping = IsInSleepScenario(playerPed);
-        ctx.isAtCamp = IsInCampScenario(playerPed);
-    }
 
-    ctx.isInTimeWarp = g_State.msPerInGameMinute > GetCurrentGameTimeScale();
-    
     // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
     ctx.isInMission = isInMission && !generalConfig.enableDuringMissions;
     ctx.isInMinigame = isInMinigame && !generalConfig.enableDuringMinigames;
+    
+	// Only check the following states if the player is not already in a mission or minigame
+	// they can't be happening/change if we are in mission or minigame or falling/dying
+    if (!ctx.isInMission && !ctx.isInMinigame && !isFallingOrGoingToDie) {
+        ctx.isBathing = IsPlayerBathing(playerPed);
+        ctx.isSleeping = IsInSleepScenario(playerPed);
+        ctx.isJailed = IsPlayerArrested();        
+        ctx.isAtCamp = IsInCampScenario(playerPed);
+    }
+    
+    ctx.isInTimeWarp = g_State.msPerInGameMinute > GetCurrentGameTimeScale();
 
     // camp stays out as we want a customized slowed decay in those cases
     ctx.freezeActive = (ctx.isInMission || ctx.isInMinigame || isFallingOrGoingToDie || ctx.isSleeping || ctx.isBathing || ctx.isJailed || ctx.isInTimeWarp);
