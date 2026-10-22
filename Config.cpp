@@ -183,7 +183,7 @@ void LogConfiguration() {
 
     std::ostringstream table;
     table << std::fixed << std::setprecision(2)
-        << "\n\n+---------------------------------------+------------+\n"
+        << "\n\n+-------------------------------------------+------------+\n"
         << "| Configuration Parameter                   |      Value |\n"
         << "+-------------------------------------------+------------+\n"
         << "| Logging: Log Level                        | " << std::setw(10) << g_CoreConfig.logLevelRaw << " |\n"

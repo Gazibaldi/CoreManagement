@@ -149,26 +149,29 @@ bool IsInActiveScenario(Ped playerPed, std::span<const Hash> scenarioSet) {
 
     bool isInScenarioSet = std::ranges::any_of(scenarioSet, contains_check);
 
-	if (isInScenarioSet) {
-		WriteLog(LogLevel::Dev, "Active scenario matches known set");
-	}
-	else {
-		WriteLog(LogLevel::Dev, "Active scenario does not match any known set.");
-	}
+	WriteLog(LogLevel::Dev, "Is active scenario in known set: " + std::string(isInScenarioSet ? "true" : "false"));
 
 	return isInScenarioSet;
 }
 
 bool IsInSleepScenario(Ped playerPed) {
 	bool isInSleepScenario = IsInActiveScenario(playerPed, g_SleepScenarios);
-	WriteLog(LogLevel::Verbose, "IsInSleepScenario check: " + std::string(isInSleepScenario ? "true" : "false"));
+
+	if (isInSleepScenario)
+		WriteLog(LogLevel::Verbose, "Player sleep check: Player is asleep.");
+	else
+		WriteLog(LogLevel::Verbose, "Player sleep check: Player is not asleep.");
 
 	return isInSleepScenario;
 }
 
 bool IsInCampScenario(Ped playerPed) {
     bool isInCampScenario = IsInActiveScenario(playerPed, g_CampScenarios);
-    WriteLog(LogLevel::Verbose, "IsInCampScenario check: " + std::string(isInCampScenario ? "true" : "false"));
+    
+    if (isInCampScenario)
+        WriteLog(LogLevel::Verbose, "Player camp check: Player is at camp.");
+    else
+        WriteLog(LogLevel::Verbose, "Player camp check: Player is not at camp.");
 
     return isInCampScenario;
 }
@@ -191,11 +194,11 @@ bool IsPlayerArrested() {
     }
     else {
         if(jailMonitor.ActivateMonitor()) {
-            WriteLog(LogLevel::Verbose, "Player is being arrested and is in custody.");
+            WriteLog(LogLevel::Verbose, "Player jailed check: Player is being arrested and is in custody.");
             return true;
         }
 
-        WriteLog(LogLevel::Verbose, "Player is not being arrested or is not in custody.");
+        WriteLog(LogLevel::Verbose, "Player jailed check: Player is not being arrested or is not in custody.");
         return false;
     }
 }
@@ -262,7 +265,7 @@ void SetGameTimeScale() {
 int GetCurrentGameTimeScale() {
     int msPerInGameMinute = CLOCK::GET_MILLISECONDS_PER_GAME_MINUTE();
 
-	WriteLog(LogLevel::Verbose, "Current game time scale (ms per in-game minute): " + std::to_string(msPerInGameMinute));
+	WriteLog(LogLevel::Dev, "Current game time scale (ms per in-game minute): " + std::to_string(msPerInGameMinute));
     return msPerInGameMinute;
 }
 
