@@ -26,7 +26,7 @@ void InventoryManager::ComputeHashes() noexcept {
             { "PROVISION_TALISMAN_BEAR_CLAW",         GetKey("PROVISION_TALISMAN_BEAR_CLAW"), 0.10f, 0.00f, 0.00f }, // Fits in WARDROBE
             { "PROVISION_TALISMAN_BUFFALO_HORN",      GetKey("PROVISION_TALISMAN_BUFFALO_HORN"), 0.00f, 0.10f, 0.00f }, // Fits in SLOTID_SATCHEL
             { "PROVISION_TALISMAN_ALLIGATOR_TOOTH",   GetKey("PROVISION_TALISMAN_ALLIGATOR_TOOTH"), 0.00f, 0.00f, 0.10f } // Fits in WARDROBE
-        } };
+    } };
 
 
     // TODO: Need to get confirmation of the correct mapping to entry to name
