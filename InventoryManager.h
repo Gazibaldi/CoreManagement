@@ -53,12 +53,12 @@ struct RDR_ITEMINFO
 };
 
 class InventoryManager {
-    Hash m_NullSlotHash;
-    Hash m_CharacterHash;
-    Hash m_ActiveHorseSlotHash;
-    Hash m_SatchelSlotHash;
-    Hash m_WardrobeSlotHash;
-    Hash m_WardrobeContainerHash;
+    Hash m_NullSlotHash = 0;
+    Hash m_CharacterHash = 0;
+    Hash m_ActiveHorseSlotHash = 0;
+    Hash m_SatchelSlotHash = 0;
+    Hash m_WardrobeSlotHash = 0;
+    Hash m_WardrobeContainerHash = 0;
 
     std::array<PlayerPassiveModifier, 4> m_PlayerPassiveModifiers{};
     std::array<TackModifier, 12> m_StirrupModifiers{};

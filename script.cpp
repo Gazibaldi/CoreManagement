@@ -723,7 +723,7 @@ void ApplyBatchTimeSkipDecay(
     }
     else if (!isStaminaGold) {
         // Standard macro transit decay (Trains/Stagecoaches/Jail/Barber)
-        float activeStaminaDecay = playerConfig.baseStaminaDecay * CalculatePlayerStaminaDecayMultiplier(playerConfig, passives.totalStaminaReduction, playerPed, applyPostMissionDecay);
+        float activeStaminaDecay = playerConfig.baseStaminaDecay * CalculatePlayerStaminaDecayMultiplier(playerConfig, playerPed, passives.totalStaminaReduction, applyPostMissionDecay);
 
         float targetStamina = startStamina - (elapsedHours * activeStaminaDecay);
         targetStamina = std::max(targetStamina, playerConfig.campedStaminaFloor);
