@@ -248,10 +248,8 @@ void RecordTrackingSnapshots(Ped playerPed) {
 	g_HorseManager.RecordSnapshot(playerPed);
 }
 
-void SetGameTimeScale() {
-    int msPerInGameMinute = g_GameTimescaleMS.load(std::memory_order_acquire);
-
-	WriteLog(LogLevel::Verbose, "Setting game time scale (ms per in-game minute): " + std::to_string(msPerInGameMinute));
+void SetGameTimeScale(int msPerInGameMinute) {
+    WriteLog(LogLevel::Verbose, "Setting game time scale (ms per in-game minute): " + std::to_string(msPerInGameMinute));
     
 	CLOCK::_SET_MILLISECONDS_PER_GAME_MINUTE(msPerInGameMinute);
 }
@@ -284,15 +282,15 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     }
     
 	int timeScale = GetCurrentGameTimeScale();
+	int configuredTimeScale = g_GameTimescaleMS.load(std::memory_order_acquire);
 
-	if (timeScale < VANILLA_GAME_TIME_SCALE) {
-        ctx.isInTimeWarp = g_State.msPerInGameMinute > timeScale;
-	}
+	ctx.isInTimeWarp = (timeScale < VANILLA_GAME_TIME_SCALE);
+	
 	// If the player is in a mission, we don't reset the time scale as it may be intended to be changed during those events.
 	// otherwise, we reset it back to the configured value to ensure the drain mechanics are consistent with the player's configuration.
-    else if (timeScale != g_State.msPerInGameMinute && !ctx.isInMission) {
-		LOG_DEV("Game time scale has changed from {} to {} probably due to a mission. Resetting back to configured value.", g_State.msPerInGameMinute, timeScale);
-		SetGameTimeScale();
+    if (timeScale != configuredTimeScale && !(ctx.isInMission || ctx.isInTimeWarp)) {
+		LOG_DEV("Game time scale has changed from {} to {} probably due to a mission/config/save load. Setting to configured value.", configuredTimeScale, timeScale);
+		SetGameTimeScale(configuredTimeScale);
     }    
 
     // camp stays out as we want a customized slowed decay in those cases
@@ -439,6 +437,8 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
     }
 
     float dirtLevel = PED::_GET_PED_DIRT_LEVEL(playerPed, true);
+
+	LOG_DEV("Player dirt level: {}", dirtLevel);
 
     bool isDirty = dirtLevel > PLAYER_DIRT_THRESHOLD;
     if(isDirty) {
@@ -1105,7 +1105,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         // Normal Open-World, Nighttime, or Semi-Restrained Decay Route
         int currentHour = CLOCK::GET_CLOCK_HOURS();
         bool isNighttime = (currentHour >= config.GeneralConfig.nightStartHour || currentHour < config.GeneralConfig.nightEndHour);
-        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, passives.totalDeadEyeReduction, applyPostMissionDecay, ctx.isAtCamp, isNighttime);
+        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, playerPed, passives.totalDeadEyeReduction, applyPostMissionDecay, ctx.isAtCamp, isNighttime);
 
         float targetDeadEye = currentDeadEye - (activeDeadEyeDecay * hoursDelta);
         float minDeadEyeFloor = ctx.isAtCamp ? config.PlayerConfig.campedDeadEyeFloor : 0.0f;
@@ -1263,7 +1263,6 @@ void ResetSimulationState() {
     g_State.lastTickInGameMinutes = 0;
     g_State.timescaleDeltaInitialised = false;
     g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::NotSet;
-    g_State.msPerInGameMinute = GetCurrentGameTimeScale();
 
     g_State.accumulatedTimeMs = 0;
     g_State.cachedHealth = 100.0f;
@@ -1315,10 +1314,7 @@ ConfigSnapshot CheckForConfigChange() {
 		for (auto& [type, monitor] : g_activeMonitors)
             monitor.RefreshThreshold(g_State.isRestricted);
 
-		// Update the timescale delta baseline to ensure accurate calculations after a config reload
-        SetGameTimeScale();
-
-        g_ShouldReloadConfig.store(false, std::memory_order_release);
+		g_ShouldReloadConfig.store(false, std::memory_order_release);
     }
 
     return ConfigSnapshot {
@@ -1354,7 +1350,7 @@ bool IsInSaveLoadState(Ped playerPed) {
         WriteLog(LogLevel::Standard, "Simulation baseline calibrated. Anchoring timestamps...");
 
         g_State.cachedInGameTimeMinutes = GetTotalInGameMinutes();
-        g_State.msPerInGameMinute = GetCurrentGameTimeScale();
+        //g_State.msPerInGameMinute = GetCurrentGameTimeScale();
         g_State.lastTickInGameMinutes = g_State.cachedInGameTimeMinutes;
         g_State.accumulatedTimeMs = 0;
 

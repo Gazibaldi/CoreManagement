@@ -43,8 +43,7 @@ struct SimulationState {
     int lastTickInGameMinutes = 0;
     bool timescaleDeltaInitialised = false;
     StateChangeIntervalType stateChangeTickIntervalMsType = StateChangeIntervalType::NotSet;
-    int msPerInGameMinute = 2000;
-
+    
     Ped lastKnownPlayerPed = 0;
 	bool configStructuresInitialised = false;
 };
