@@ -4,6 +4,9 @@
 
 #include <thread>
 #include <windows.h>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 #include "ThreadManager.h"
 #include "Config.h"
 #include "Logger.h"
@@ -59,7 +62,7 @@ void IniWatcherThread() {
     }
 }
 
-void ScriptThreadManager::Initialize() {
+void ScriptThreadManager::Initialise() {
     // ALWAYS clean up any existing thread before starting a new one (reloads persist the global manager)
     Shutdown();
 
@@ -89,12 +92,10 @@ void ScriptThreadManager::Shutdown(bool isGameExiting) {
 
     // Wait for the thread to completely finish executing
     if (iniWatcherThread.joinable()) {
-        if (isGameExiting) {
+        if (isGameExiting) 
             iniWatcherThread.detach();
-        }
-        else {
+        else
             iniWatcherThread.join(); // Safe to join during a reload because thread is fully responsive!
-        }
     }
 
     if (loggerThread.joinable()) {

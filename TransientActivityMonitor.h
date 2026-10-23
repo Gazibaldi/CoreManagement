@@ -23,6 +23,7 @@ class TransientActivityMonitor {
 
     int m_TickCounter = 0;
     int m_MaxTicksThreshold = 0;
+	int m_ThresholdSeconds = 0;
 
     std::function<bool()> m_StateEvaluator;
 
@@ -38,12 +39,14 @@ public:
         , m_StateEvaluator(std::forward<F>(evaluator))
     {
         // Internal tick math based on your global interval configuration
-        m_MaxTicksThreshold = (1000 / g_stateChangeTickIntervalMs.load(std::memory_order_acquire)) * thresholdSeconds;
+		m_ThresholdSeconds = thresholdSeconds;
+		RefreshThreshold(false); // default to unrestricted threshold until the first tick cycle
     }
 
     bool ActivateMonitor() noexcept;
     void MonitorCheck() noexcept;
     void Reset() noexcept;
+    void RefreshThreshold(bool isRestricted) noexcept;
 
     // Read-only Getters (Fully encapsulated)
     [[nodiscard]] constexpr bool IsActive() const noexcept { return m_IsActive; }

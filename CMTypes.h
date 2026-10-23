@@ -1,10 +1,21 @@
+/*
+        Copyright © 2026 Gary Tweddle / Gazibaldi.This program is free software : you can redistribute it and /or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+*/
+
 #pragma once
+#include <string_view>
 #include "..\CoreSDK\inc\types.h"
+
+enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
+enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
+enum class PlayerSpeed : int { Jog = 3, Sprint = 5 };
+enum class BathingState : int { NotBathing = 0, StandardBathing = 1, DeluxeBathing = 2 };
+enum class StateChangeIntervalType : int { NotSet, Standard, Restricted };
 
 struct SimulationState {
     bool isRestricted = false;
-	bool isRestrictedVariable = false;
-
+	bool MonitorTransientVariablesDuringRestriction = false;
+	
     int cachedInGameTimeMinutes = 0;
     int accumulatedTimeMs = 0;
 
@@ -13,13 +24,13 @@ struct SimulationState {
     float cachedDeadEye = 100.0f;
     int cachedMoney = 0;
 
-    int cachedBathingState = 0;
+    BathingState restrictedBathingState = BathingState::NotBathing;
 
     bool wasSleepingDuringRestriction = false;
     bool wasAtCampDuringRestriction = false;
     bool wasInMinigameDuringRestriction = false;
     bool wasInMissionDuringRestriction = false;
-    bool isBathingDuringRestriction = false;
+    bool wasInTimeWarpDuringRestriction = false;
     bool wasRestrictedLastTick = false;
 	
     float PostMissionDecayHoursRemaining = 0.0f;    
@@ -29,24 +40,49 @@ struct SimulationState {
     float cachedHorseHealth = 100.0f;
     float cachedHorseStamina = 100.0f;
 
-    bool wasHorseLeadingLastTick = false;
-	bool wasHorseHitchedLastTick = false;
-    
-    float accumulatedHorseLeadHealthReward = 0.0f;
-    int accumulatedHorseHitchedImmobility = 0;
-
     int lastTickInGameMinutes = 0;
     bool timescaleDeltaInitialised = false;
-
+    StateChangeIntervalType stateChangeTickIntervalMsType = StateChangeIntervalType::NotSet;
+    
     Ped lastKnownPlayerPed = 0;
+	bool configStructuresInitialised = false;
 };
+
 struct GameplayContext {
     bool freezeActive = false;
-    bool isFreezeVariable = false;
+    bool monitorTransientVarsDuringFreeze = false;
     bool isInMission = false;
     bool isInMinigame = false;
     bool isSleeping = false;
     bool isAtCamp = false;
     bool isJailed = false;
     bool isBathing = false;
+	bool isInTimeWarp = false;
+};
+
+struct PlayerPassiveModifier {
+    std::string_view name;
+    Hash itemHash;
+    float healthCoreMod;
+    float staminaCoreMod;
+    float deadEyeCoreMod;
+};
+
+struct CombinedPlayerCoreModifiers {
+    float totalHealthReduction = 0.0f;
+    float totalStaminaReduction = 0.0f;
+    float totalDeadEyeReduction = 0.0f;
+};
+
+struct TackModifier {
+    std::string_view name;
+    Hash itemHash;
+    float healthCoreMod;
+    float staminaCoreMod;
+    bool isPlayerPassive = false; // Defaulted to false inline
+};
+
+struct CombinedTackModifiers {
+    float totalHealthReduction = 0.0f;
+    float totalStaminaReduction = 0.0f;
 };

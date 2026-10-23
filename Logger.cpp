@@ -7,17 +7,21 @@
 #include <mutex>
 #include <condition_variable>
 #include <fstream>
+#include <chrono>
+#include <atomic>
+#include <string>
+#include <thread>
+#include <utility>
+#include <format>
 #include "Config.h"
 #include "Logger.h"
 #include "CMTypes.h"
 
 std::string g_LogPath = ".\\CoreManagement.log";
 
-// Shared orchestration variables instantiated here
 std::mutex g_LogQueueMutex;
 std::condition_variable g_LogCV;
 
-// Private, file-isolated synchronization variables (not exposed to script.cpp)
 static std::queue<std::string> s_LogQueue;
 
 DevLoggingCache g_LogCache;
@@ -67,13 +71,23 @@ void TryWaitForLogQueueDrain() {
     }
 }
 
-void WriteLog(LogLevel requiredLevel, const std::string& message) {
+void WriteLog(LogLevel requiredLevel, const std::string_view message) {
     int systemLevel = g_CurrentLogLevel.load(std::memory_order_acquire);
-    if (static_cast<int>(systemLevel) < static_cast<int>(requiredLevel)) return;
+    if (systemLevel < static_cast<int>(requiredLevel)) return;
 
     SYSTEMTIME st;
     GetLocalTime(&st);
-    char timeBuffer[16];
+
+    std::string formattedMessage = std::format("[{:02d}:{:02d}:{:02d}] {}",
+        st.wHour, st.wMinute, st.wSecond, message);
+
+    {
+        std::lock_guard<std::mutex> lock(g_LogQueueMutex);
+        s_LogQueue.push(std::move(formattedMessage));
+    }
+    g_LogCV.notify_one();
+
+    /*char timeBuffer[16];
     sprintf_s(timeBuffer, "[%02d:%02d:%02d] ", st.wHour, st.wMinute, st.wSecond);
     std::string formattedMessage = std::string(timeBuffer) + message;
 
@@ -81,7 +95,7 @@ void WriteLog(LogLevel requiredLevel, const std::string& message) {
         std::lock_guard<std::mutex> lock(g_LogQueueMutex);
         s_LogQueue.push(formattedMessage);
     }
-    g_LogCV.notify_one();
+    g_LogCV.notify_one();*/
 }
 
 void ClearLog() {

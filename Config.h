@@ -6,20 +6,22 @@
 #include <mutex>
 #include <atomic>
 #include <string>
+#include <memory>
 #include "Logger.h"
 
 extern std::string VERSION;
 
-// Explicit extern linkage to look up your main configuration settings
 struct CoreConfigSettings {
     int coreDrainTickIntervalMs = 10000;
     int stateChangeTickIntervalMs = 500;
+    float restrictedStateChangeTickIntervalMultiplier = 1.0f;
     int logLevelRaw = 1;
 
     LogLevel currentLogLevel = LogLevel::Standard;
 };
 
 struct GeneralConfigSettings {
+    int msPerInGameMinute = 2000;
     int nightStartHour = 20;
     int nightEndHour = 6;
 
@@ -31,9 +33,19 @@ struct PlayerConfigSettings {
     float baseHealthDecay = 3.5f;
     float baseStaminaDecay = 5.5f;
     float baseDeadEyeDecay = 4.16f;
+
     float healthTimeSkipMultiplier = 0.5f;
     float nightDeadEyeMultiplier = 1.3f;
+	float deadEyeDirtyMultiplier = 1.1f;
     float campedMultiplier = 0.25f;
+
+    float jogStaminaMultiplier = 1.2f;
+    float sprintStaminaMultiplier = 1.5f;
+
+    float mountWalkStaminaMultiplier = 0.8f;
+    float mountTrotStaminaMultiplier = 1.0f;
+    float mountGallopStaminaMultiplier = 1.2f;
+
     float healthTimeSkipFloor = 15.0f;
     float campedHealthFloor = 5.0f;
     float campedStaminaFloor = 5.0f;
@@ -43,25 +55,53 @@ struct PlayerConfigSettings {
 struct HorseConfigSettings {
     float baseHealthDecay = 3.5f;
     float baseStaminaDecay = 5.5f;
+
+    float grazeStaminaMultiplier = 0.7f;
     float trotStaminaMultiplier = 1.3f;
     float gallopStaminaMultiplier = 4.5f;
+
     float healthTimeSkipFloor = 15.0f;
     float campedHealthFloor = 5.0f;
     float campedStaminaFloor = 5.0f;
 };
 
+struct ConfigSnapshot {
+    std::shared_ptr<CoreConfigSettings>    corePtr;
+    std::shared_ptr<GeneralConfigSettings> generalPtr;
+    std::shared_ptr<PlayerConfigSettings>  playerPtr;
+    std::shared_ptr<HorseConfigSettings>   horsePtr;
+
+    // Expose clean direct references using dot notation
+    const CoreConfigSettings& CoreConfig;
+    const GeneralConfigSettings& GeneralConfig;
+    const PlayerConfigSettings& PlayerConfig;
+    const HorseConfigSettings& HorseConfig;
+
+    ConfigSnapshot(
+        std::shared_ptr<CoreConfigSettings>    core,
+        std::shared_ptr<GeneralConfigSettings> general,
+        std::shared_ptr<PlayerConfigSettings>  player,
+        std::shared_ptr<HorseConfigSettings>   horse)
+        : corePtr(std::move(core)), generalPtr(std::move(general)),
+        playerPtr(std::move(player)), horsePtr(std::move(horse)),
+        CoreConfig(*corePtr), GeneralConfig(*generalPtr),
+        PlayerConfig(*playerPtr), HorseConfig(*horsePtr)
+    {}
+};
+
 extern std::mutex g_ConfigMutex;
 
-extern std::atomic<int> g_CurrentLogLevel;
 extern std::atomic<bool> g_ShouldReloadConfig;
 
 extern std::string g_IniPath;
 
-extern std::atomic<int> g_stateChangeTickIntervalMs;
+extern std::atomic<int> g_StateChangeTickIntervalMs;
+extern std::atomic<int> g_StateChangeTickIntervalRestrictedMs;
+extern std::atomic<int> g_GameTimescaleMS;
 
-extern CoreConfigSettings g_CoreConfig;
-extern GeneralConfigSettings g_GeneralConfig;
-extern PlayerConfigSettings g_PlayerConfig;
-extern HorseConfigSettings g_HorseConfig;
+extern std::atomic<std::shared_ptr<CoreConfigSettings>> g_CoreConfig;
+extern std::atomic<std::shared_ptr<GeneralConfigSettings>> g_GeneralConfig;
+extern std::atomic<std::shared_ptr<PlayerConfigSettings>> g_PlayerConfig;
+extern std::atomic<std::shared_ptr<HorseConfigSettings>> g_HorseConfig;
 
 void LoadConfiguration();
