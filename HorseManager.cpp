@@ -212,7 +212,7 @@ void HorseManager::ResetState() noexcept {
 
     bool isDirty = dirtLevel > HORSE_DIRT_THRESHOLD;
 
-	LOG_DEV("Checking if horse is dirty. Dirt level: {}, Threshold: {}, IsDirty: {}", dirtLevel, HORSE_DIRT_THRESHOLD, isDirty);
+	LOG_DEV("Checking if horse is dirty. Dirt level: {:.4f}, Threshold: {}, IsDirty: {}", dirtLevel, HORSE_DIRT_THRESHOLD, isDirty);
 
     return isDirty;
 }
@@ -243,7 +243,7 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
             LOG_DEV("Horse is immobile, but being led by the player (not hitched).");
         }
         else {
-			LOG_DEV("Horse is mobile. Current speed: {:.2f} m/s.", horseSpeed);
+			LOG_DEV("Horse is mobile. Current speed: {:.4f} m/s.", horseSpeed);
         }
 
 		// We do a separate check for leading the horse, as it is possible for the horse to be immobile 
