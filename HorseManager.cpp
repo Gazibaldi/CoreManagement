@@ -2,6 +2,7 @@
         Copyright © 2026 Gary Tweddle / Gazibaldi.This program is free software : you can redistribute it and /or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
 */
 #include <tuple>
+#include <string>
 #include "..\CoreSDK\inc\natives.h"
 #include "HorseManager.h"
 #include "Logger.h"
@@ -19,11 +20,11 @@ std::tuple<Ped, bool> HorseManager::GetPlayerMountedHorse(Ped playerPed) noexcep
     if (activeHorse != 0 &&
         ENTITY::DOES_ENTITY_EXIST(activeHorse) &&
         !ENTITY::IS_ENTITY_DEAD(activeHorse)) {
-            WriteLog(LogLevel::Dev, "Player is mounted on a horse.");
+            LOG_DEV("Player is mounted on a horse.");
             return { activeHorse, true };
     }
     else {
-        WriteLog(LogLevel::Dev, "Player is not mounted on a horse.");
+        LOG_DEV("Player is not mounted on a horse.");
         return { 0, false };
     }
 }
@@ -33,7 +34,7 @@ std::tuple<Ped, bool> HorseManager::GetPlayerActiveHorse(Ped playerPed, bool inc
 
 	//We check if the player is mounted and if we are not including mounted horses, return no horse
 	if (hasHorse && !includeMounted) {
-		WriteLog(LogLevel::Dev, "Requested unmounted active horse.");
+		LOG_DEV("Player is mounted on a horse, but mounted horses are not included in the search. Returning no active horse.");
 		return { 0, false };
 	}
 	// If the player is mounted and we are including mounted horses, return the mounted horse
@@ -46,11 +47,11 @@ std::tuple<Ped, bool> HorseManager::GetPlayerActiveHorse(Ped playerPed, bool inc
         if (activeHorse != 0 &&
             ENTITY::DOES_ENTITY_EXIST(activeHorse) &&
             !ENTITY::IS_ENTITY_DEAD(activeHorse)) {
-            WriteLog(LogLevel::Dev, "Player has an active saddled horse.");
+            LOG_DEV("Player has an active saddled horse.");
             return { activeHorse, true };
         }
         else {
-            WriteLog(LogLevel::Dev, "Player does not have an active saddled horse.");
+            LOG_DEV("Player does not have an active saddled horse.");
             return { 0, false };
         }
     }
@@ -75,7 +76,7 @@ bool HorseManager::IsBeingLedByPlayer(Ped playerPed, Ped horsePed) noexcept {
 
     Ped ledHorse = TASK::_GET_LED_HORSE_FROM_PED(playerPed);
 
-    WriteLog(LogLevel::Dev, "Checking if horse being led is active horse");
+    LOG_DEV("Checking if horse being led is active horse");
 
 	return ledHorse == horsePed;
 }
@@ -94,12 +95,12 @@ bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) 
     bool result = (static_cast<float>(samples) / static_cast<float>(m_HorseSamples)) >= HORSE_SAMPLING_THRESHOLD;
 
     if(!result)
-	    WriteLog(LogLevel::Dev, "Horse didn't pass sample threshold check (" + std::string(sampleType == HorseSampleType::Lead ? "Lead" : "Hitched") + "): SamplesRecorded=" + std::to_string(samples) + ", TotalSamplesTaken=" + std::to_string(m_HorseSamples) + ", Threshold=" + std::to_string(HORSE_SAMPLING_THRESHOLD));
+        LOG_DEV("Horse didn't pass sample threshold check ({}): SamplesRecorded={}, TotalSamplesTaken={}, Threshold={}", std::string(sampleType == HorseSampleType::Lead ? "Lead" : "Hitched"), samples, m_HorseSamples, HORSE_SAMPLING_THRESHOLD);
 
     return result;
 }
 
-void HorseManager::OnReset() noexcept {
+void HorseManager::ResetState() noexcept {
     m_HorseSamples = 0;
     m_HorseImmobileSamples = 0;
     m_HorseLeadSamples = 0;
@@ -120,7 +121,7 @@ void HorseManager::OnReset() noexcept {
             if (hasHorse) {
                 float distance = GetHorseDistanceFromPlayer(playerPed, activeHorse);
 
-                WriteLog(LogLevel::Dev, "Active horse detected. Distance from player: " + std::to_string(distance) + " metres.");
+                LOG_DEV("Active horse detected. Distance from player: {} metres.", distance);
 
                 // If the horse is too far away, we consider it "lost" and reset the state.
                 // HORSE_MAX_DISTANCE_FROM_PLAYER (400) metres is a generous distance, 350m is the Bonding Level 4 max whistle distance.
@@ -140,13 +141,13 @@ void HorseManager::OnReset() noexcept {
 }
 
 [[nodiscard]] bool HorseManager::IsHorseHitched() noexcept {
-    WriteLog(LogLevel::Dev, "Getting horse hitched state.");
+    LOG_DEV("Getting horse hitched state.");
     
     return TestSampleThreshold(m_HorseImmobileSamples, HorseSampleType::Hitched);
 }
 
 [[nodiscard]] bool HorseManager::IsHorseBeingLed() noexcept {
-    WriteLog(LogLevel::Dev, "Getting horse being led state.");
+    LOG_DEV("Getting horse being led state.");
 
     return TestSampleThreshold(m_HorseLeadSamples, HorseSampleType::Lead);
 }
@@ -154,7 +155,7 @@ void HorseManager::OnReset() noexcept {
 [[nodiscard]] float HorseManager::GetHorseHitchedReward(float hoursDelta) noexcept {
 	// if the horse is not considered hitched and there is no accumulated reward, we return 0.0f to avoid applying any reward.
 	if (!TestSampleThreshold(m_HorseImmobileSamples, HorseSampleType::Hitched) && m_HorseHitchedReward < 1.0f) {
-		WriteLog(LogLevel::Dev, "Horse is not considered hitched. No reward to apply.");
+        LOG_DEV("Horse is not considered hitched. No reward to apply.");
 		m_HorseHitchedReward = 0.0f; // Reset the accumulated reward if the horse is not hitched
 
 		return 0.0f;
@@ -164,10 +165,10 @@ void HorseManager::OnReset() noexcept {
 
 	m_HorseHitchedReward += reward; // Accumulate the reward
 
-    WriteLog(LogLevel::Dev, "Current accumulated horse hitched reward: " + std::to_string(m_HorseHitchedReward));
+    LOG_DEV("Current accumulated horse hitched reward: {}", m_HorseHitchedReward);
 
 	if (m_HorseHitchedReward < 1.0f) {
-		WriteLog(LogLevel::Dev, "Accumulated horse hitched reward is less than 1.0f. Delaying reward application to next threshold.");
+		LOG_DEV("Accumulated horse hitched reward is less than 1.0f. Delaying reward application to next threshold.");
 
 		return 0.0f;
 	}
@@ -180,7 +181,7 @@ void HorseManager::OnReset() noexcept {
 
 [[nodiscard]] float HorseManager::GetHorseLeadReward(float hoursDelta) noexcept {
     if (!TestSampleThreshold(m_HorseLeadSamples, HorseSampleType::Lead) && m_HorseLeadReward < 1.0f) {
-        WriteLog(LogLevel::Dev, "Horse is not considered led. No reward to apply.");
+        LOG_DEV("Horse is not considered led. No reward to apply.");
         m_HorseLeadReward = 0.0f; // Reset the accumulated reward if the horse is not led
 
         return 0.0f;
@@ -190,10 +191,10 @@ void HorseManager::OnReset() noexcept {
 
     m_HorseLeadReward += reward; // Accumulate the reward
 
-	WriteLog(LogLevel::Dev, "Current accumulated horse lead reward: " + std::to_string(m_HorseLeadReward));
+	LOG_DEV("Current accumulated horse lead reward: {}", m_HorseLeadReward);
 
     if (m_HorseLeadReward < 1.0f) {
-        WriteLog(LogLevel::Dev, "Accumulated horse lead reward is less than 1.0f. Delaying reward application to next threshold.");
+        LOG_DEV("Accumulated horse lead reward is less than 1.0f. Delaying reward application to next threshold.");
 
         return 0.0f;
     }
@@ -205,7 +206,7 @@ void HorseManager::OnReset() noexcept {
 }
 
 void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
-    WriteLog(LogLevel::Dev, "Recording hitched/led snapshot for horse.");
+    LOG_DEV("Recording hitched/led snapshot for horse.");
     std::lock_guard<std::mutex> guard(m_Lock);
 
     // Check if the player has an active horse (saddled only) not mounted.
@@ -214,7 +215,7 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
     // mounted speed is tracked in MovementVelocityTracker
     auto [activeHorse, hasHorse] = GetActivePlayerHorse(playerPed, ActiveHorseType::Active);
     if (hasHorse) {
-        WriteLog(LogLevel::Dev, "Player has an active horse.");
+        LOG_DEV("Player has an active horse.");
         
         m_HorseSamples++;
         
@@ -223,35 +224,35 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
 
 		// Track immobile horse samples to determine if the horse is hitched
         if (horseSpeed == 0.0f && !isBeingLed) {
-            WriteLog(LogLevel::Dev, "Horse is immobile and not being led. Incrementing immobile sample count.");
+            LOG_DEV("Horse is immobile and not being led. Incrementing immobile sample count.");
             m_HorseImmobileSamples++;
         }
         else if(horseSpeed == 0.0f) {
-            WriteLog(LogLevel::Dev, "Horse is immobile, but being led by the player (not hitched).");
+            LOG_DEV("Horse is immobile, but being led by the player (not hitched).");
         }
         else {
-			WriteLog(LogLevel::Dev, "Horse is mobile. Current speed: " + std::to_string(horseSpeed) + " m/s.");
+			LOG_DEV("Horse is mobile. Current speed: {:.2f} m/s.", horseSpeed);
         }
 
 		// We do a separate check for leading the horse, as it is possible for the horse to be immobile 
         // but still being led by the player (e.g., if the player is holding the reins while standing still).
         if (isBeingLed) {
-            WriteLog(LogLevel::Dev, "Player is leading the horse.");
+            LOG_DEV("Player is leading the horse.");
             m_HorseLeadSamples++;
         }
         else {
-            WriteLog(LogLevel::Dev, "Player is not leading the horse.");
+            LOG_DEV("Player is not leading the horse.");
         }
     }
     else {
-        WriteLog(LogLevel::Dev, "Player does not have an active unmounted horse.");
-        OnReset();
+        LOG_DEV("Player does not have an active unmounted horse.");
+        ResetState();
     }
 }
 
 [[nodiscard]] void HorseManager::ResetSnapshot() noexcept {
-	WriteLog(LogLevel::Dev, "Resetting horse hitched/led snapshot.");
+	LOG_DEV("Resetting horse hitched/led snapshot.");
 
 	std::lock_guard<std::mutex> guard(m_Lock);
-    OnReset();
+    ResetState();
 }

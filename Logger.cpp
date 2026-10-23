@@ -7,6 +7,12 @@
 #include <mutex>
 #include <condition_variable>
 #include <fstream>
+#include <chrono>
+#include <atomic>
+#include <string>
+#include <thread>
+#include <utility>
+#include <format>
 #include "Config.h"
 #include "Logger.h"
 #include "CMTypes.h"
@@ -65,13 +71,23 @@ void TryWaitForLogQueueDrain() {
     }
 }
 
-void WriteLog(LogLevel requiredLevel, const std::string& message) {
+void WriteLog(LogLevel requiredLevel, const std::string_view message) {
     int systemLevel = g_CurrentLogLevel.load(std::memory_order_acquire);
     if (systemLevel < static_cast<int>(requiredLevel)) return;
 
     SYSTEMTIME st;
     GetLocalTime(&st);
-    char timeBuffer[16];
+
+    std::string formattedMessage = std::format("[{:02d}:{:02d}:{:02d}] {}",
+        st.wHour, st.wMinute, st.wSecond, message);
+
+    {
+        std::lock_guard<std::mutex> lock(g_LogQueueMutex);
+        s_LogQueue.push(std::move(formattedMessage));
+    }
+    g_LogCV.notify_one();
+
+    /*char timeBuffer[16];
     sprintf_s(timeBuffer, "[%02d:%02d:%02d] ", st.wHour, st.wMinute, st.wSecond);
     std::string formattedMessage = std::string(timeBuffer) + message;
 
@@ -79,7 +95,7 @@ void WriteLog(LogLevel requiredLevel, const std::string& message) {
         std::lock_guard<std::mutex> lock(g_LogQueueMutex);
         s_LogQueue.push(formattedMessage);
     }
-    g_LogCV.notify_one();
+    g_LogCV.notify_one();*/
 }
 
 void ClearLog() {

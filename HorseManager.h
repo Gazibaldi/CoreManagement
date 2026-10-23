@@ -27,7 +27,7 @@ class HorseManager {
     float GetHorseDistanceFromPlayer(Ped playerPed, Ped horsePed) noexcept;
     bool IsBeingLedByPlayer(Ped playerPed, Ped horsePed) noexcept;
     bool TestSampleThreshold(int samples, HorseSampleType sampleType) noexcept;
-	void OnReset() noexcept;
+	void ResetState() noexcept;
 
 public:
     void RecordSnapshot(Ped playerPed) noexcept;

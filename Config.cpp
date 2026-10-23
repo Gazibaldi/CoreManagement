@@ -10,6 +10,8 @@
 #include <atomic>
 #include <algorithm>
 #include <fstream>
+#include <memory>
+#include <mutex>
 #include "Config.h"
 
 #ifdef DEVTEST
@@ -22,10 +24,10 @@ std::string VERSION = "v0.11-ALPHA";
 
 std::mutex g_ConfigMutex;
 
-CoreConfigSettings g_CoreConfig;
-GeneralConfigSettings g_GeneralConfig;
-PlayerConfigSettings g_PlayerConfig;
-HorseConfigSettings g_HorseConfig;
+std::atomic<std::shared_ptr<CoreConfigSettings>> g_CoreConfig{ std::make_shared<CoreConfigSettings>() };
+std::atomic<std::shared_ptr<GeneralConfigSettings>> g_GeneralConfig{ std::make_shared<GeneralConfigSettings>() };
+std::atomic<std::shared_ptr<PlayerConfigSettings>> g_PlayerConfig{ std::make_shared<PlayerConfigSettings>() };
+std::atomic<std::shared_ptr<HorseConfigSettings>> g_HorseConfig{ std::make_shared<HorseConfigSettings>() };
 
 CoreConfigSettings defaultCoreConfig;
 GeneralConfigSettings defaultGeneralConfig;
@@ -183,7 +185,7 @@ void BuildDefaultConfigFile() {
     }
 }
 
-void LogConfiguration() {  
+void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigSettings* generalConfig, const PlayerConfigSettings* playerConfig, const HorseConfigSettings* horseConfig) {
     if (g_CurrentLogLevel.load(std::memory_order_acquire) < static_cast<int>(LogLevel::Standard))
         return;
 
@@ -192,48 +194,48 @@ void LogConfiguration() {
         << "\n\n+---------------------------------------------+------------+\n"
         << "| Configuration Parameter                     |      Value |\n"
         << "+---------------------------------------------+------------+\n"
-        << "| Logging: Log Level                          | " << std::setw(10) << g_CoreConfig.logLevelRaw << " |\n"
+        << "| Logging: Log Level                          | " << std::setw(10) << coreConfig->logLevelRaw << " |\n"
         << "|                                             |            |\n"
-        << "| Performance: Drain Tick Interval (ms)       | " << std::setw(10) << g_CoreConfig.coreDrainTickIntervalMs << " |\n"
-        << "| Performance: State Tick Interval (ms)       | " << std::setw(10) << g_CoreConfig.stateChangeTickIntervalMs << " |\n"
-        << "| Performance: State Tick Interval Multiplier | " << std::setw(10) << g_CoreConfig.restrictedStateChangeTickIntervalMultiplier << " |\n"
+        << "| Performance: Drain Tick Interval (ms)       | " << std::setw(10) << coreConfig->coreDrainTickIntervalMs << " |\n"
+        << "| Performance: State Tick Interval (ms)       | " << std::setw(10) << coreConfig->stateChangeTickIntervalMs << " |\n"
+        << "| Performance: State Tick Interval Multiplier | " << std::setw(10) << coreConfig->restrictedStateChangeTickIntervalMultiplier << " |\n"
         << "|                                             |            |\n"
-        << "| General: In-Game Minute (ms)                | " << std::setw(10) << g_GeneralConfig.msPerInGameMinute << " |\n"
-        << "| General: Night Start Hour                   | " << std::setw(10) << g_GeneralConfig.nightStartHour << " |\n"
-        << "| General: Night End Hour                     | " << std::setw(10) << g_GeneralConfig.nightEndHour << " |\n"
-        << "| General: Drain Enabled for Missions         | " << std::setw(10) << static_cast<int>(g_GeneralConfig.enableDuringMissions) << " |\n"
-        << "| General: Drain Enabled for Mini-games       | " << std::setw(10) << static_cast<int>(g_GeneralConfig.enableDuringMinigames) << " |\n"
+        << "| General: In-Game Minute (ms)                | " << std::setw(10) << generalConfig->msPerInGameMinute << " |\n"
+        << "| General: Night Start Hour                   | " << std::setw(10) << generalConfig->nightStartHour << " |\n"
+        << "| General: Night End Hour                     | " << std::setw(10) << generalConfig->nightEndHour << " |\n"
+        << "| General: Drain Enabled for Missions         | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringMissions) << " |\n"
+        << "| General: Drain Enabled for Mini-games       | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringMinigames) << " |\n"
         << "|                                             |            |\n"
-        << "| Player: Health Base Awake Decay             | " << std::setw(10) << g_PlayerConfig.baseHealthDecay << " |\n"
-        << "| Player: Stamina Base Awake Decay            | " << std::setw(10) << g_PlayerConfig.baseStaminaDecay << " |\n"
-        << "| Player: Dead Eye Base Awake Decay           | " << std::setw(10) << g_PlayerConfig.baseDeadEyeDecay << " |\n"
+        << "| Player: Health Base Awake Decay             | " << std::setw(10) << playerConfig->baseHealthDecay << " |\n"
+        << "| Player: Stamina Base Awake Decay            | " << std::setw(10) << playerConfig->baseStaminaDecay << " |\n"
+        << "| Player: Dead Eye Base Awake Decay           | " << std::setw(10) << playerConfig->baseDeadEyeDecay << " |\n"
         << "|                                             |            |\n"
-        << "| Player: Sleep Health Multiplier             | " << std::setw(10) << g_PlayerConfig.healthTimeSkipMultiplier << " |\n"
-        << "| Player: Night Dead Eye Multiplier           | " << std::setw(10) << g_PlayerConfig.nightDeadEyeMultiplier << " |\n"
-        << "| Player: Camped/Restrained Multiplier        | " << std::setw(10) << g_PlayerConfig.campedMultiplier << " |\n"
+        << "| Player: Sleep Health Multiplier             | " << std::setw(10) << playerConfig->healthTimeSkipMultiplier << " |\n"
+        << "| Player: Night Dead Eye Multiplier           | " << std::setw(10) << playerConfig->nightDeadEyeMultiplier << " |\n"
+        << "| Player: Camped/Restrained Multiplier        | " << std::setw(10) << playerConfig->campedMultiplier << " |\n"
         << "|                                             |            |\n"
-        << "| Player: Jog Stamina Multiplier              | " << std::setw(10) << g_PlayerConfig.jogStaminaMultiplier << " |\n"
-        << "| Player: Sprint Stamina Multiplier           | " << std::setw(10) << g_PlayerConfig.sprintStaminaMultiplier << " |\n"
+        << "| Player: Jog Stamina Multiplier              | " << std::setw(10) << playerConfig->jogStaminaMultiplier << " |\n"
+        << "| Player: Sprint Stamina Multiplier           | " << std::setw(10) << playerConfig->sprintStaminaMultiplier << " |\n"
         << "|                                             |            |\n"
-		<< "| Player: Mounted Walk Stamina Multiplier     | " << std::setw(10) << g_PlayerConfig.mountWalkStaminaMultiplier << " |\n"
-        << "| Player: Mounted Trot Stamina Multiplier     | " << std::setw(10) << g_PlayerConfig.mountTrotStaminaMultiplier << " |\n"
-        << "| Player: Mounted Gallop Stamina Multiplier   | " << std::setw(10) << g_PlayerConfig.mountGallopStaminaMultiplier << " |\n"
+		<< "| Player: Mounted Walk Stamina Multiplier     | " << std::setw(10) << playerConfig->mountWalkStaminaMultiplier << " |\n"
+        << "| Player: Mounted Trot Stamina Multiplier     | " << std::setw(10) << playerConfig->mountTrotStaminaMultiplier << " |\n"
+        << "| Player: Mounted Gallop Stamina Multiplier   | " << std::setw(10) << playerConfig->mountGallopStaminaMultiplier << " |\n"
         << "|                                             |            |\n"
-        << "| Player: Health Timeskip Floor               | " << std::setw(10) << g_PlayerConfig.healthTimeSkipFloor << " |\n"
-        << "| Player: Health Camped Floor                 | " << std::setw(10) << g_PlayerConfig.campedHealthFloor << " |\n"
-        << "| Player: Stamina Camped Floor                | " << std::setw(10) << g_PlayerConfig.campedStaminaFloor << " |\n"
-        << "| Player: Dead Eye Camped Floor               | " << std::setw(10) << g_PlayerConfig.campedDeadEyeFloor << " |\n"
+        << "| Player: Health Timeskip Floor               | " << std::setw(10) << playerConfig->healthTimeSkipFloor << " |\n"
+        << "| Player: Health Camped Floor                 | " << std::setw(10) << playerConfig->campedHealthFloor << " |\n"
+        << "| Player: Stamina Camped Floor                | " << std::setw(10) << playerConfig->campedStaminaFloor << " |\n"
+        << "| Player: Dead Eye Camped Floor               | " << std::setw(10) << playerConfig->campedDeadEyeFloor << " |\n"
         << "|                                             |            |\n"
-        << "| Horse: Health Base Decay                    | " << std::setw(10) << g_HorseConfig.baseHealthDecay << " |\n"
-        << "| Horse: Stamina Base Decay                   | " << std::setw(10) << g_HorseConfig.baseStaminaDecay << " |\n"
+        << "| Horse: Health Base Decay                    | " << std::setw(10) << horseConfig->baseHealthDecay << " |\n"
+        << "| Horse: Stamina Base Decay                   | " << std::setw(10) << horseConfig->baseStaminaDecay << " |\n"
         << "|                                             |            |\n"
-		<< "| Horse: Stamina Graze Multiplier             | " << std::setw(10) << g_HorseConfig.grazeStaminaMultiplier << " |\n"
-        << "| Horse: Stamina Trot Multiplier              | " << std::setw(10) << g_HorseConfig.trotStaminaMultiplier << " |\n"
-        << "| Horse: Stamina Gallop Multiplier            | " << std::setw(10) << g_HorseConfig.gallopStaminaMultiplier << " |\n"
+		<< "| Horse: Stamina Graze Multiplier             | " << std::setw(10) << horseConfig->grazeStaminaMultiplier << " |\n"
+        << "| Horse: Stamina Trot Multiplier              | " << std::setw(10) << horseConfig->trotStaminaMultiplier << " |\n"
+        << "| Horse: Stamina Gallop Multiplier            | " << std::setw(10) << horseConfig->gallopStaminaMultiplier << " |\n"
         << "|                                             |            |\n"
-        << "| Horse: Health Timeskip Floor                | " << std::setw(10) << g_HorseConfig.healthTimeSkipFloor << " |\n"
-        << "| Horse: Health Camped Floor                  | " << std::setw(10) << g_HorseConfig.campedHealthFloor << " |\n"
-        << "| Horse: Stamina Camped Floor                 | " << std::setw(10) << g_HorseConfig.campedStaminaFloor << " |\n"
+        << "| Horse: Health Timeskip Floor                | " << std::setw(10) << horseConfig->healthTimeSkipFloor << " |\n"
+        << "| Horse: Health Camped Floor                  | " << std::setw(10) << horseConfig->campedHealthFloor << " |\n"
+        << "| Horse: Stamina Camped Floor                 | " << std::setw(10) << horseConfig->campedStaminaFloor << " |\n"
         << "+---------------------------------------------+------------+\n";
 
     WriteLog(LogLevel::Standard, "Internal Parameter Map Hydrated:" + table.str());
@@ -249,80 +251,90 @@ void LoadConfiguration() {
 
     WriteLog(LogLevel::Standard, "Loading ini configuration from: " + g_IniPath);
 
-    g_CoreConfig.coreDrainTickIntervalMs = std::clamp(GetIniInt("Performance", "coreDrainTickIntervalMs", defaultCoreConfig.coreDrainTickIntervalMs, g_IniPath.c_str()), 5000, 300000); // minimum 5 second tick interval maximum 5 minute tick interval
+    std::shared_ptr<CoreConfigSettings>    newCoreConfig = std::make_shared<CoreConfigSettings>();
+    std::shared_ptr<GeneralConfigSettings> newGeneralConfig = std::make_shared<GeneralConfigSettings>();
+    std::shared_ptr<PlayerConfigSettings>  newPlayerConfig = std::make_shared<PlayerConfigSettings>();
+	std::shared_ptr<HorseConfigSettings>   newHorseConfig = std::make_shared<HorseConfigSettings>();
+
+    newCoreConfig->coreDrainTickIntervalMs = std::clamp(GetIniInt("Performance", "coreDrainTickIntervalMs", defaultCoreConfig.coreDrainTickIntervalMs, g_IniPath.c_str()), 5000, 300000); // minimum 5 second tick interval maximum 5 minute tick interval
 		                                                                                                                                                                                // it's designed to be a slow loop as core drain 
                                                                                                                                                                                         // isn't really a real-time process        
         
-	g_CoreConfig.stateChangeTickIntervalMs = std::clamp(GetIniInt("Performance", "stateChangeTickIntervalMs", defaultCoreConfig.stateChangeTickIntervalMs, g_IniPath.c_str()), 100, 1000); // clamp between 0.1 and 1 second tick interval 
+	newCoreConfig->stateChangeTickIntervalMs = std::clamp(GetIniInt("Performance", "stateChangeTickIntervalMs", defaultCoreConfig.stateChangeTickIntervalMs, g_IniPath.c_str()), 100, 1000); // clamp between 0.1 and 1 second tick interval 
 	                                                                                                                                                                                       // it's designed to be a fast loop (very lightweight)
                                                                                                                                                                                            // to avoid excessive CPU usage while not too slow to miss state changes
-	g_CoreConfig.restrictedStateChangeTickIntervalMultiplier = std::clamp(GetIniFloat("Performance", "restrictedStateChangeTickIntervalMultiplier", 
+	newCoreConfig->restrictedStateChangeTickIntervalMultiplier = std::clamp(GetIniFloat("Performance", "restrictedStateChangeTickIntervalMultiplier", 
                                                                    defaultCoreConfig.restrictedStateChangeTickIntervalMultiplier, g_IniPath.c_str()), 1.0f, 3.0f); // clamp between 1.0 and 3.0 multiplier
 
-	g_CoreConfig.logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", defaultCoreConfig.logLevelRaw, g_IniPath.c_str()), defaultCoreConfig.logLevelRaw); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay, will effect fps). 
+	newCoreConfig->logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", defaultCoreConfig.logLevelRaw, g_IniPath.c_str()), defaultCoreConfig.logLevelRaw); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay, will effect fps). 
                                                                                                                                                                     // Range is 0-2 for normal gameplay. 0=disabled, 1=standard, 2=verbose
 
-    g_GeneralConfig.msPerInGameMinute = std::clamp(GetIniInt("General", "MsPerInGameMinute", defaultGeneralConfig.msPerInGameMinute, g_IniPath.c_str()), 2000, 60000); // clamp between 2000ms (2 seconds) and 60000ms (60 seconds)
-    g_GeneralConfig.nightStartHour = std::clamp(GetIniInt("General", "NightStartHour", defaultGeneralConfig.nightStartHour, g_IniPath.c_str()), 18, 22); // clamp between 18 and 22 (6pm - 10pm)
-    g_GeneralConfig.nightEndHour = std::clamp(GetIniInt("General", "NightEndHour", defaultGeneralConfig.nightEndHour, g_IniPath.c_str()), 4, 8); // clamp between 4 and 8 (4am - 8am)
-    g_GeneralConfig.enableDuringMissions = GetIniBool("General", "EnableDuringMissions", defaultGeneralConfig.enableDuringMissions, g_IniPath.c_str());
-    g_GeneralConfig.enableDuringMinigames = GetIniBool("General", "EnableDuringMinigames", defaultGeneralConfig.enableDuringMinigames, g_IniPath.c_str());
+    newGeneralConfig->msPerInGameMinute = std::clamp(GetIniInt("General", "MsPerInGameMinute", defaultGeneralConfig.msPerInGameMinute, g_IniPath.c_str()), 2000, 60000); // clamp between 2000ms (2 seconds) and 60000ms (60 seconds)
+    newGeneralConfig->nightStartHour = std::clamp(GetIniInt("General", "NightStartHour", defaultGeneralConfig.nightStartHour, g_IniPath.c_str()), 18, 22); // clamp between 18 and 22 (6pm - 10pm)
+    newGeneralConfig->nightEndHour = std::clamp(GetIniInt("General", "NightEndHour", defaultGeneralConfig.nightEndHour, g_IniPath.c_str()), 4, 8); // clamp between 4 and 8 (4am - 8am)
+    newGeneralConfig->enableDuringMissions = GetIniBool("General", "EnableDuringMissions", defaultGeneralConfig.enableDuringMissions, g_IniPath.c_str());
+    newGeneralConfig->enableDuringMinigames = GetIniBool("General", "EnableDuringMinigames", defaultGeneralConfig.enableDuringMinigames, g_IniPath.c_str());
 
-    g_PlayerConfig.baseHealthDecay = std::clamp(GetIniFloat("BaseDecayAwake", "HealthDecayBase", defaultPlayerConfig.baseHealthDecay, g_IniPath.c_str()), 1.0f, 100.0f);
-    g_PlayerConfig.baseStaminaDecay = std::clamp(GetIniFloat("BaseDecayAwake", "StaminaDecayBase", defaultPlayerConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
-    g_PlayerConfig.baseDeadEyeDecay = std::clamp(GetIniFloat("BaseDecayAwake", "DeadEyeDecayBase", defaultPlayerConfig.baseDeadEyeDecay, g_IniPath.c_str()), 1.0f, 100.0f);
+    newPlayerConfig->baseHealthDecay = std::clamp(GetIniFloat("BaseDecayAwake", "HealthDecayBase", defaultPlayerConfig.baseHealthDecay, g_IniPath.c_str()), 1.0f, 100.0f);
+    newPlayerConfig->baseStaminaDecay = std::clamp(GetIniFloat("BaseDecayAwake", "StaminaDecayBase", defaultPlayerConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
+    newPlayerConfig->baseDeadEyeDecay = std::clamp(GetIniFloat("BaseDecayAwake", "DeadEyeDecayBase", defaultPlayerConfig.baseDeadEyeDecay, g_IniPath.c_str()), 1.0f, 100.0f);
 
-    g_PlayerConfig.healthTimeSkipMultiplier = std::clamp(GetIniFloat("Modifiers", "HealthTimeSkipMultiplier", defaultPlayerConfig.healthTimeSkipMultiplier, g_IniPath.c_str()), 0.01f, 10.0f);
-    g_PlayerConfig.nightDeadEyeMultiplier = std::clamp(GetIniFloat("Modifiers", "NightDeadEyeMultiplier", defaultPlayerConfig.nightDeadEyeMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
-    g_PlayerConfig.campedMultiplier = std::clamp(GetIniFloat("Modifiers", "CampedMultiplier", defaultPlayerConfig.campedMultiplier, g_IniPath.c_str()), 0.01f, 10.0f);
+    newPlayerConfig->healthTimeSkipMultiplier = std::clamp(GetIniFloat("Modifiers", "HealthTimeSkipMultiplier", defaultPlayerConfig.healthTimeSkipMultiplier, g_IniPath.c_str()), 0.01f, 10.0f);
+    newPlayerConfig->nightDeadEyeMultiplier = std::clamp(GetIniFloat("Modifiers", "NightDeadEyeMultiplier", defaultPlayerConfig.nightDeadEyeMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+    newPlayerConfig->campedMultiplier = std::clamp(GetIniFloat("Modifiers", "CampedMultiplier", defaultPlayerConfig.campedMultiplier, g_IniPath.c_str()), 0.01f, 10.0f);
 
-    g_PlayerConfig.jogStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "JogStaminaMultiplier", defaultPlayerConfig.jogStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
-    g_PlayerConfig.sprintStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "SprintStaminaMultiplier", defaultPlayerConfig.sprintStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+    newPlayerConfig->jogStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "JogStaminaMultiplier", defaultPlayerConfig.jogStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+    newPlayerConfig->sprintStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "SprintStaminaMultiplier", defaultPlayerConfig.sprintStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
 
-	g_PlayerConfig.mountWalkStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedWalkStaminaMultiplier", defaultPlayerConfig.mountWalkStaminaMultiplier, g_IniPath.c_str()), 0.5f, 10.0f);
-    g_PlayerConfig.mountTrotStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedTrotStaminaMultiplier", defaultPlayerConfig.mountTrotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
-    g_PlayerConfig.mountGallopStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedGallopStaminaMultiplier", defaultPlayerConfig.mountGallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+	newPlayerConfig->mountWalkStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedWalkStaminaMultiplier", defaultPlayerConfig.mountWalkStaminaMultiplier, g_IniPath.c_str()), 0.5f, 10.0f);
+    newPlayerConfig->mountTrotStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedTrotStaminaMultiplier", defaultPlayerConfig.mountTrotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+    newPlayerConfig->mountGallopStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedGallopStaminaMultiplier", defaultPlayerConfig.mountGallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
 
-    g_PlayerConfig.healthTimeSkipFloor = std::clamp(GetIniFloat("Floors", "HealthTimeSkipFloor", defaultPlayerConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 15.0f);
-    g_PlayerConfig.campedHealthFloor = std::clamp(GetIniFloat("Floors", "CampedHealthFloor", defaultPlayerConfig.campedHealthFloor, g_IniPath.c_str()), 5.0f, 10.0f);
-    g_PlayerConfig.campedStaminaFloor = std::clamp(GetIniFloat("Floors", "CampedStaminaFloor", defaultPlayerConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 10.0f);
-    g_PlayerConfig.campedDeadEyeFloor = std::clamp(GetIniFloat("Floors", "CampedDeadEyeFloor", defaultPlayerConfig.campedDeadEyeFloor, g_IniPath.c_str()), 1.0f, 10.0f);
+    newPlayerConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("Floors", "HealthTimeSkipFloor", defaultPlayerConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 15.0f);
+    newPlayerConfig->campedHealthFloor = std::clamp(GetIniFloat("Floors", "CampedHealthFloor", defaultPlayerConfig.campedHealthFloor, g_IniPath.c_str()), 5.0f, 10.0f);
+    newPlayerConfig->campedStaminaFloor = std::clamp(GetIniFloat("Floors", "CampedStaminaFloor", defaultPlayerConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 10.0f);
+    newPlayerConfig->campedDeadEyeFloor = std::clamp(GetIniFloat("Floors", "CampedDeadEyeFloor", defaultPlayerConfig.campedDeadEyeFloor, g_IniPath.c_str()), 1.0f, 10.0f);
 
-    g_HorseConfig.baseHealthDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseHealthDecayBase", defaultHorseConfig.baseHealthDecay, g_IniPath.c_str()), 1.0f, 100.0f);
-    g_HorseConfig.baseStaminaDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", defaultHorseConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
+    newHorseConfig->baseHealthDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseHealthDecayBase", defaultHorseConfig.baseHealthDecay, g_IniPath.c_str()), 1.0f, 100.0f);
+    newHorseConfig->baseStaminaDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", defaultHorseConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
 
-	g_HorseConfig.grazeStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGrazeStaminaMultiplier", defaultHorseConfig.grazeStaminaMultiplier, g_IniPath.c_str()), 0.5f, 10.0f);
-    g_HorseConfig.trotStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", defaultHorseConfig.trotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
-    g_HorseConfig.gallopStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", defaultHorseConfig.gallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+	newHorseConfig->grazeStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGrazeStaminaMultiplier", defaultHorseConfig.grazeStaminaMultiplier, g_IniPath.c_str()), 0.5f, 10.0f);
+    newHorseConfig->trotStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", defaultHorseConfig.trotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+    newHorseConfig->gallopStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", defaultHorseConfig.gallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
 
-    g_HorseConfig.healthTimeSkipFloor = std::clamp(GetIniFloat("HorseFloors", "HorseHealthTimeSkipFloor", defaultHorseConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 15.0f);
-    g_HorseConfig.campedHealthFloor = std::clamp(GetIniFloat("HorseFloors", "CampedHealthFloor", defaultHorseConfig.campedHealthFloor, g_IniPath.c_str()), 1.0f, 10.0f);
-    g_HorseConfig.campedStaminaFloor = std::clamp(GetIniFloat("HorseFloors", "CampedStaminaFloor", defaultHorseConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 10.0f);
+    newHorseConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("HorseFloors", "HorseHealthTimeSkipFloor", defaultHorseConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 15.0f);
+    newHorseConfig->campedHealthFloor = std::clamp(GetIniFloat("HorseFloors", "CampedHealthFloor", defaultHorseConfig.campedHealthFloor, g_IniPath.c_str()), 1.0f, 10.0f);
+    newHorseConfig->campedStaminaFloor = std::clamp(GetIniFloat("HorseFloors", "CampedStaminaFloor", defaultHorseConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 10.0f);
 
-	switch (g_CoreConfig.logLevelRaw) {
+    switch (newCoreConfig->logLevelRaw) {
 	case 0:
-		g_CoreConfig.currentLogLevel = LogLevel::Disabled;
+        newCoreConfig->currentLogLevel = LogLevel::Disabled;
 		break;
 	case 1:
-		g_CoreConfig.currentLogLevel = LogLevel::Standard;
+        newCoreConfig->currentLogLevel = LogLevel::Standard;
 		break;
 	case 2:
-		g_CoreConfig.currentLogLevel = LogLevel::Verbose;
+        newCoreConfig->currentLogLevel = LogLevel::Verbose;
 		break;
 	case 2105:
-		g_CoreConfig.currentLogLevel = LogLevel::Dev;
+        newCoreConfig->currentLogLevel = LogLevel::Dev;
 		break;
 	default:
-		g_CoreConfig.currentLogLevel = LogLevel::Disabled; // Fallback to disabled if somehow an invalid value is present
+        newCoreConfig->currentLogLevel = LogLevel::Disabled; // Fallback to disabled if somehow an invalid value is present
 		break;
 	}
 
-	g_GameTimescaleMS.store(g_GeneralConfig.msPerInGameMinute, std::memory_order_release);
-    
-    g_StateChangeTickIntervalMs.store(g_CoreConfig.stateChangeTickIntervalMs, std::memory_order_release);
-    g_StateChangeTickIntervalRestrictedMs.store(static_cast<int>(g_CoreConfig.stateChangeTickIntervalMs * g_CoreConfig.restrictedStateChangeTickIntervalMultiplier), std::memory_order_release);
-    
-    g_CurrentLogLevel.store(static_cast<int>(g_CoreConfig.logLevelRaw), std::memory_order_release);
+    g_CoreConfig.store(newCoreConfig, std::memory_order_release);
+    g_GeneralConfig.store(newGeneralConfig, std::memory_order_release);
+    g_PlayerConfig.store(newPlayerConfig, std::memory_order_release);
+    g_HorseConfig.store(newHorseConfig, std::memory_order_release);
 
-    LogConfiguration();
+	g_GameTimescaleMS.store(newGeneralConfig->msPerInGameMinute, std::memory_order_release);
+    
+    g_StateChangeTickIntervalMs.store(newCoreConfig->stateChangeTickIntervalMs, std::memory_order_release);
+    g_StateChangeTickIntervalRestrictedMs.store(static_cast<int>(newCoreConfig->stateChangeTickIntervalMs * newCoreConfig->restrictedStateChangeTickIntervalMultiplier), std::memory_order_release);
+    
+    g_CurrentLogLevel.store(static_cast<int>(newCoreConfig->logLevelRaw), std::memory_order_release);
+
+    LogConfiguration(newCoreConfig.get(), newGeneralConfig.get(), newPlayerConfig.get(), newHorseConfig.get());
 }

@@ -46,7 +46,9 @@ struct SimulationState {
     int msPerInGameMinute = 2000;
 
     Ped lastKnownPlayerPed = 0;
+	bool configStructuresInitialised = false;
 };
+
 struct GameplayContext {
     bool freezeActive = false;
     bool monitorTransientVarsDuringFreeze = false;

@@ -8,7 +8,7 @@
 
 Hash GetKey(const char* key) {
     Hash hash = MISC::GET_HASH_KEY(key);
-    WriteLog(LogLevel::Dev, "Precomputed hash for key '" + std::string(key) + "': " + std::to_string(hash));
+    LOG_DEV("Precomputed hash for key '{}': {}", key, hash);
 
     return hash;
 }
@@ -188,7 +188,7 @@ void InventoryManager::ComputeHashes() noexcept {
     
     INVENTORY::INVENTORY_GET_GUID_FROM_ITEMID(1, (Any*)&guid, itemHash, slotId, (Any*)&outGuid);
 
-	WriteLog(LogLevel::Dev, "Retrieved inventory item GUID for item hash " + std::to_string(itemHash) + ": " + outGuid.ToString());
+	LOG_DEV("Retrieved inventory item GUID for item hash {}: {}", itemHash, outGuid.ToString());
     
     return outGuid;
 }
@@ -200,11 +200,11 @@ void InventoryManager::ComputeHashes() noexcept {
     RDR_GUID invGuid = GetPlayerInventoryItemGUID(m_CharacterHash, emptyGuid, m_NullSlotHash);
 
     if (invGuid.IsInvalid()) {
-		WriteLog(LogLevel::Dev, "Failed to retrieve player inventory GUID.");
+		LOG_DEV("Failed to retrieve player inventory GUID.");
 		return RDR_GUID{};
     }
 
-	WriteLog(LogLevel::Dev, "Retrieved player inventory GUID: " + invGuid.ToString());
+	LOG_DEV("Retrieved player inventory GUID: {}", invGuid.ToString());
 
     return invGuid;
 }
@@ -213,16 +213,16 @@ void InventoryManager::ComputeHashes() noexcept {
     RDR_ITEMINFO info{};
 
     if (!ITEMDATABASE::_ITEMDATABASE_IS_KEY_VALID(itemHash, 0)) {
-		WriteLog(LogLevel::Dev, "Item hash is not valid in the item database. Hash: " + std::to_string(itemHash));
+		LOG_DEV("Item hash is not valid in the item database. Hash: {}", itemHash);
         return 0;
     }
 
     if (!ITEMDATABASE::ITEMDATABASE_FILLOUT_ITEM_INFO(itemHash, (Any*)&info)) {
-		WriteLog(LogLevel::Dev, "Failed to fill out item info for hash: " + std::to_string(itemHash));
+		LOG_DEV("Failed to fill out item info for hash: {}", itemHash);
         return 0;
     }
 
-	WriteLog(LogLevel::Dev, "Retrieved item group for hash " + std::to_string(itemHash) + ": " + std::to_string(info.itemGroup));
+	LOG_DEV("Retrieved item group for hash {}: {}", itemHash, info.itemGroup);
     
     return info.itemGroup;
 }
@@ -239,17 +239,17 @@ void InventoryManager::ComputeHashes() noexcept {
         switch (group)
         {
 		case 0x8A291148: // HORSE
-            WriteLog(LogLevel::Dev, "Item (hash: " + std::to_string(itemHash) + ") fits horse wardrobe container (hash: " + std::to_string(m_WardrobeContainerHash) + ")");
+            LOG_DEV("Item (hash: {}) fits horse wardrobe container (hash: {})", itemHash, m_WardrobeContainerHash);
             slotInfo.guid = GetPlayerInventoryItemGUID(m_WardrobeContainerHash, slotInfo.guid, m_ActiveHorseSlotHash);
             slotInfo.slotId = INVENTORY::_GET_DEFAULT_ITEM_SLOT_INFO(itemHash, m_WardrobeContainerHash);
             break;
 		case 0xC2286F01: // CLOTHING (WARDROBE)
-            WriteLog(LogLevel::Dev, "Item (hash: " + std::to_string(itemHash) + ") fits wardrobe container (hash: " + std::to_string(m_WardrobeContainerHash) + ")");
+            LOG_DEV("Item (hash: {}) fits wardrobe container (hash: {})", itemHash, m_WardrobeContainerHash);
             slotInfo.guid = GetPlayerInventoryItemGUID(m_WardrobeContainerHash, slotInfo.guid, m_WardrobeSlotHash);
             slotInfo.slotId = INVENTORY::_GET_DEFAULT_ITEM_SLOT_INFO(itemHash, m_WardrobeContainerHash);
             break;
 		case 0xDE7B48B3: // SATCHEL
-            WriteLog(LogLevel::Dev, "Item (hash: " + std::to_string(itemHash) + ") fits in satchel slot (hash: " + std::to_string(m_SatchelSlotHash) + ")");
+            LOG_DEV("Item (hash: {}) fits in satchel slot (hash: {})", itemHash, m_SatchelSlotHash);
             slotInfo.slotId = m_SatchelSlotHash;
             break;
         default:
@@ -264,14 +264,14 @@ void InventoryManager::ComputeHashes() noexcept {
     RDR_SLOTINFO slotInfo = GetItemSlotInfo(itemHash);
 
     if (slotInfo.IsInvalid()) {
-		WriteLog(LogLevel::Dev, "Failed to retrieve slot info for item: " + itemName + " (hash: " + std::to_string(itemHash) + ")");
+		LOG_DEV("Failed to retrieve slot info for item: {} (hash: {})", itemName, itemHash);
         return false;
     }
 
     RDR_GUID itemGuid = GetPlayerInventoryItemGUID(itemHash, slotInfo.guid, slotInfo.slotId);
 
     if(itemGuid.IsInvalid()) {
-		WriteLog(LogLevel::Verbose, "Player does not have item: " + itemName + "(hash: " + std::to_string(itemHash) + ") in their inventory");
+		LOG_DEV("Player does not have item: {} (hash: {}) in their inventory", itemName, itemHash);
         return false;
     }
     else {
@@ -291,13 +291,13 @@ void InventoryManager::ComputeHashes() noexcept {
     RDR_SLOTINFO slotInfo = GetItemSlotInfo(itemHash);
 
     if (slotInfo.IsInvalid()) {
-        WriteLog(LogLevel::Dev, "Failed to retrieve slot info for item: " + itemName + " (hash: " + std::to_string(itemHash) + ")");
+        LOG_DEV("Failed to retrieve slot info for item: {} (hash: {})", itemName, itemHash);
         return false;
     }
 
     RDR_GUID itemGuid = GetPlayerInventoryItemGUID(itemHash, slotInfo.guid, slotInfo.slotId);
 
-	WriteLog(LogLevel::Dev, "Inventory item: " + itemName + " (hash: " + std::to_string(itemHash) + ") has GUID: " + itemGuid.ToString());
+	LOG_DEV("Inventory item: {} (hash: {}) has GUID: {}", itemName, itemHash, itemGuid.ToString());
 
     if (itemGuid.IsInvalid()) {
         WriteLog(LogLevel::Verbose, "Horse does not have item: " + itemName + " (hash: " + std::to_string(itemHash) + ") in their inventory");

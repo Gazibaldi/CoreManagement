@@ -14,7 +14,7 @@
 void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
     if (playerPed == 0 || !ENTITY::DOES_ENTITY_EXIST(playerPed)) return;
 	
-    WriteLog(LogLevel::Dev, "Recording movement snapshot for player.");
+    LOG_DEV("Recording movement snapshot for player.");
 
     std::lock_guard<std::mutex> guard(m_Lock);
 
@@ -39,7 +39,7 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
 }
 
 [[nodiscard]] float MovementVelocityTracker::GetPlayerOnFootSpeed() noexcept {
-	WriteLog(LogLevel::Dev, "Getting player average on-foot speed.");
+	LOG_DEV("Getting player average on-foot speed.");
     std::lock_guard<std::mutex> guard(m_Lock);
     if (m_PlayerFootSamples == 0) return 0.0f;
 
@@ -47,7 +47,7 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
 }
 
 [[nodiscard]] float MovementVelocityTracker::GetHorseAverageSpeed() noexcept {
-	WriteLog(LogLevel::Dev, "Getting horse average speed.");
+	LOG_DEV("Getting horse average speed.");
     std::lock_guard<std::mutex> guard(m_Lock);
     if (m_HorseSamples == 0) return 0.0f;
 
@@ -55,7 +55,7 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
 }
 
 [[nodiscard]] void MovementVelocityTracker::ResetSnapshot() noexcept {
-	WriteLog(LogLevel::Dev, "Resetting MovementVelocityTracker state.");
+	LOG_DEV("Resetting MovementVelocityTracker state.");
 
 	std::lock_guard<std::mutex> guard(m_Lock);
 	m_PlayerFootSum = 0.0f;

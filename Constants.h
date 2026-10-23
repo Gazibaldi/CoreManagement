@@ -7,6 +7,8 @@
 #include <unordered_set>
 #include <string>
 
+const int VANILLA_GAME_TIME_SCALE = 2000;
+
 const float HORSE_HITCHED_HEALTH_REQ = 60.0f;
 
 const float POST_MISSION_DECAY_ADDITIVE_MULTIPLIER = 0.2f;
