@@ -39,6 +39,8 @@ public:
     
     [[nodiscard]] float GetHorseHitchedReward(float hoursDelta) noexcept;
     [[nodiscard]] float GetHorseLeadReward(float hoursDelta) noexcept;
+
+    [[nodiscard]] bool IsHorseDirty(Ped horsePed) noexcept;
     
     [[nodiscard]] void ResetSnapshot() noexcept;
 };

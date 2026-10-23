@@ -14,6 +14,8 @@ const float HORSE_SAMPLING_THRESHOLD = 0.75f; // 75% of samples must tracked to 
 const float HORSE_HITCHED_REWARD_PER_GAME_HOUR = 5.0f;
 const float HORSE_LEAD_REWARD_PER_GAME_HOUR = 10.0f;
 
+const float HORSE_DIRT_THRESHOLD = 0.5f; // Arbitrary threshold for determining if a horse is considered dirty
+
 std::tuple<Ped, bool> HorseManager::GetPlayerMountedHorse(Ped playerPed) noexcept {
     Ped activeHorse = PED::GET_MOUNT(playerPed);
 
@@ -203,6 +205,16 @@ void HorseManager::ResetState() noexcept {
     m_HorseLeadReward = 0.0f; // Reset the accumulated reward after applying
 
     return rewardToApply;
+}
+
+[[nodiscard]] bool HorseManager::IsHorseDirty(Ped horsePed) noexcept {
+	float dirtLevel = PED::_GET_PED_DIRT_LEVEL(horsePed, true);
+
+    bool isDirty = dirtLevel > HORSE_DIRT_THRESHOLD;
+
+	LOG_DEV("Checking if horse is dirty. Dirt level: {}, Threshold: {}, IsDirty: {}", dirtLevel, HORSE_DIRT_THRESHOLD, isDirty);
+
+    return isDirty;
 }
 
 void HorseManager::RecordSnapshot(Ped playerPed) noexcept {

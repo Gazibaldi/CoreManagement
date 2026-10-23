@@ -36,11 +36,11 @@ struct PlayerConfigSettings {
 
     float healthTimeSkipMultiplier = 0.5f;
     float nightDeadEyeMultiplier = 1.3f;
+	float deadEyeDirtyMultiplier = 1.1f;
     float campedMultiplier = 0.25f;
 
     float jogStaminaMultiplier = 1.2f;
     float sprintStaminaMultiplier = 1.5f;
-
 
     float mountWalkStaminaMultiplier = 0.8f;
     float mountTrotStaminaMultiplier = 1.0f;

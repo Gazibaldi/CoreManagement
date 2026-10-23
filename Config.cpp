@@ -138,10 +138,12 @@ void BuildDefaultConfigFile() {
             << "; percentage based modifiers for decay points above (0.5 = 50% drain [5 decay becomes 2.5 decay])\n"
             << "; HealthTimeSkipMultiplier - Decay rate multiplier for HEALTH when the player is asleep\n"
             << "; NightDeadEyeMultiplier   - Decay rate multiplier for the DEAD EYE during the night hours (NightStartHour -> NightEndHour)\n"
+            << "; DeadEyeDirtyMultiplier   - Decay rate multiplier for the DEAD EYE when the player is dirty (1.0 = no change - 1.5 = 50% increase)\n"
             << "; CampedMultiplier         - Decay rate multiplier for the all cores if the player is in a restrained state (e.g., camp/jail/bath/barber)\n"
             << ";                            In bathing scenarios this is just your HEALTH as bathing is rewarding for STAMINA and DEAD EYE\n"
             << "HealthTimeSkipMultiplier = " << defaultPlayerConfig.healthTimeSkipMultiplier << "\n"
             << "NightDeadEyeMultiplier = " << defaultPlayerConfig.nightDeadEyeMultiplier << "\n"
+            << "DeadEyeDirtyMultiplier = " << defaultPlayerConfig.deadEyeDirtyMultiplier << "\n"
             << "CampedMultiplier = " << defaultPlayerConfig.campedMultiplier << "\n\n"
 
             << "[PlayerMovementModifiers]\n"
@@ -212,6 +214,7 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
         << "|                                             |            |\n"
         << "| Player: Sleep Health Multiplier             | " << std::setw(10) << playerConfig->healthTimeSkipMultiplier << " |\n"
         << "| Player: Night Dead Eye Multiplier           | " << std::setw(10) << playerConfig->nightDeadEyeMultiplier << " |\n"
+        << "| Player: Dead Eye Dirty Multiplier           | " << std::setw(10) << playerConfig->deadEyeDirtyMultiplier << " |\n"
         << "| Player: Camped/Restrained Multiplier        | " << std::setw(10) << playerConfig->campedMultiplier << " |\n"
         << "|                                             |            |\n"
         << "| Player: Jog Stamina Multiplier              | " << std::setw(10) << playerConfig->jogStaminaMultiplier << " |\n"
@@ -279,16 +282,17 @@ void LoadConfiguration() {
     newPlayerConfig->baseStaminaDecay = std::clamp(GetIniFloat("BaseDecayAwake", "StaminaDecayBase", defaultPlayerConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
     newPlayerConfig->baseDeadEyeDecay = std::clamp(GetIniFloat("BaseDecayAwake", "DeadEyeDecayBase", defaultPlayerConfig.baseDeadEyeDecay, g_IniPath.c_str()), 1.0f, 100.0f);
 
-    newPlayerConfig->healthTimeSkipMultiplier = std::clamp(GetIniFloat("Modifiers", "HealthTimeSkipMultiplier", defaultPlayerConfig.healthTimeSkipMultiplier, g_IniPath.c_str()), 0.01f, 10.0f);
-    newPlayerConfig->nightDeadEyeMultiplier = std::clamp(GetIniFloat("Modifiers", "NightDeadEyeMultiplier", defaultPlayerConfig.nightDeadEyeMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+    newPlayerConfig->healthTimeSkipMultiplier = std::clamp(GetIniFloat("Modifiers", "HealthTimeSkipMultiplier", defaultPlayerConfig.healthTimeSkipMultiplier, g_IniPath.c_str()), 0.01f, 1.0f);
+    newPlayerConfig->nightDeadEyeMultiplier = std::clamp(GetIniFloat("Modifiers", "NightDeadEyeMultiplier", defaultPlayerConfig.nightDeadEyeMultiplier, g_IniPath.c_str()), 1.0f, 2.0f);
+	newPlayerConfig->deadEyeDirtyMultiplier = std::clamp(GetIniFloat("Modifiers", "DeadEyeDirtyMultiplier", defaultPlayerConfig.deadEyeDirtyMultiplier, g_IniPath.c_str()), 1.0f, 1.5f);
     newPlayerConfig->campedMultiplier = std::clamp(GetIniFloat("Modifiers", "CampedMultiplier", defaultPlayerConfig.campedMultiplier, g_IniPath.c_str()), 0.01f, 10.0f);
 
-    newPlayerConfig->jogStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "JogStaminaMultiplier", defaultPlayerConfig.jogStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
-    newPlayerConfig->sprintStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "SprintStaminaMultiplier", defaultPlayerConfig.sprintStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+    newPlayerConfig->jogStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "JogStaminaMultiplier", defaultPlayerConfig.jogStaminaMultiplier, g_IniPath.c_str()), 1.0f, 3.0f);
+    newPlayerConfig->sprintStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "SprintStaminaMultiplier", defaultPlayerConfig.sprintStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
 
-	newPlayerConfig->mountWalkStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedWalkStaminaMultiplier", defaultPlayerConfig.mountWalkStaminaMultiplier, g_IniPath.c_str()), 0.5f, 10.0f);
-    newPlayerConfig->mountTrotStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedTrotStaminaMultiplier", defaultPlayerConfig.mountTrotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
-    newPlayerConfig->mountGallopStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedGallopStaminaMultiplier", defaultPlayerConfig.mountGallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+	newPlayerConfig->mountWalkStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedWalkStaminaMultiplier", defaultPlayerConfig.mountWalkStaminaMultiplier, g_IniPath.c_str()), 0.5f, 1.0f);
+    newPlayerConfig->mountTrotStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedTrotStaminaMultiplier", defaultPlayerConfig.mountTrotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 3.0f);
+    newPlayerConfig->mountGallopStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedGallopStaminaMultiplier", defaultPlayerConfig.mountGallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
 
     newPlayerConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("Floors", "HealthTimeSkipFloor", defaultPlayerConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 15.0f);
     newPlayerConfig->campedHealthFloor = std::clamp(GetIniFloat("Floors", "CampedHealthFloor", defaultPlayerConfig.campedHealthFloor, g_IniPath.c_str()), 5.0f, 10.0f);
@@ -298,9 +302,9 @@ void LoadConfiguration() {
     newHorseConfig->baseHealthDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseHealthDecayBase", defaultHorseConfig.baseHealthDecay, g_IniPath.c_str()), 1.0f, 100.0f);
     newHorseConfig->baseStaminaDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", defaultHorseConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
 
-	newHorseConfig->grazeStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGrazeStaminaMultiplier", defaultHorseConfig.grazeStaminaMultiplier, g_IniPath.c_str()), 0.5f, 10.0f);
-    newHorseConfig->trotStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", defaultHorseConfig.trotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
-    newHorseConfig->gallopStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", defaultHorseConfig.gallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 10.0f);
+	newHorseConfig->grazeStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGrazeStaminaMultiplier", defaultHorseConfig.grazeStaminaMultiplier, g_IniPath.c_str()), 0.5f, 1.0f);
+    newHorseConfig->trotStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", defaultHorseConfig.trotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
+    newHorseConfig->gallopStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", defaultHorseConfig.gallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 8.0f);
 
     newHorseConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("HorseFloors", "HorseHealthTimeSkipFloor", defaultHorseConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 15.0f);
     newHorseConfig->campedHealthFloor = std::clamp(GetIniFloat("HorseFloors", "CampedHealthFloor", defaultHorseConfig.campedHealthFloor, g_IniPath.c_str()), 1.0f, 10.0f);

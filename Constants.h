@@ -21,4 +21,7 @@ const float TIMESKIP_MAX_HOURS = 12.0f;
 const float MINIGAME_TIMESKIP_MAX_HOURS = 3.0f;
 
 const float BATHING_TIMESKIP_MAX_HOURS = 2.0f;
+
+const float PLAYER_DIRT_THRESHOLD = 0.5f;
+
 const std::unordered_set<std::string> VALID_BATHING_STATES{ "BATHING", "Bathing", "Scrub_Idle", "Scrub_Head", "Scrub_Left_Arm", "Scrub_Right_Arm", "Scrub_Left_Leg", "Scrub_Right_Leg" };

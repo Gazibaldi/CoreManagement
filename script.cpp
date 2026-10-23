@@ -426,7 +426,7 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
     return std::max(multiplier, 0.1f);
 }
 
-float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerConfig, float totalPassiveDeadEyeModifierReduction, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false, bool isNighttime = false) {
+float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, float totalPassiveDeadEyeModifierReduction, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false, bool isNighttime = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained) {
@@ -437,6 +437,14 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
         WriteLog(LogLevel::Verbose, "Player is in nighttime. Applying night dead eye decay multiplier.");
         multiplier = playerConfig.nightDeadEyeMultiplier;
     }
+
+    float dirtLevel = PED::_GET_PED_DIRT_LEVEL(playerPed, true);
+
+    bool isDirty = dirtLevel > PLAYER_DIRT_THRESHOLD;
+    if(isDirty) {
+		WriteLog(LogLevel::Verbose, "Player is dirty. Applying dirty dead eye decay multiplier.");
+		multiplier += (1 - playerConfig.deadEyeDirtyMultiplier);
+    }    
 
     if (applyPostMissionDecay) {
         WriteLog(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission dead eye decay multiplier.");
@@ -524,9 +532,12 @@ float CalculateHorseHealthDecayMultiplier(const PlayerConfigSettings& playerConf
 
     if (isPlayerSemiRestrained)
         multiplier = playerConfig.campedMultiplier;
+    
+    if(g_HorseManager.IsHorseDirty(horsePed))
+        multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
 
     WriteLog(LogLevel::Verbose, "Active horse passive modifiers: Health Reduction = " + std::to_string(totalPassiveHealthModifierReduction));
-    multiplier -= totalPassiveHealthModifierReduction;
+    multiplier -= totalPassiveHealthModifierReduction;    
 
     return std::max(multiplier, 0.1f);
 }
@@ -536,8 +547,11 @@ float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerCon
 
     if (isPlayerSemiRestrained)
         multiplier = playerConfig.campedMultiplier;
-    else 
+    else
         multiplier = CalculateHorseSpeedStaminaDecayMultiplier(horseConfig);
+    
+    if (g_HorseManager.IsHorseDirty(horsePed))
+        multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
 
     WriteLog(LogLevel::Verbose, "Active horse passive modifiers: Stamina Reduction = " + std::to_string(totalPassiveStaminaModifierReduction));
     multiplier -= totalPassiveStaminaModifierReduction;
@@ -744,7 +758,7 @@ void ApplyBatchTimeSkipDecay(
     else if (!isDeadEyeGold) {
         // Standard macro transit decay (Trains/Stagecoaches/Jail/Barber)
 		// Don't apply nighttime multiplier here, as the player may have moved across the day/night boundary during the time skip, and we want to avoid over-penalizing them for that.
-        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, passives.totalDeadEyeReduction, applyPostMissionDecay);
+        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, playerPed, passives.totalDeadEyeReduction, applyPostMissionDecay);
 
         float targetDeadEye = startDeadEye - (elapsedHours * activeDeadEyeDecay);        
         targetDeadEye = std::max(targetDeadEye, config.PlayerConfig.campedDeadEyeFloor);
