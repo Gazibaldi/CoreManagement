@@ -7,7 +7,6 @@
 #include <string>
 #include <atomic>
 #include <memory>
-#include <cmath>
 #include <algorithm>
 #include <span>
 #include <unordered_map>
@@ -288,7 +287,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 	// if the player is entering a mission and the time scale is above vanilla, we reset it to vanilla to ensure mission events are not affected by the time scale change. 
 	// This is a safeguard against any mission scripts that rely on the vanilla time scale for timing events. 
     // We don't reset it if the player is in a time warp, as that is an intended effect of the time warp.
-    if (ctx.isInMission && !ctx.isInTimeWarp && timeScale > VANILLA_GAME_TIME_SCALE) {
+    if ((ctx.isInMission && !g_State.wasInMissionDuringRestriction) && !ctx.isInTimeWarp && timeScale > VANILLA_GAME_TIME_SCALE) {
         LOG_DEV("Mission start detected: Setting game time scale to vanilla value.");
 		SetGameTimeScale(VANILLA_GAME_TIME_SCALE);
     }
@@ -707,7 +706,7 @@ void ApplyBatchTimeSkipDecay(
         float minHealthFloor = wasSleeping ? config.PlayerConfig.healthTimeSkipFloor : config.PlayerConfig.campedHealthFloor;
         targetHealth = std::max(targetHealth, minHealthFloor);
 
-		int finalHealth = std::lround(targetHealth);
+		int finalHealth = BUILTIN::FLOOR(targetHealth);
 
 		LOG_DEV("Health decay calculation: currentHealth={}, elapsedHours={:.4f}, activeHealthDecay={:.4f}, targetHealth={}, minHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
         WriteLog(LogLevel::Standard, "Player time-skipped. Health decayed to: " + std::to_string(finalHealth));
@@ -731,7 +730,7 @@ void ApplyBatchTimeSkipDecay(
 			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
             else {
 
-                int finalStamina = std::lround(CalculatePlayerStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
+                int finalStamina = BUILTIN::FLOOR(CalculatePlayerStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
 
                 WriteLog(LogLevel::Standard, "Player slept. Stamina replenished to: " + std::to_string(finalStamina));
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
@@ -745,7 +744,7 @@ void ApplyBatchTimeSkipDecay(
         float targetStamina = startStamina - (elapsedHours * activeStaminaDecay);
         targetStamina = std::max(targetStamina, config.PlayerConfig.campedStaminaFloor);
 
-		int finalStamina = std::lround(targetStamina);
+		int finalStamina = BUILTIN::FLOOR(targetStamina);
 
         LOG_DEV("Stamina decay calculation: currentStamina={}, elapsedHours={:.4f}, activeStaminaDecay={:.4f}, targetStamina={}, minStaminaFloor={}", startStamina, elapsedHours, activeStaminaDecay, finalStamina, config.PlayerConfig.campedStaminaFloor);
         WriteLog(LogLevel::Standard, "Player time-skipped. Stamina decayed to: " + std::to_string(finalStamina));
@@ -756,7 +755,7 @@ void ApplyBatchTimeSkipDecay(
     if (wasSleeping) {
         if (!isDeadEyeGold) {
             // Standard sleep replenishment only runs if the core isn't already golden
-            int finalDeadEye = std::lround(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
+            int finalDeadEye = BUILTIN::FLOOR(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
             
             WriteLog(LogLevel::Standard, "Player slept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
@@ -770,7 +769,7 @@ void ApplyBatchTimeSkipDecay(
         float targetDeadEye = startDeadEye - (elapsedHours * activeDeadEyeDecay);        
         targetDeadEye = std::max(targetDeadEye, config.PlayerConfig.campedDeadEyeFloor);
 
-		int finalDeadEye = std::lround(targetDeadEye);
+		int finalDeadEye = BUILTIN::FLOOR(targetDeadEye);
 
         LOG_DEV("Dead Eye decay calculation: currentDeadEye={}, elapsedHours={:.4f}, activeDeadEyeDecay={:.4f}, targetDeadEye={}, minDeadEyeFloor={}", startDeadEye, elapsedHours, activeDeadEyeDecay, finalDeadEye, config.PlayerConfig.campedDeadEyeFloor);
         WriteLog(LogLevel::Standard, "Player time-skipped. Dead Eye decayed to: " + std::to_string(finalDeadEye));
@@ -795,7 +794,7 @@ void ApplyBatchTimeSkipDecay(
 
                 targetHealth = std::max(targetHealth, minHealthFloor);
 
-				int finalHealth = std::lround(targetHealth);
+				int finalHealth = BUILTIN::FLOOR(targetHealth);
 
                 LOG_DEV("Horse Health decay calculation: currentHealth={}, elapsedHours={:.4f}, activeHealthDecay={:.4f}, targetHealth={}, minHealthFloor={}", startHorseHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
                 WriteLog(LogLevel::Standard, "Player time-skipped. Horse Health decayed to: " + std::to_string(finalHealth));
@@ -819,7 +818,7 @@ void ApplyBatchTimeSkipDecay(
                     // REGULAR SLEEP REPLENISHMENT ROUTE
                     else {
 
-                        int finalHorseStamina = std::lround(CalculateHorseStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
+                        int finalHorseStamina = BUILTIN::FLOOR(CalculateHorseStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
 
                         WriteLog(LogLevel::Standard, "Player slept. Horse Stamina replenished to: " + std::to_string(finalHorseStamina));
                         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalHorseStamina);
@@ -835,7 +834,7 @@ void ApplyBatchTimeSkipDecay(
                 
                 targetStamina = std::max(targetStamina, config.HorseConfig.campedStaminaFloor);
 
-				int finalStamina = std::lround(targetStamina);
+				int finalStamina = BUILTIN::FLOOR(targetStamina);
 
                 LOG_DEV("Horse Stamina decay calculation: currentStamina={}, elapsedHours={:.4f}, activeStaminaDecay={:.4f}, targetStamina={}, minStaminaFloor={}", startHorseStamina, elapsedHours, activeStaminaDecay, finalStamina, config.HorseConfig.campedStaminaFloor);
                 WriteLog(LogLevel::Standard, "Player time-skipped. Horse Stamina decayed to: " + std::to_string(finalStamina));
@@ -990,12 +989,17 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             }
             else if (g_State.wasInMissionDuringRestriction)
             {
-                g_State.PostMissionDecayHoursRemaining += POST_MISSION_DECAY_HOURS;
+                if (elapsedMinutes >= POST_MISSION_MIN_ELAPSED_MINUTES)
+                {   g_State.PostMissionDecayHoursRemaining += POST_MISSION_DECAY_HOURS;
 
-				// Cap the post-mission decay hours to a maximum of 3 hours to prevent excessive decay 
-                // (in-case multiple missions accumulate over the decay multiplier period)
-				g_State.PostMissionDecayHoursRemaining = std::min(g_State.PostMissionDecayHoursRemaining, 3.0f);
-				WriteLog(LogLevel::Verbose, "Player exited a mission. Post-mission decay hours remaining: " + std::to_string(g_State.PostMissionDecayHoursRemaining));
+                    // Cap the post-mission decay hours to a maximum of 3 hours to prevent excessive decay 
+                    // (in-case multiple missions accumulate over the decay multiplier period)
+                    g_State.PostMissionDecayHoursRemaining = std::min(g_State.PostMissionDecayHoursRemaining, 3.0f);
+                    WriteLog(LogLevel::Verbose, "Player exited a mission. Post-mission decay hours remaining: " + std::to_string(g_State.PostMissionDecayHoursRemaining));
+                }
+                else {
+					WriteLog(LogLevel::Verbose, "Player exited a mission but elapsed time was less than the minimum threshold. No post-mission decay applied.");
+                }
             }
             else {
                 LOG_DEV("Player was not sleeping, in a minigame, or in a mission during restriction. No batch decay applied.");
@@ -1085,7 +1089,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 		float minHealthFloor = ctx.isAtCamp ? config.PlayerConfig.campedHealthFloor : 0.0f;          
         targetHealth = std::max(targetHealth, minHealthFloor);
 
-		int finalHealth = std::lround(targetHealth);
+		int finalHealth = BUILTIN::FLOOR(targetHealth);
 
         LOG_DEV("Player Core Simulation: HoursDelta={:.4f}, HealthDecay = {:.4f}, CurrentHealth={}, TargetHealth={}, MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
         WriteLog(LogLevel::Standard, "Player Core Sync Tick: Health=" + std::to_string(finalHealth));
@@ -1100,7 +1104,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         float minStaminaFloor = ctx.isAtCamp ? config.PlayerConfig.campedStaminaFloor : 0.0f;
         targetStamina = std::max(targetStamina, minStaminaFloor);
 
-		int finalStamina = std::lround(targetStamina);
+		int finalStamina = BUILTIN::FLOOR(targetStamina);
             
         LOG_DEV("Player Core Simulation: HoursDelta={:.4f}, StaminaDecay = {:.4f}, CurrentStamina={}, TargetStamina={}, MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
         WriteLog(LogLevel::Standard, "Player Stamina Sync Tick: Stamina=" + std::to_string(finalStamina));
@@ -1119,7 +1123,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 
         targetDeadEye = std::max(targetDeadEye, minDeadEyeFloor);
 
-		int finalDeadEye = std::lround(targetDeadEye);
+		int finalDeadEye = BUILTIN::FLOOR(targetDeadEye);
 
         LOG_DEV("Player Core Simulation: HoursDelta={:.4f}, DeadEyeDecay = {:.4f}, CurrentDeadEye={}, TargetDeadEye={}, MinDeadEyeFloor={}", hoursDelta, activeDeadEyeDecay, currentDeadEye, finalDeadEye, minDeadEyeFloor);
         WriteLog(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye=" + std::to_string(finalDeadEye));
@@ -1158,7 +1162,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
         targetHealth = std::max(targetHealth, minHealthFloor);
 
-		int finalHealth = std::lround(targetHealth);
+		int finalHealth = BUILTIN::FLOOR(targetHealth);
 
         LOG_DEV("Horse Core Simulation: HoursDelta={:.4f}, HealthDecay = {:.4f}, CurrentHealth={}, TargetHealth={}, MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
         WriteLog(LogLevel::Standard, "Horse Core Sync Tick: Health=" + std::to_string(finalHealth));
@@ -1186,7 +1190,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 				if (reward >= 1.0f) {
 			        targetStamina = std::min(currentStamina + reward, 100.0f);
 
-					int finalStamina = std::lround(targetStamina);
+					int finalStamina = BUILTIN::FLOOR(targetStamina);
 
 				    WriteLog(LogLevel::Standard, "Horse is well-fed or has golden health. Applying hitched bonus: +" + std::to_string(reward) + " to stamina core. Horse Stamina updated to: " + std::to_string(finalStamina));
                     ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
@@ -1200,7 +1204,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
             if (reward >= 1.0f) {
                 targetStamina = std::min(currentStamina + reward, 100.0f);
 
-                int finalStamina = std::lround(targetStamina);
+                int finalStamina = BUILTIN::FLOOR(targetStamina);
 
                 WriteLog(LogLevel::Standard, "Active Horse is being led by the player. Applying cached reward: +" + std::to_string(reward) + ". Horse Stamina updated to: " + std::to_string(finalStamina));
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
@@ -1215,7 +1219,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
             targetStamina = std::max(targetStamina, minStaminaFloor);
 
-            int finalStamina = std::lround(targetStamina);
+            int finalStamina = BUILTIN::FLOOR(targetStamina);
 
             LOG_DEV("Horse Core Simulation: HoursDelta={:.4f}, StaminaDecay={:.4f}, CurrentStamina={}, TargetStamina={}, MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
             WriteLog(LogLevel::Standard, "Horse Core Sync Tick: Stamina=" + std::to_string(finalStamina));

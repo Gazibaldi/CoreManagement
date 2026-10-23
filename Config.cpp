@@ -96,6 +96,8 @@ void BuildDefaultConfigFile() {
             << "; How often the main drain game simulation thread ticks (in milliseconds)\n"
             << "; Minimum interval is 5 seconds (5000 ms). Maximum is 5 mins (300000 ms)\n"
             << "; Recommendation: keep this as a multiple of the msPerInGameMinute to ensure clean hour based decay delta\n"
+            << "; Personal recommendation : set to 30 mins in game (vanilla: 2000ms per in game minute = 2000 * 30 = 60000)\n"
+            << "; If you set the msPerInGameMinute close to real-time, reduce accordingly (15 mins in - game or even 10 mins)\n"
             << "coreDrainTickIntervalMs = " << defaultCoreConfig.coreDrainTickIntervalMs << "\n"
             << "; How often the main state simulation should run (in milliseconds)\n"
             << "; This should be low to capture mission triggers etc. The drain will be forced  in such cases\n"
