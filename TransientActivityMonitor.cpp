@@ -1,4 +1,5 @@
 #include "TransientActivityMonitor.h"
+#include "Config.h"
 
 bool TransientActivityMonitor::ActivateMonitor() noexcept {
     m_IsActive = m_StateEvaluator();
