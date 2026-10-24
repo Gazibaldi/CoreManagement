@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <cstdlib>
 #include <array>
+#include <cmath>
 #include "..\CoreSDK\inc\natives.h"
 #include "..\CoreSDK\inc\types.h"
 #include "script.h"
@@ -82,12 +83,12 @@ void PrecomputeHashes() {
 
     g_InventoryManager.ComputeHashes();
 
-    g_PokerScriptHash = GetKey("poker_core");
-	g_BlackjackScriptHash = GetKey("blackjack_core");
-	g_DominoesScriptHash = GetKey("dominoes_core");
-	g_FiveFingerFilletScriptHash = GetKey("five_finger_fillet");
+    g_PokerScriptHash = GetKey("poker_sp");
+	g_BlackjackScriptHash = GetKey("bjack_sp");
+	g_DominoesScriptHash = GetKey("dominoes_sp");
+	g_FiveFingerFilletScriptHash = GetKey("fillet_sp");
 
-	// additional hashes can be precomputed here if needed
+    // additional hashes can be precomputed here if needed
 }
 
 void InitialiseActivityMonitors() {
@@ -200,7 +201,7 @@ bool IsPlayerPlayingTableMinigame() {
 	int pokerThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_PokerScriptHash);
 	int blackjackThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_BlackjackScriptHash);
 	int dominoesThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_DominoesScriptHash);
-	int fiveFingerFilletThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_FiveFingerFilletScriptHash); 
+	int fiveFingerFilletThreads = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_FiveFingerFilletScriptHash);
 
 	LOG_DEV("Table minigame thread counts - Poker: {}, Blackjack: {}, Dominoes: {}, Five Finger Fillet: {}", pokerThreads, blackjackThreads, dominoesThreads, fiveFingerFilletThreads);
 
@@ -266,6 +267,8 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     bool isInMinigame = IsPlayerPlayingTableMinigame();
     bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
 
+    LOG_DEV("Gameplay state evaluated: allowDrainInMissions={}, allowDrainInMinigames={}", generalConfig.enableDuringMissions, generalConfig.enableDuringMinigames);
+
     // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
     ctx.isInMission = isInMission && !generalConfig.enableDuringMissions;
     ctx.isInMinigame = isInMinigame && !generalConfig.enableDuringMinigames;
@@ -292,10 +295,10 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 		SetGameTimeScale(VANILLA_GAME_TIME_SCALE);
     }
 	
-	// If the player is in a mission, we don't reset the time scale as it may be intended to be changed during those events.
+	// If the player is in a mission/minigame/timewarp, we don't reset the time scale as it may be intended to be changed during those events.
 	// otherwise, we reset it back to the configured value to ensure the drain mechanics are consistent with the player's configuration.
-    if (timeScale != configuredTimeScale && !(ctx.isInMission || ctx.isInTimeWarp)) {
-		LOG_DEV("Game time scale has changed from {} to {} probably due to a mission/config/save load. Setting to configured value.", configuredTimeScale, timeScale);
+    if (timeScale != configuredTimeScale && !(ctx.isInMission || ctx.isInTimeWarp || ctx.isInMinigame)) {
+		LOG_DEV("Game time scale has changed to {} probably due to a config change/save load. Setting to configured value: {}.", timeScale, configuredTimeScale);
 		SetGameTimeScale(configuredTimeScale);
     }    
 
@@ -307,8 +310,6 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 		RecordTrackingSnapshots(playerPed);
     
 	if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev) && HasDevLogCacheChanged(ctx)) {
-        LOG_DEV("Gameplay state evaluated: allowDrainInMissions={}, allowDrainInMinigames={}", generalConfig.enableDuringMissions, generalConfig.enableDuringMinigames);
-
         // Update tracking baselines immediately
         UpdateDevLogCache(ctx);
 
@@ -493,12 +494,12 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
     // Luxury Hotel Quality Adjustment (+20/+10 points to caps)
     if (isHotelRoom) {
         if (isNighttime) {
-			WriteLog(LogLevel::Standard, "Luxury hotel room detected at night. Dead Eye caps increased by +20 points.");
+			WriteLog(LogLevel::Standard, "Luxury hotel room/own bed detected at night. Dead Eye caps increased by +20 points.");
             focusCap += 20.0f;
             fatigueCap += 20.0f;
 		}
         else {
-            WriteLog(LogLevel::Standard, "Luxury hotel room detected during daytime. Dead Eye caps increased by +10 points.");
+            WriteLog(LogLevel::Standard, "Luxury hotel room/own bed detected during daytime. Dead Eye caps increased by +10 points.");
             focusCap += 10.0f;
             fatigueCap += 10.0f;
         }
@@ -661,6 +662,39 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
     }
 }
 
+bool IsSleepDuringTheNight(int elapsedHours, int nightStartHour, int nightEndHour) {
+	int currentHour = CLOCK::GET_CLOCK_HOURS();
+    int sleepStartHour = currentHour - elapsedHours;
+	if (sleepStartHour < 0) sleepStartHour += 24; // Wrap around if negative
+
+	bool wasNightStart = (sleepStartHour >= nightStartHour || sleepStartHour < nightEndHour);
+	bool wasNightEnd = (currentHour >= nightStartHour || currentHour < nightEndHour);
+
+	if (wasNightStart && wasNightEnd) {
+		WriteLog(LogLevel::Verbose, "Player slept completely during the night hours.");
+		return true;
+	}
+
+	// Calculate the number of hours slept during the night
+	int hoursSleptDuringNight = 0;
+	
+	for (int i = 0; i < elapsedHours; ++i) {
+		int hourToCheck = (sleepStartHour + i) % 24;
+		if (hourToCheck >= nightStartHour || hourToCheck < nightEndHour)
+			hoursSleptDuringNight++;
+	}
+
+	if (hoursSleptDuringNight >= std::lround(elapsedHours * SLEEP_NIGHT_PERCENTAGE_THRESHOLD)) {
+		LOG_DEV("Player slept partially during the night hours. Hours slept during night: {}, Total hours slept: {}, Percentage: {:.2f}%", hoursSleptDuringNight, elapsedHours, (static_cast<float>(hoursSleptDuringNight) / elapsedHours) * 100.0f);
+		WriteLog(LogLevel::Verbose, "Player slept partially during the night hours.");
+
+		return true;
+	}
+
+	WriteLog(LogLevel::Verbose, "Player did not sleep during the night hours.");
+	return false;
+}
+
 void ApplyBatchTimeSkipDecay(
 	Ped playerPed, int elapsedMinutes, float startHealth, float startStamina, float startDeadEye, 
     float startHorseHealth, float startHorseStamina, bool processHorse,
@@ -713,16 +747,20 @@ void ApplyBatchTimeSkipDecay(
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
 
-    int currentHour = CLOCK::GET_CLOCK_HOURS();
-    bool isNighttime = (currentHour >= config.GeneralConfig.nightStartHour || currentHour < config.GeneralConfig.nightEndHour);
-    bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
+    bool sleptAtNight = false;
+	bool isHotelRoom = false;
+
+    if (wasSleeping) {
+        sleptAtNight = IsSleepDuringTheNight(static_cast<int>(elapsedHours), config.GeneralConfig.nightStartHour, config.GeneralConfig.nightEndHour);
+        isHotelRoom = !g_State.wasAtCampDuringRestriction;
+    }
 
 	// Stamina Core Replenishment Logic
     if (wasSleeping) {
         // Gold cores are immune to sleep cap constraints, they remain full
         if (!isStaminaGold) {
 			// SPECIAL GOLDEN STAMINA CORE REWARD (Minimum Sleep Hours-OverSleep Threshold Hours Hours in a Hotel Room at Night)
-            if (isHotelRoom && isNighttime && elapsedHours >= MIN_SLEEP_HOURS && elapsedHours <= OVERSLEEP_THRESHOLD_HOURS) {
+            if (isHotelRoom && sleptAtNight && elapsedHours >= MIN_SLEEP_HOURS && elapsedHours <= OVERSLEEP_THRESHOLD_HOURS) {
 				
 				WriteLog(LogLevel::Standard, "Player slept " + std::to_string(MIN_SLEEP_HOURS) + "-" + std::to_string(OVERSLEEP_THRESHOLD_HOURS) + " hours in a hotel room at night. Stamina core is now golden and fully fortified.");
 				ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
@@ -730,7 +768,7 @@ void ApplyBatchTimeSkipDecay(
 			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
             else {
 
-                int finalStamina = BUILTIN::FLOOR(CalculatePlayerStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
+                int finalStamina = BUILTIN::FLOOR(CalculatePlayerStaminaSleepReplenish(startStamina, elapsedHours, sleptAtNight, isHotelRoom));
 
                 WriteLog(LogLevel::Standard, "Player slept. Stamina replenished to: " + std::to_string(finalStamina));
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
@@ -755,7 +793,7 @@ void ApplyBatchTimeSkipDecay(
     if (wasSleeping) {
         if (!isDeadEyeGold) {
             // Standard sleep replenishment only runs if the core isn't already golden
-            int finalDeadEye = BUILTIN::FLOOR(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, isNighttime, isHotelRoom));
+            int finalDeadEye = BUILTIN::FLOOR(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, sleptAtNight, isHotelRoom));
             
             WriteLog(LogLevel::Standard, "Player slept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
@@ -783,6 +821,8 @@ void ApplyBatchTimeSkipDecay(
             bool isHorseHealthGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(activeHorse, static_cast<int>(CoreIndex::Health));
             bool isHorseStaminaGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(activeHorse, static_cast<int>(CoreIndex::Stamina));
 
+            LOG_DEV("Horse Time Skip Simulation: isHealthGold = {}, isStaminaGold = {}", isHorseHealthGold, isHorseStaminaGold);
+
             CombinedTackModifiers passives = g_InventoryManager.GetActiveHorseTackModifiers(activeHorse);
 
 			// Horse Health Core Decay Logic
@@ -805,12 +845,10 @@ void ApplyBatchTimeSkipDecay(
             if (wasSleeping) {
                 // Gold cores are immune to sleep cap constraints, they remain full
                 if (!isHorseStaminaGold) {
-                    int currentHour = CLOCK::GET_CLOCK_HOURS();
-                    bool isNighttime = (currentHour >= config.GeneralConfig.nightStartHour || currentHour < config.GeneralConfig.nightEndHour);
                     bool isHotelRoom = !g_State.wasAtCampDuringRestriction;
 
                     // SPECIAL GOLDEN STAMINA CORE REWARD (Hotel Stable at Night)
-                    if (isHotelRoom && isNighttime) {
+                    if (isHotelRoom && sleptAtNight) {
 
                         WriteLog(LogLevel::Standard, "Horse slept in a stable (hotel) at night. Stamina core is now golden and fully fortified.");
                         ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
@@ -818,7 +856,7 @@ void ApplyBatchTimeSkipDecay(
                     // REGULAR SLEEP REPLENISHMENT ROUTE
                     else {
 
-                        int finalHorseStamina = BUILTIN::FLOOR(CalculateHorseStaminaSleepReplenish(startStamina, elapsedHours, isNighttime, isHotelRoom));
+                        int finalHorseStamina = BUILTIN::FLOOR(CalculateHorseStaminaSleepReplenish(startStamina, elapsedHours, sleptAtNight, isHotelRoom));
 
                         WriteLog(LogLevel::Standard, "Player slept. Horse Stamina replenished to: " + std::to_string(finalHorseStamina));
                         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalHorseStamina);

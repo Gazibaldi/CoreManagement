@@ -20,6 +20,7 @@ const float MIN_SLEEP_HOURS = 8.0f;
 
 const float TIMESKIP_MAX_HOURS = 12.0f;
 const float MINIGAME_TIMESKIP_MAX_HOURS = 3.0f;
+const float SLEEP_NIGHT_PERCENTAGE_THRESHOLD = 0.6f; // Percentage of sleep that must occur during the night to be considered a "nighttime sleep"
 
 const float BATHING_TIMESKIP_MAX_HOURS = 2.0f;
 

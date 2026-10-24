@@ -31,6 +31,7 @@ struct DevLoggingCache {
     bool lastIsBathing = false;
 	bool lastIsInMission = false;
 	bool lastIsInMinigame = false;
+	bool lastIsInTimeWarp = false;
 };
 
 extern std::string g_LogPath;

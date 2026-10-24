@@ -110,7 +110,8 @@ bool HasDevLogCacheChanged(const GameplayContext& ctx) {
 		ctx.isJailed != g_LogCache.lastIsJailed ||
 		ctx.isBathing != g_LogCache.lastIsBathing ||
         ctx.isInMission != g_LogCache.lastIsInMission ||
-        ctx.isInMinigame != g_LogCache.lastIsInMinigame);
+        ctx.isInMinigame != g_LogCache.lastIsInMinigame ||
+        ctx.isInTimeWarp != g_LogCache.lastIsInTimeWarp);
 }
 
 void UpdateDevLogCache(const GameplayContext& ctx) {
@@ -121,6 +122,7 @@ void UpdateDevLogCache(const GameplayContext& ctx) {
 	g_LogCache.lastIsBathing = ctx.isBathing;
 	g_LogCache.lastIsInMission = ctx.isInMission;
 	g_LogCache.lastIsInMinigame = ctx.isInMinigame;
+	g_LogCache.lastIsInTimeWarp = ctx.isInTimeWarp;
 }
 
 void ClearDevLogCache() {
@@ -131,4 +133,5 @@ void ClearDevLogCache() {
 	g_LogCache.lastIsBathing = false;
 	g_LogCache.lastIsInMission = false;
 	g_LogCache.lastIsInMinigame = false;
+	g_LogCache.lastIsInTimeWarp = false;
 }
