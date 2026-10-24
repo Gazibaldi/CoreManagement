@@ -5,7 +5,6 @@
 #include <windows.h>
 #include <queue>
 #include <mutex>
-#include <condition_variable>
 #include <fstream>
 #include <chrono>
 #include <atomic>
@@ -16,11 +15,22 @@
 #include "Config.h"
 #include "Logger.h"
 #include "CMTypes.h"
+#include "ThreadManager.h"
+
+struct DevLoggingCache {
+    bool lastFreezeActive = false;
+    bool lastIsAtCamp = false;
+    bool lastIsSleeping = false;
+    bool lastIsJailed = false;
+    bool lastIsBathing = false;
+    bool lastIsInMission = false;
+    bool lastIsInMinigame = false;
+    bool lastIsInTimeWarp = false;
+};
+
+std::atomic<int> g_CurrentLogLevel{ static_cast<int>(LogLevel::Disabled) };
 
 std::string g_LogPath = ".\\CoreManagement.log";
-
-std::mutex g_LogQueueMutex;
-std::condition_variable g_LogCV;
 
 static std::queue<std::string> s_LogQueue;
 
@@ -86,16 +96,6 @@ void WriteLog(LogLevel requiredLevel, const std::string_view message) {
         s_LogQueue.push(std::move(formattedMessage));
     }
     g_LogCV.notify_one();
-
-    /*char timeBuffer[16];
-    sprintf_s(timeBuffer, "[%02d:%02d:%02d] ", st.wHour, st.wMinute, st.wSecond);
-    std::string formattedMessage = std::string(timeBuffer) + message;
-
-    {
-        std::lock_guard<std::mutex> lock(g_LogQueueMutex);
-        s_LogQueue.push(formattedMessage);
-    }
-    g_LogCV.notify_one();*/
 }
 
 void ClearLog() {

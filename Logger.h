@@ -4,7 +4,6 @@
 
 #pragma once
 #include <string_view>
-#include <string>
 #include <atomic>
 #include "CMTypes.h"
 
@@ -23,18 +22,6 @@
 
 enum class LogLevel : int { Disabled = 0, Standard = 1, Verbose = 2, Dev = 2105 };
 
-struct DevLoggingCache {
-    bool lastFreezeActive = false;
-    bool lastIsAtCamp = false;
-    bool lastIsSleeping = false;
-    bool lastIsJailed = false;
-    bool lastIsBathing = false;
-	bool lastIsInMission = false;
-	bool lastIsInMinigame = false;
-	bool lastIsInTimeWarp = false;
-};
-
-extern std::string g_LogPath;
 extern std::atomic<int> g_CurrentLogLevel;
 
 void AsyncLogWriterWorker(std::atomic<bool>& runFlag);

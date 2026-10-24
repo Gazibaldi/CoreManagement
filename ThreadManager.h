@@ -22,10 +22,8 @@ public:
 
 extern ScriptThreadManager g_ThreadManager;
 
-// INI Watcher synchronization
-extern std::atomic<bool> g_RunIniWatcherThread;
-extern std::condition_variable g_IniWatcherCv;
-extern std::mutex g_IniWatcherCvMutex;
+// Config synchronization
+extern std::atomic<bool> g_HasConfigChanged;
 
 // Logger orchestration tools
 extern std::condition_variable g_LogCV; 

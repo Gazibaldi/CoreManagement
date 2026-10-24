@@ -1350,7 +1350,7 @@ void ResetSimulationState() {
 }
 
 ConfigSnapshot CheckForConfigChange() {
-    if (g_ShouldReloadConfig.load(std::memory_order_acquire) || !g_State.configStructuresInitialised) {
+    if (g_HasConfigChanged.load(std::memory_order_acquire) || !g_State.configStructuresInitialised) {
         // Log an accurate message based on WHY we are filling the cache
         if (!g_State.configStructuresInitialised)
             WriteLog(LogLevel::Verbose, "Initialising local simulation configuration cache for the first time...");
@@ -1363,7 +1363,7 @@ ConfigSnapshot CheckForConfigChange() {
 		for (auto& [type, monitor] : g_activeMonitors)
             monitor.RefreshThreshold(g_State.isRestricted);
 
-		g_ShouldReloadConfig.store(false, std::memory_order_release);
+        g_HasConfigChanged.store(false, std::memory_order_release);
     }
 
     return ConfigSnapshot {

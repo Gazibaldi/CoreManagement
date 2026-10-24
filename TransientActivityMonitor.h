@@ -6,7 +6,6 @@
 #include <functional>
 #include <concepts>
 #include <utility>
-#include "Config.h"
 
 enum class TransientActivityType {
 	Unknown,
@@ -28,10 +27,8 @@ class TransientActivityMonitor {
     std::function<bool()> m_StateEvaluator;
 
 public:
-    // C++20 default constructor support
     TransientActivityMonitor() = default;
 
-    // C++20 Template Constructor using a Concept to perfectly forward any callable (Lambdas, Functors)
     template<typename F>
         requires std::invocable<F>&& std::convertible_to<std::invoke_result_t<F>, bool>
     TransientActivityMonitor(TransientActivityType activity, int thresholdSeconds, F&& evaluator)

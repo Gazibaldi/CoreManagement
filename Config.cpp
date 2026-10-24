@@ -11,8 +11,8 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
-#include <mutex>
 #include "Config.h"
+#include "Logger.h"
 
 #ifdef DEVTEST
 const bool ALLOW_DEV_LOGGING = true;
@@ -21,8 +21,6 @@ const bool ALLOW_DEV_LOGGING = false;
 #endif
 
 std::string VERSION = "v0.11-ALPHA";
-
-std::mutex g_ConfigMutex;
 
 std::atomic<std::shared_ptr<CoreConfigSettings>> g_CoreConfig{ std::make_shared<CoreConfigSettings>() };
 std::atomic<std::shared_ptr<GeneralConfigSettings>> g_GeneralConfig{ std::make_shared<GeneralConfigSettings>() };
@@ -33,10 +31,6 @@ CoreConfigSettings defaultCoreConfig;
 GeneralConfigSettings defaultGeneralConfig;
 PlayerConfigSettings defaultPlayerConfig;
 HorseConfigSettings defaultHorseConfig;
-
-std::atomic<int> g_CurrentLogLevel{ static_cast<int>(LogLevel::Disabled) };
-
-std::atomic<bool> g_ShouldReloadConfig(false);
 
 std::string g_IniPath = ".\\CoreManagement.ini";
 

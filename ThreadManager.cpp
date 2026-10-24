@@ -18,10 +18,14 @@ std::atomic<bool> g_RunIniWatcherThread(false);
 std::condition_variable g_IniWatcherCv;
 std::mutex g_IniWatcherCvMutex;
 
+// Config synchronization variables
+std::mutex g_ConfigMutex;
+std::atomic<bool> g_HasConfigChanged(false);
+
 // Logger synchronization variables
 std::atomic<bool> g_RunLogThread(false);
-extern std::condition_variable g_LogCV;
-extern std::mutex g_LogQueueMutex;
+std::condition_variable g_LogCV;
+std::mutex g_LogQueueMutex;
 
 void IniWatcherThread() {
     WIN32_FILE_ATTRIBUTE_DATA fileData;
@@ -55,7 +59,7 @@ void IniWatcherThread() {
                     LoadConfiguration(); // Overwrites g_CoreConfig, g_GeneralConfig, etc.
                 }
 
-                g_ShouldReloadConfig.store(true, std::memory_order_release);
+                g_HasConfigChanged.store(true, std::memory_order_release);
                 WriteLog(LogLevel::Standard, "Configuration dynamically reloaded.");
             }
         }

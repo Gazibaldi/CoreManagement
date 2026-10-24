@@ -7,6 +7,7 @@
 #include <atomic>
 #include <string>
 #include <memory>
+#include <utility>
 #include "Logger.h"
 
 extern std::string VERSION;
@@ -88,10 +89,6 @@ struct ConfigSnapshot {
         PlayerConfig(*playerPtr), HorseConfig(*horsePtr)
     {}
 };
-
-extern std::mutex g_ConfigMutex;
-
-extern std::atomic<bool> g_ShouldReloadConfig;
 
 extern std::string g_IniPath;
 
