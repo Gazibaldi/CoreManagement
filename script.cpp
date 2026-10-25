@@ -285,17 +285,10 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 
 	ctx.isInTimeWarp = (timeScale < VANILLA_GAME_TIME_SCALE);
 
-	// if the player is entering a mission and the time scale is above vanilla, we reset it to vanilla to ensure mission events are not affected by the time scale change. 
-	// This is a safeguard against any mission scripts that rely on the vanilla time scale for timing events. 
-    if (ctx.isInMission && !g_State.wasInMissionDuringRestriction) {
-        LOG(LogLevel::Verbose, "Mission start detected: Setting game time scale to vanilla value.");
-		SetGameTimeScale(VANILLA_GAME_TIME_SCALE);
-    }
-	
 	// If the player is in a mission/minigame/timewarp, we don't reset the time scale as it may be intended to be changed during those events.
 	// otherwise, we reset it back to the configured value to ensure the drain mechanics are consistent with the player's configuration.
-    if (timeScale != configuredTimeScale && !(ctx.isInMission || ctx.isInTimeWarp || ctx.isInMinigame)) {
-        LOG(LogLevel::Verbose, "Game time scale has changed to {} probably due to a config change/save load. Setting to configured value: {}.", timeScale, configuredTimeScale);
+    if (timeScale != configuredTimeScale && !(isInMission || isInMinigame || ctx.isInTimeWarp)) {
+        LOG(LogLevel::Verbose, "Game time scale has changed to {} probably due to state change. Setting to configured value: {}.", timeScale, configuredTimeScale);
 		SetGameTimeScale(configuredTimeScale);
     }    
 
