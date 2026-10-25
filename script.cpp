@@ -441,10 +441,10 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
     }
 
     float dirtLevel = PED::_GET_PED_DIRT_LEVEL(playerPed, true);
-
-	LOG_DEV("Player dirt level: {}", dirtLevel);
-
     bool isDirty = dirtLevel > PLAYER_DIRT_THRESHOLD;
+
+    LOG_DEV("Checking if player is dirty. Dirt level: {:.4f}, Threshold: {}, IsDirty: {}", dirtLevel, PLAYER_DIRT_THRESHOLD, isDirty);
+
     if(isDirty) {
 		LOG(LogLevel::Verbose, "Player is dirty. Applying dirty dead eye decay multiplier.");
 		multiplier += std::max(playerConfig.deadEyeDirtyMultiplier - 1.0f, 0.0f);
