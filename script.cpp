@@ -288,14 +288,14 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 	// if the player is entering a mission and the time scale is above vanilla, we reset it to vanilla to ensure mission events are not affected by the time scale change. 
 	// This is a safeguard against any mission scripts that rely on the vanilla time scale for timing events. 
     if (ctx.isInMission && !g_State.wasInMissionDuringRestriction) {
-        LOG_DEV("Mission start detected: Setting game time scale to vanilla value.");
+        LOG(LogLevel::Verbose, "Mission start detected: Setting game time scale to vanilla value.");
 		SetGameTimeScale(VANILLA_GAME_TIME_SCALE);
     }
 	
 	// If the player is in a mission/minigame/timewarp, we don't reset the time scale as it may be intended to be changed during those events.
 	// otherwise, we reset it back to the configured value to ensure the drain mechanics are consistent with the player's configuration.
     if (timeScale != configuredTimeScale && !(ctx.isInMission || ctx.isInTimeWarp || ctx.isInMinigame)) {
-		LOG_DEV("Game time scale has changed to {} probably due to a config change/save load. Setting to configured value: {}.", timeScale, configuredTimeScale);
+        LOG(LogLevel::Verbose, "Game time scale has changed to {} probably due to a config change/save load. Setting to configured value: {}.", timeScale, configuredTimeScale);
 		SetGameTimeScale(configuredTimeScale);
     }    
 
@@ -306,7 +306,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     if (!ctx.freezeActive)
 		RecordTrackingSnapshots(playerPed);
     
-	if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev) && HasDevLogCacheChanged(ctx)) {
+	if (HasDevLogCacheChanged(ctx)) {
         // Update tracking baselines immediately
         UpdateDevLogCache(ctx);
 
