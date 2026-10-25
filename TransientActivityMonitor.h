@@ -8,7 +8,7 @@
 #include <utility>
 #include <array>
 #include <optional>
-#include "../magic_enum/inc/magic_enum.hpp"
+#include "magic_enum.hpp"
 
 enum class TransientActivityType {
 	Unknown,
