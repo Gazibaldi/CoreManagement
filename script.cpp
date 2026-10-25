@@ -1440,6 +1440,34 @@ ConfigSnapshot CheckForConfigChange() {
     };
 }
 
+int CalculateStateChangeTickIntervalMs() {
+    int normalTickInterval = g_StateChangeTickIntervalMs.load(std::memory_order_acquire);
+    int restrictedTickInterval = g_StateChangeTickIntervalRestrictedMs.load(std::memory_order_acquire);
+
+    // Safe Initialisation (mainly for logging purposes) - we want to log the first tick interval used to ensure we have a baseline for debugging
+    if (g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::NotSet) {
+        g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Standard;
+        LOG(LogLevel::Verbose, "State Change Interval Initialised: Using standard tick interval of {} ms", normalTickInterval);
+    }
+
+    // If we are entering a restricted state, we want to use the restricted tick interval for faster processing of core simulation
+    if (g_State.isRestricted && g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Standard) {
+        g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Restricted;
+        LOG(LogLevel::Verbose, "State Change Interval Change: Restricted state active. Using restricted tick interval of {} ms", restrictedTickInterval);
+    }
+    // If we are exiting a restricted state, we want to use the standard tick interval for normal gameplay
+    else if (!g_State.isRestricted && g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Restricted) {
+        g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Standard;
+        LOG(LogLevel::Verbose, "State Change Interval Change: Restricted state inactive. Using standard tick interval of {} ms", normalTickInterval);
+    }
+
+    // If we are in the same state as before, we just return the current tick interval without logging
+    if (g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Standard)
+        return normalTickInterval;
+
+    return restrictedTickInterval;
+}
+
 bool IsInSaveLoadState(Ped playerPed) {
     Player playerId = PLAYER::PLAYER_ID();
 
@@ -1467,6 +1495,8 @@ bool IsInSaveLoadState(Ped playerPed) {
         g_State.accumulatedTimeMs = 0;
 
         g_State.timescaleDeltaInitialised = true;
+
+        CalculateStateChangeTickIntervalMs();
     }
 
     g_State.lastKnownPlayerPed = playerPed;
@@ -1545,34 +1575,6 @@ void UpdateCoreSimulation() {
             g_State.lastTickInGameMinutes = currentTotalMinutes;
         }
     }
-}
-
-int CalculateStateChangeTickIntervalMs() {
-	int normalTickInterval = g_StateChangeTickIntervalMs.load(std::memory_order_acquire);
-	int restrictedTickInterval = g_StateChangeTickIntervalRestrictedMs.load(std::memory_order_acquire);
-
-	// Safe Initialisation (mainly for logging purposes) - we want to log the first tick interval used to ensure we have a baseline for debugging
-    if (g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::NotSet) {
-        g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Standard;
-        LOG(LogLevel::Verbose, "State Change Interval Initialised: Using standard tick interval of {} ms", normalTickInterval);
-    }
-
-	// If we are entering a restricted state, we want to use the restricted tick interval for faster processing of core simulation
-    if (g_State.isRestricted && g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Standard) {
-        g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Restricted;
-        LOG(LogLevel::Verbose, "State Change Interval Change: Restricted state active. Using restricted tick interval of {} ms", restrictedTickInterval);
-    }
-	// If we are exiting a restricted state, we want to use the standard tick interval for normal gameplay
-    else if (!g_State.isRestricted && g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Restricted) {
-        g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Standard;
-        LOG(LogLevel::Verbose, "State Change Interval Change: Restricted state inactive. Using standard tick interval of {} ms", normalTickInterval);
-    }
-
-	// If we are in the same state as before, we just return the current tick interval without logging
-    if(g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Standard)
-        return normalTickInterval;
-
-    return restrictedTickInterval;
 }
 
 void ScriptMain() {
