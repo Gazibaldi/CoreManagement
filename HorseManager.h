@@ -6,6 +6,7 @@
 
 #include <mutex>
 #include <tuple>
+#include "..\CoreSDK\inc\types.h"
 
 enum class ActiveHorseType : int { Mounted, Active, Either };
 

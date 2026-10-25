@@ -5,11 +5,9 @@
 #pragma once
 #include <string_view>
 #include <atomic>
-#include <mutex>
-#include <condition_variable>
+#include <thread>
 #include <format>
 #include "CMTypes.h"
-
 
 #ifdef DEVTEST
 // __VA_OPT__(,) safely deletes the comma if you pass 0 formatting variables!
@@ -32,14 +30,12 @@
             } \
         } while(0)
 
-enum class LogLevel : int { Disabled = 0, Standard = 1, Verbose = 2, Dev = 2105 };
+enum class LogLevel : int { ConfigOnly = 0, Standard = 1, Verbose = 2, Dev = 2105 };
 extern std::atomic<int> g_CurrentLogLevel;
 
-extern std::atomic<bool> g_RunLogThread;
-extern std::condition_variable g_LogCV;
-extern std::mutex g_LogQueueMutex;
+[[nodiscard]] std::thread InitialiseLoggerThread();
 
-void AsyncLogWriterWorker(std::atomic<bool>& runFlag);
+void ShutdownLogger();
 
 void TryWaitForLogQueueDrain();
 

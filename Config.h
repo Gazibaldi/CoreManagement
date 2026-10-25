@@ -4,12 +4,11 @@
 
 #pragma once
 #include <atomic>
-#include <condition_variable>
-#include <mutex>
 #include <string>
 #include <memory>
 #include <utility>
 #include "Logger.h"
+#include <thread>
 
 extern const std::string VERSION;
 
@@ -97,17 +96,14 @@ extern const std::string g_IniPath;
 
 extern std::atomic<int> g_StateChangeTickIntervalMs;
 extern std::atomic<int> g_StateChangeTickIntervalRestrictedMs;
-extern std::atomic<int> g_GameTimescaleMS;
 
 extern std::atomic<std::shared_ptr<CoreConfigSettings>> g_CoreConfig;
 extern std::atomic<std::shared_ptr<GeneralConfigSettings>> g_GeneralConfig;
 extern std::atomic<std::shared_ptr<PlayerConfigSettings>> g_PlayerConfig;
 extern std::atomic<std::shared_ptr<HorseConfigSettings>> g_HorseConfig;
 
-void ConfigWatcherWorker();
+[[nodiscard]] std::thread InitialiseConfigThread();
+
+void ShutdownConfig();
 
 void LoadConfiguration();
-
-extern std::atomic<bool> g_RunConfigThread;
-extern std::condition_variable g_ConfigThreadCV;
-extern std::mutex g_ConfigMutex;

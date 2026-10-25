@@ -3,9 +3,6 @@
 */
 
 #include <thread>
-#include <atomic>
-#include <mutex>
-#include <functional>
 #include "ThreadManager.h"
 #include "Config.h"
 #include "Logger.h"
@@ -16,29 +13,13 @@ void ScriptThreadManager::Initialise() {
     // ALWAYS clean up any existing thread before starting a new one (reloads persist the global manager)
     Shutdown();
 
-    // Boot up the Logger thread first so the script can log safely immediately
-    g_RunLogThread.store(true, std::memory_order_release);
-    loggerThread = std::thread(AsyncLogWriterWorker, std::ref(g_RunLogThread));
-
-    // Boot up the INI Watcher thread
-    g_RunConfigThread.store(true, std::memory_order_release);
-    configThread = std::thread(ConfigWatcherWorker);
+	loggerThread = InitialiseLoggerThread();
+    configThread = InitialiseConfigThread();
 }
 
 void ScriptThreadManager::Shutdown(bool isGameExiting) {
-    // Signal the threads to stop
-    g_RunConfigThread.store(false, std::memory_order_release);
-    g_RunLogThread.store(false, std::memory_order_release);
-
-    // Wake up the condition variables loop in case it's waiting/sleeping
-    {
-        std::lock_guard<std::mutex> lock(g_ConfigMutex);
-        g_ConfigThreadCV.notify_all();
-    }
-    {
-        std::lock_guard<std::mutex> lock(g_LogQueueMutex);
-        g_LogCV.notify_all();
-    }
+    ShutdownLogger();
+	ShutdownConfig();
 
     // Wait for the thread to completely finish executing
     if (configThread.joinable()) {

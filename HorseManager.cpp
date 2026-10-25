@@ -99,7 +99,11 @@ bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) 
     bool result = (static_cast<float>(samples) / static_cast<float>(m_HorseSamples)) >= HORSE_SAMPLING_THRESHOLD;
 
     if(!result)
-        LOG_DEV("Horse didn't pass sample threshold check ({}): SamplesRecorded={}, TotalSamplesTaken={}, Threshold={}", std::string(sampleType == HorseSampleType::Lead ? "Lead" : "Hitched"), samples, m_HorseSamples, HORSE_SAMPLING_THRESHOLD);
+        LOG_DEV(
+            "Horse didn't pass sample threshold check ({}):\n"
+            "SamplesRecorded={},\n"
+            "TotalSamplesTaken={},\n"
+            "Threshold={}", std::string(sampleType == HorseSampleType::Lead ? "Lead" : "Hitched"), samples, m_HorseSamples, HORSE_SAMPLING_THRESHOLD);
 
     return result;
 }

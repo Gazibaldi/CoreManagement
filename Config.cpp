@@ -118,14 +118,29 @@ void ConfigWatcherWorker() {
                 // Give the OS text editor 100ms to finish flushing its buffer to disk cleanly
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-                LOG(LogLevel::Standard, "Config change detected. Parsing INI...");
+                LOG(LogLevel::ConfigOnly, "Config change detected. Parsing INI...");
 
                 LoadConfiguration(); // Overwrites g_CoreConfig, g_GeneralConfig, etc.
                 
                 g_HasConfigChanged.store(true, std::memory_order_release);
-                LOG(LogLevel::Standard, "Configuration dynamically reloaded.");
+                LOG(LogLevel::ConfigOnly, "Configuration dynamically reloaded.");
             }
         }
+    }
+}
+
+[[nodiscard]] std::thread InitialiseConfigThread() {
+    g_RunConfigThread.store(true, std::memory_order_release);
+    return std::thread(ConfigWatcherWorker);
+}
+
+void ShutdownConfig() {
+    g_RunConfigThread.store(false, std::memory_order_release);
+
+    // Wake up the condition variables loop in case it's waiting/sleeping
+    {
+        std::lock_guard<std::mutex> lock(g_ConfigMutex);
+        g_ConfigThreadCV.notify_all();
     }
 }
 
@@ -231,9 +246,6 @@ void BuildDefaultConfigFile() {
 }
 
 void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigSettings* generalConfig, const PlayerConfigSettings* playerConfig, const HorseConfigSettings* horseConfig) {
-    if (g_CurrentLogLevel.load(std::memory_order_acquire) < static_cast<int>(LogLevel::Standard))
-        return;
-
     std::ostringstream table;
     table << std::fixed << std::setprecision(2)
         << "+---------------------------------------------+------------+\n"
@@ -284,17 +296,17 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
         << "| Horse: Stamina Camped Floor                 | " << std::setw(10) << horseConfig->campedStaminaFloor << " |\n"
         << "+---------------------------------------------+------------+\n";
 
-    LOG(LogLevel::Standard, "Internal Parameter Map Hydrated:\n{}", table.str());
+    LOG(LogLevel::ConfigOnly, "Internal Parameter Map Hydrated:\n{}", table.str());
 }
 
 void LoadConfiguration() {
     if (!DoesFileExist(g_IniPath)) {
         BuildDefaultConfigFile();
 
-		LOG(LogLevel::Standard, "Configuration file missing. Generating fresh defaults at: {}", g_IniPath);
+		LOG(LogLevel::ConfigOnly, "Configuration file missing. Generating fresh defaults at: {}", g_IniPath);
     }
 
-    LOG(LogLevel::Standard, "Loading ini configuration from: {}", g_IniPath);
+    LOG(LogLevel::ConfigOnly, "Loading ini configuration from: {}", g_IniPath);
 
     std::shared_ptr<CoreConfigSettings>    newCoreConfig = std::make_shared<CoreConfigSettings>();
     std::shared_ptr<GeneralConfigSettings> newGeneralConfig = std::make_shared<GeneralConfigSettings>();
@@ -354,7 +366,7 @@ void LoadConfiguration() {
 
     switch (newCoreConfig->logLevelRaw) {
 	case 0:
-        newCoreConfig->currentLogLevel = LogLevel::Disabled;
+        newCoreConfig->currentLogLevel = LogLevel::ConfigOnly;
 		break;
 	case 1:
         newCoreConfig->currentLogLevel = LogLevel::Standard;
@@ -366,7 +378,7 @@ void LoadConfiguration() {
         newCoreConfig->currentLogLevel = LogLevel::Dev;
 		break;
 	default:
-        newCoreConfig->currentLogLevel = LogLevel::Disabled; // Fallback to disabled if somehow an invalid value is present
+        newCoreConfig->currentLogLevel = LogLevel::ConfigOnly; // Fallback to disabled if somehow an invalid value is present
 		break;
 	}
 
@@ -375,9 +387,7 @@ void LoadConfiguration() {
     g_PlayerConfig.store(newPlayerConfig, std::memory_order_release);
     g_HorseConfig.store(newHorseConfig, std::memory_order_release);
 
-	g_GameTimescaleMS.store(newGeneralConfig->msPerInGameMinute, std::memory_order_release);
-    
-    g_StateChangeTickIntervalMs.store(newCoreConfig->stateChangeTickIntervalMs, std::memory_order_release);
+	g_StateChangeTickIntervalMs.store(newCoreConfig->stateChangeTickIntervalMs, std::memory_order_release);
     g_StateChangeTickIntervalRestrictedMs.store(static_cast<int>(newCoreConfig->stateChangeTickIntervalMs * newCoreConfig->restrictedStateChangeTickIntervalMultiplier), std::memory_order_release);
     
     g_CurrentLogLevel.store(static_cast<int>(newCoreConfig->logLevelRaw), std::memory_order_release);

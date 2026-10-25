@@ -15,8 +15,10 @@
 #include <ios>
 #include <string_view>
 #include <condition_variable>
+#include <functional>
 #include "Logger.h"
 #include "CMTypes.h"
+
 
 struct DevLoggingCache {
     bool lastFreezeActive = false;
@@ -29,7 +31,7 @@ struct DevLoggingCache {
     bool lastIsInTimeWarp = false;
 };
 
-std::atomic<int> g_CurrentLogLevel{ static_cast<int>(LogLevel::Disabled) };
+std::atomic<int> g_CurrentLogLevel{ static_cast<int>(LogLevel::ConfigOnly) };
 
 const std::string g_LogPath = ".\\CoreManagement.log";
 
@@ -64,6 +66,21 @@ void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
             logFile.flush();
             logFile.close();
         }
+    }
+}
+
+[[nodiscard]] std::thread InitialiseLoggerThread() {
+    g_RunLogThread.store(true, std::memory_order_release);
+    return std::thread(AsyncLogWriterWorker, std::ref(g_RunLogThread));
+}
+
+void ShutdownLogger() {
+    g_RunLogThread.store(false, std::memory_order_release);
+    
+    // Wake up the condition variable loop in case it's waiting/sleeping
+    {
+        std::lock_guard<std::mutex> lock(g_LogQueueMutex);
+        g_LogCV.notify_all();
     }
 }
 
