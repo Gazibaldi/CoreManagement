@@ -8,8 +8,7 @@ bool TransientActivityMonitor::ActivateMonitor() noexcept {
 }
 
 // Core Tick Cycle Engine
-void TransientActivityMonitor::MonitorCheck() noexcept {
-    
+void TransientActivityMonitor::MonitorCheck() noexcept {    
 	// If the state evaluator returns false and the monitor is active, increment the tick counter
 	// If the tick counter exceeds the threshold, mark the monitor as expired and inactive
 	// this is basically a fuzzy debounce mechanism to ensure that transient states are not immediately considered expired

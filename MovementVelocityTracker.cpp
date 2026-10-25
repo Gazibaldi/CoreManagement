@@ -6,8 +6,8 @@
 
 #include <algorithm>
 #include <mutex>
-#include "MovementVelocityTracker.h"
 #include "..\CoreSDK\inc\natives.h"
+#include "MovementVelocityTracker.h"
 #include "Logger.h"
 #include "HorseManager.h"
 
@@ -41,6 +41,7 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
 [[nodiscard]] float MovementVelocityTracker::GetPlayerOnFootSpeed() noexcept {
 	LOG_DEV("Getting player average on-foot speed.");
     std::lock_guard<std::mutex> guard(m_Lock);
+
     if (m_PlayerFootSamples == 0) return 0.0f;
 
     return m_PlayerFootSum / static_cast<float>(m_PlayerFootSamples);
@@ -49,15 +50,16 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
 [[nodiscard]] float MovementVelocityTracker::GetHorseAverageSpeed() noexcept {
 	LOG_DEV("Getting horse average speed.");
     std::lock_guard<std::mutex> guard(m_Lock);
+
     if (m_HorseSamples == 0) return 0.0f;
 
     return m_HorseSum / static_cast<float>(m_HorseSamples);
 }
 
-[[nodiscard]] void MovementVelocityTracker::ResetSnapshot() noexcept {
+void MovementVelocityTracker::ResetSnapshot() noexcept {
 	LOG_DEV("Resetting MovementVelocityTracker state.");
-
 	std::lock_guard<std::mutex> guard(m_Lock);
+
 	m_PlayerFootSum = 0.0f;
 	m_PlayerFootSamples = 0;
 

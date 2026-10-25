@@ -12,10 +12,11 @@
 #include <thread>
 #include <utility>
 #include <format>
-#include "Config.h"
+#include <ios>
+#include <string_view>
+#include <condition_variable>
 #include "Logger.h"
 #include "CMTypes.h"
-#include "ThreadManager.h"
 
 struct DevLoggingCache {
     bool lastFreezeActive = false;
@@ -30,11 +31,15 @@ struct DevLoggingCache {
 
 std::atomic<int> g_CurrentLogLevel{ static_cast<int>(LogLevel::Disabled) };
 
-std::string g_LogPath = ".\\CoreManagement.log";
+const std::string g_LogPath = ".\\CoreManagement.log";
 
 static std::queue<std::string> s_LogQueue;
 
 DevLoggingCache g_LogCache;
+
+std::atomic<bool> g_RunLogThread(false);
+std::condition_variable g_LogCV;
+std::mutex g_LogQueueMutex;
 
 void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
     while (runFlag || !s_LogQueue.empty()) {

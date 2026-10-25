@@ -3,8 +3,10 @@
 */
 
 #include "..\CoreSDK\inc\types.h"
+#include "..\CoreSDK\inc\natives.h"
 #include "InventoryManager.h"
 #include "Logger.h"
+#include "CMTypes.h"
 
 Hash GetKey(const char* key) {
     Hash hash = MISC::GET_HASH_KEY(key);
@@ -183,7 +185,7 @@ void InventoryManager::ComputeHashes() noexcept {
     } };
 }
 
-[[nodiscard]] RDR_GUID InventoryManager::GetPlayerInventoryItemGUID(Hash itemHash, RDR_GUID guid, Hash slotId) noexcept {
+RDR_GUID InventoryManager::GetPlayerInventoryItemGUID(Hash itemHash, RDR_GUID guid, Hash slotId) noexcept {
     RDR_GUID outGuid{};
     
     INVENTORY::INVENTORY_GET_GUID_FROM_ITEMID(1, (Any*)&guid, itemHash, slotId, (Any*)&outGuid);
@@ -193,8 +195,7 @@ void InventoryManager::ComputeHashes() noexcept {
     return outGuid;
 }
 
-// Gets the players inventory GUID
-[[nodiscard]] RDR_GUID InventoryManager::GetPlayerInventoryGUID() noexcept {
+RDR_GUID InventoryManager::GetPlayerInventoryGUID() noexcept {
     RDR_GUID emptyGuid{};
 
     RDR_GUID invGuid = GetPlayerInventoryItemGUID(m_CharacterHash, emptyGuid, m_NullSlotHash);
@@ -209,7 +210,7 @@ void InventoryManager::ComputeHashes() noexcept {
     return invGuid;
 }
 
-[[nodiscard]] Hash InventoryManager::GetItemGroup(Hash itemHash) noexcept {
+Hash InventoryManager::GetItemGroup(Hash itemHash) noexcept {
     RDR_ITEMINFO info{};
 
     if (!ITEMDATABASE::_ITEMDATABASE_IS_KEY_VALID(itemHash, 0)) {
@@ -227,7 +228,7 @@ void InventoryManager::ComputeHashes() noexcept {
     return info.itemGroup;
 }
 
-[[nodiscard]] RDR_SLOTINFO InventoryManager::GetItemSlotInfo(Hash itemHash) noexcept {
+RDR_SLOTINFO InventoryManager::GetItemSlotInfo(Hash itemHash) noexcept {
     RDR_SLOTINFO slotInfo{};
 
 	RDR_GUID invGuid = GetPlayerInventoryGUID();
@@ -260,7 +261,7 @@ void InventoryManager::ComputeHashes() noexcept {
     return slotInfo;
 }
 
-[[nodiscard]] bool InventoryManager::DoesPlayerHaveItem(Hash itemHash, const std::string& itemName) noexcept {    
+bool InventoryManager::DoesPlayerHaveItem(Hash itemHash, const std::string& itemName) noexcept {    
     RDR_SLOTINFO slotInfo = GetItemSlotInfo(itemHash);
 
     if (slotInfo.IsInvalid()) {
@@ -287,7 +288,7 @@ void InventoryManager::ComputeHashes() noexcept {
     }
 }
 
-[[nodiscard]] bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std::string& itemName) noexcept {
+bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std::string& itemName) noexcept {
     RDR_SLOTINFO slotInfo = GetItemSlotInfo(itemHash);
 
     if (slotInfo.IsInvalid()) {

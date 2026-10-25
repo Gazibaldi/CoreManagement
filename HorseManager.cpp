@@ -2,8 +2,10 @@
         Copyright © 2026 Gary Tweddle / Gazibaldi.This program is free software : you can redistribute it and /or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
 */
 #include <tuple>
+#include <mutex>
 #include <string>
 #include "..\CoreSDK\inc\natives.h"
+#include "..\CoreSDK\inc\types.h"
 #include "HorseManager.h"
 #include "Logger.h"
 
@@ -262,7 +264,7 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
     }
 }
 
-[[nodiscard]] void HorseManager::ResetSnapshot() noexcept {
+void HorseManager::ResetSnapshot() noexcept {
 	LOG_DEV("Resetting horse hitched/led snapshot.");
 
 	std::lock_guard<std::mutex> guard(m_Lock);

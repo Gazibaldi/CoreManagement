@@ -4,12 +4,9 @@
 
 #pragma once
 #include <thread>
-#include <mutex>
-#include <atomic>
-#include <condition_variable>
 
 class ScriptThreadManager {
-    std::thread iniWatcherThread;
+    std::thread configThread;
     std::thread loggerThread;
 public:
     ScriptThreadManager() = default;
@@ -21,10 +18,3 @@ public:
 };
 
 extern ScriptThreadManager g_ThreadManager;
-
-// Config synchronization
-extern std::atomic<bool> g_HasConfigChanged;
-
-// Logger orchestration tools
-extern std::condition_variable g_LogCV; 
-extern std::mutex g_LogQueueMutex;

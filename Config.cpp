@@ -10,7 +10,10 @@
 #include <atomic>
 #include <algorithm>
 #include <fstream>
+#include <string_view>
 #include <memory>
+#include <mutex>
+#include <condition_variable>
 #include "Config.h"
 #include "Logger.h"
 
@@ -20,23 +23,29 @@ const bool ALLOW_DEV_LOGGING = true;
 const bool ALLOW_DEV_LOGGING = false;
 #endif
 
-std::string VERSION = "v0.11-ALPHA";
+const std::string VERSION = "v0.11-ALPHA";
 
 std::atomic<std::shared_ptr<CoreConfigSettings>> g_CoreConfig{ std::make_shared<CoreConfigSettings>() };
 std::atomic<std::shared_ptr<GeneralConfigSettings>> g_GeneralConfig{ std::make_shared<GeneralConfigSettings>() };
 std::atomic<std::shared_ptr<PlayerConfigSettings>> g_PlayerConfig{ std::make_shared<PlayerConfigSettings>() };
 std::atomic<std::shared_ptr<HorseConfigSettings>> g_HorseConfig{ std::make_shared<HorseConfigSettings>() };
 
-CoreConfigSettings defaultCoreConfig;
-GeneralConfigSettings defaultGeneralConfig;
-PlayerConfigSettings defaultPlayerConfig;
-HorseConfigSettings defaultHorseConfig;
+const CoreConfigSettings defaultCoreConfig;
+const GeneralConfigSettings defaultGeneralConfig;
+const PlayerConfigSettings defaultPlayerConfig;
+const HorseConfigSettings defaultHorseConfig;
 
-std::string g_IniPath = ".\\CoreManagement.ini";
+const std::string g_IniPath = ".\\CoreManagement.ini";
 
 std::atomic<int> g_GameTimescaleMS(2000);
 std::atomic<int> g_StateChangeTickIntervalMs(500);
 std::atomic<int> g_StateChangeTickIntervalRestrictedMs(500);
+
+std::atomic<bool> g_RunConfigThread(false);
+std::condition_variable g_ConfigThreadCV;
+
+std::mutex g_ConfigMutex;
+std::atomic<bool> g_HasConfigChanged(false);
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {
     char defaultBuffer[32];
@@ -80,6 +89,45 @@ int ValidateLogLevel(int value, int defaultValue) {
     }
 
     return defaultValue;
+}
+
+void ConfigWatcherWorker() {
+    WIN32_FILE_ATTRIBUTE_DATA fileData;
+    FILETIME lastWriteTime = { 0, 0 };
+
+    if (GetFileAttributesExA(g_IniPath.c_str(), GetFileExInfoStandard, &fileData)) {
+        lastWriteTime = fileData.ftLastWriteTime;
+    }
+
+    while (g_RunConfigThread) {
+        std::unique_lock<std::mutex> lock(g_ConfigMutex);
+
+        g_ConfigThreadCV.wait_for(lock, std::chrono::milliseconds(8000), [&] {
+            return !g_RunConfigThread.load(std::memory_order_acquire);
+            });
+
+        // Check again immediately after waking up to handle instant shutdown
+        if (!g_RunConfigThread) break;
+
+        if (GetFileAttributesExA(g_IniPath.c_str(), GetFileExInfoStandard, &fileData)) {
+            if (CompareFileTime(&fileData.ftLastWriteTime, &lastWriteTime) > 0) {
+                lastWriteTime = fileData.ftLastWriteTime;
+
+                // Give the OS text editor 100ms to finish flushing its buffer to disk cleanly
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+                WriteLog(LogLevel::Standard, "Config change detected. Parsing INI...");
+
+                {
+                    std::lock_guard<std::mutex> lock(g_ConfigMutex);
+                    LoadConfiguration(); // Overwrites g_CoreConfig, g_GeneralConfig, etc.
+                }
+
+                g_HasConfigChanged.store(true, std::memory_order_release);
+                WriteLog(LogLevel::Standard, "Configuration dynamically reloaded.");
+            }
+        }
+    }
 }
 
 void BuildDefaultConfigFile() {
@@ -241,7 +289,6 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
 }
 
 void LoadConfiguration() {
-
     if (!DoesFileExist(g_IniPath)) {
         BuildDefaultConfigFile();
 

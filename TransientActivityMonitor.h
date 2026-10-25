@@ -46,7 +46,7 @@ public:
     void RefreshThreshold(bool isRestricted) noexcept;
 
     // Read-only Getters (Fully encapsulated)
-    [[nodiscard]] constexpr bool IsActive() const noexcept { return m_IsActive; }
-    [[nodiscard]] constexpr bool IsExpired() const noexcept { return m_IsExpired; }
-    [[nodiscard]] constexpr TransientActivityType GetActivityType() const noexcept { return m_Activity; }
+    [[nodiscard]] bool IsActive() const noexcept { return m_IsActive; }
+    [[nodiscard]] bool IsExpired() const noexcept { return m_IsExpired; }
+    [[nodiscard]] TransientActivityType GetActivityType() const noexcept { return m_Activity; }
 };

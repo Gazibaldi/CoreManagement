@@ -5,7 +5,7 @@
 #pragma once
 #include <array>
 #include <string>
-#include "..\CoreSDK\inc\natives.h"
+#include "..\CoreSDK\inc\types.h"
 #include "CMTypes.h"
 
 Hash GetKey(const char* key);
@@ -64,13 +64,13 @@ class InventoryManager {
     std::array<TackModifier, 12> m_StirrupModifiers{};
     std::array<TackModifier, 93> m_SaddleModifiers{};
 
-    [[nodiscard]] RDR_GUID GetPlayerInventoryItemGUID(Hash item, RDR_GUID guid, Hash slotId) noexcept;
-    [[nodiscard]] RDR_GUID GetPlayerInventoryGUID() noexcept;
-    [[nodiscard]] Hash GetItemGroup(Hash itemHash) noexcept;
-    [[nodiscard]] RDR_SLOTINFO GetItemSlotInfo(Hash itemHash) noexcept;
+    RDR_GUID GetPlayerInventoryItemGUID(Hash item, RDR_GUID guid, Hash slotId) noexcept;
+    RDR_GUID GetPlayerInventoryGUID() noexcept;
+    Hash GetItemGroup(Hash itemHash) noexcept;
+    RDR_SLOTINFO GetItemSlotInfo(Hash itemHash) noexcept;
 
-    [[nodiscard]] bool DoesPlayerHaveItem(Hash itemHash, const std::string& itemName) noexcept;
-    [[nodiscard]] bool DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std::string& itemName) noexcept;
+    bool DoesPlayerHaveItem(Hash itemHash, const std::string& itemName) noexcept;
+    bool DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std::string& itemName) noexcept;
 
 public:
     void ComputeHashes() noexcept;

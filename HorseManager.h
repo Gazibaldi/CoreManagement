@@ -42,7 +42,7 @@ public:
 
     [[nodiscard]] bool IsHorseDirty(Ped horsePed) noexcept;
     
-    [[nodiscard]] void ResetSnapshot() noexcept;
+    void ResetSnapshot() noexcept;
 };
 
 extern HorseManager g_HorseManager;
