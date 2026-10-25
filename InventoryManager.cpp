@@ -280,9 +280,9 @@ bool InventoryManager::DoesPlayerHaveItem(Hash itemHash, const std::string& item
         bool result = INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&itemGuid);
 
 		if(!result)
-            WriteLog(LogLevel::Verbose, "Item " + itemName + " (hash: " + std::to_string(itemHash) + ") is in player inventory but did not pass the GUID validity check");
+            LOG(LogLevel::Verbose, "Item {} (hash: {}) is in player inventory but did not pass the GUID validity check", itemName, itemHash);
         else
-            WriteLog(LogLevel::Verbose, "Player has item: " + itemName + " (hash: " + std::to_string(itemHash) + ") in their inventory. Adding core passive modifiers");
+            LOG(LogLevel::Verbose, "Player has item: {} (hash: {}) in their inventory. Adding core passive modifiers", itemName, itemHash);
 
         return result;
     }
@@ -301,7 +301,7 @@ bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std:
 	LOG_DEV("Inventory item: {} (hash: {}) has GUID: {}", itemName, itemHash, itemGuid.ToString());
 
     if (itemGuid.IsInvalid()) {
-        WriteLog(LogLevel::Verbose, "Horse does not have item: " + itemName + " (hash: " + std::to_string(itemHash) + ") in their inventory");
+        LOG(LogLevel::Verbose, "Horse does not have item: {} (hash: {}) in their inventory", itemName, itemHash);
         return false;
     }
     else {
@@ -309,9 +309,9 @@ bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std:
         bool result = INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&itemGuid);
 
         if (!result)
-            WriteLog(LogLevel::Verbose, "Item " + itemName + " (hash: " + std::to_string(itemHash) + ") is in horse inventory but did not pass the GUID validity check");
+            LOG(LogLevel::Verbose, "Item {} (hash: {}) is in horse inventory but did not pass the GUID validity check", itemName, itemHash);
         else
-            WriteLog(LogLevel::Verbose, "Horse has item: " + itemName + " (hash: " + std::to_string(itemHash) + ") in their inventory. Adding core passive modifiers");
+            LOG(LogLevel::Verbose, "Horse has item: {} (hash: {}) in their inventory. Adding core passive modifiers", itemName, itemHash);
 
         return result;
     }
@@ -321,7 +321,7 @@ bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std:
     CombinedPlayerCoreModifiers modifiers{};
 
     for (const auto& passive : m_PlayerPassiveModifiers) {
-		WriteLog(LogLevel::Verbose, "Checking for player passive item: " + std::string(passive.name) + " (hash: " + std::to_string(passive.itemHash) + ")");
+		LOG(LogLevel::Verbose, "Checking for player passive item: {} (hash: {})", passive.name, passive.itemHash);
         if (DoesPlayerHaveItem(passive.itemHash, std::string(passive.name))) {
             modifiers.totalHealthReduction += passive.healthCoreMod;
             modifiers.totalStaminaReduction += passive.staminaCoreMod;
@@ -341,7 +341,7 @@ bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std:
 	// TODO: this just checks for items in the inventory not if they are equipped. Need to check if the horse has the item equipped instead of just in inventory.
     // Scan for Stirrups
     for (const auto& stirrup : m_StirrupModifiers) {
-		WriteLog(LogLevel::Verbose, "Checking for horse stirrup item: " + std::string(stirrup.name) + " (hash: " + std::to_string(stirrup.itemHash) + ")");
+		LOG(LogLevel::Verbose, "Checking for horse stirrup item: {} (hash: {})", stirrup.name, stirrup.itemHash);
         if (DoesHorseHaveItem(horsePed, stirrup.itemHash, std::string(stirrup.name))) {
             modifiers.totalStaminaReduction += stirrup.staminaCoreMod;
             break;
@@ -350,7 +350,7 @@ bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std:
 
     // Scan for Saddles & Horse Player Passives
     for (const auto& saddle : m_SaddleModifiers) {
-		WriteLog(LogLevel::Verbose, "Checking for horse saddle item: " + std::string(saddle.name) + " (hash: " + std::to_string(saddle.itemHash) + ")");
+		LOG(LogLevel::Verbose, "Checking for horse saddle item: {} (hash: {})", saddle.name, saddle.itemHash);
         bool hasItem = false;
 
         if (saddle.isPlayerPassive)

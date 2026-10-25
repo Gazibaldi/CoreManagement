@@ -90,9 +90,9 @@ bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) 
 
     if (samples == 0 || m_HorseSamples == 0) {
 		if (sampleType == HorseSampleType::Lead)
-            WriteLog(LogLevel::Verbose, "No lead samples recorded. Horse is not considered led.");
+            LOG(LogLevel::Verbose, "No lead samples recorded. Horse is not considered led.");
 		else if (sampleType == HorseSampleType::Hitched)
-			WriteLog(LogLevel::Verbose, "No hitched samples recorded. Horse is not considered hitched.");
+			LOG(LogLevel::Verbose, "No hitched samples recorded. Horse is not considered hitched.");
         return false;
     }
 
@@ -131,7 +131,7 @@ void HorseManager::ResetState() noexcept {
                 // HORSE_MAX_DISTANCE_FROM_PLAYER (400) metres is a generous distance, 350m is the Bonding Level 4 max whistle distance.
                 // Deters exploiting the drain mechanics for the horse by leaving it in a distant location while the player is elsewhere.
                 if (distance > HORSE_MAX_DISTANCE_FROM_PLAYER) {
-                    WriteLog(LogLevel::Verbose, "Active horse is too far away (" + std::to_string(distance) + " metres). Assuming it is lost.");
+                    LOG(LogLevel::Verbose, "Active horse is too far away ({} metres). Assuming it is lost.", distance);
                     hasHorse = false;
                     activeHorse = 0;
                 }

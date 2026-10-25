@@ -148,9 +148,9 @@ bool IsInSleepScenario(Ped playerPed) {
 	bool isInSleepScenario = IsInActiveScenario(playerPed, g_SleepScenarios);
 
 	if (isInSleepScenario)
-		WriteLog(LogLevel::Verbose, "Player sleep check: Player is asleep.");
+		LOG(LogLevel::Verbose, "Player sleep check: Player is asleep.");
 	else
-		WriteLog(LogLevel::Verbose, "Player sleep check: Player is not asleep.");
+		LOG(LogLevel::Verbose, "Player sleep check: Player is not asleep.");
 
 	return isInSleepScenario;
 }
@@ -159,9 +159,9 @@ bool IsInCampScenario(Ped playerPed) {
     bool isInCampScenario = IsInActiveScenario(playerPed, g_CampScenarios);
     
     if (isInCampScenario)
-        WriteLog(LogLevel::Verbose, "Player camp check: Player is at camp.");
+        LOG(LogLevel::Verbose, "Player camp check: Player is at camp.");
     else
-        WriteLog(LogLevel::Verbose, "Player camp check: Player is not at camp.");
+        LOG(LogLevel::Verbose, "Player camp check: Player is not at camp.");
 
     return isInCampScenario;
 }
@@ -175,20 +175,20 @@ bool IsPlayerArrested() {
         if (jailMonitor.IsExpired()) {
             jailMonitor.Reset();
 
-            WriteLog(LogLevel::Verbose, "Player jailed check: Player has exited jail. Resetting transient jailed state.");
+            LOG(LogLevel::Verbose, "Player jailed check: Player has exited jail. Resetting transient jailed state.");
             return false;
         }
 
-        WriteLog(LogLevel::Verbose, "Player jailed check: Player is still in jail");
+        LOG(LogLevel::Verbose, "Player jailed check: Player is still in jail");
         return true;
     }
     else {
         if(jailMonitor.ActivateMonitor()) {
-            WriteLog(LogLevel::Verbose, "Player jailed check: Player is being arrested and is in custody.");
+            LOG(LogLevel::Verbose, "Player jailed check: Player is being arrested and is in custody.");
             return true;
         }
 
-        WriteLog(LogLevel::Verbose, "Player jailed check: Player is not being arrested or is not in custody.");
+        LOG(LogLevel::Verbose, "Player jailed check: Player is not being arrested or is not in custody.");
         return false;
     }
 }
@@ -209,20 +209,20 @@ bool IsPlayerBathing(Ped playerPed) {
         if (bathingMonitor.IsExpired()) {
             bathingMonitor.Reset();
 
-            WriteLog(LogLevel::Verbose, "Player bathing check: Player has exited the bath. Resetting transient bathing state.");
+            LOG(LogLevel::Verbose, "Player bathing check: Player has exited the bath. Resetting transient bathing state.");
             return false;
         }
 
-        WriteLog(LogLevel::Verbose, "Player bathing check: Player is still in a bath");
+        LOG(LogLevel::Verbose, "Player bathing check: Player is still in a bath");
         return true;
     }
     else {
         if (bathingMonitor.ActivateMonitor()) {
-            WriteLog(LogLevel::Verbose, "Player bathing check: Player is now in a bath.");
+            LOG(LogLevel::Verbose, "Player bathing check: Player is now in a bath.");
             return true;
         }
 
-        WriteLog(LogLevel::Verbose, "Player bathing check: Player is not in a bath.");
+        LOG(LogLevel::Verbose, "Player bathing check: Player is not in a bath.");
         return false;
     }
 }
@@ -232,7 +232,7 @@ bool IsPlayerPlayingTableMinigame() {
         int threadCount = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_TableMinigames[idx]);
         LOG_DEV("Table minigame thread count for hash {}: {}", g_TableMinigames[idx], threadCount);
         if (threadCount > 0) {
-            WriteLog(LogLevel::Verbose, "Player is currently playing a table minigame.");
+            LOG(LogLevel::Verbose, "Player is currently playing a table minigame.");
             return true;
         }
     }
@@ -246,7 +246,7 @@ void RecordTrackingSnapshots(Ped playerPed) {
 }
 
 void SetGameTimeScale(int msPerInGameMinute) {
-    WriteLog(LogLevel::Verbose, "Setting game time scale (ms per in-game minute): " + std::to_string(msPerInGameMinute));
+    LOG(LogLevel::Verbose, "Setting game time scale (ms per in-game minute): {}", msPerInGameMinute);
     
 	CLOCK::_SET_MILLISECONDS_PER_GAME_MINUTE(msPerInGameMinute);
 }
@@ -327,15 +327,15 @@ float GetPlayerMountedStaminaMultiplier(const PlayerConfigSettings& playerConfig
     float currentSpeed = g_MovementTracker.GetHorseAverageSpeed();
 
     if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {
-        WriteLog(LogLevel::Verbose, "Active horse is galloping. Applying high Player stamina decay multiplier");
+        LOG(LogLevel::Verbose, "Active horse is galloping. Applying high Player stamina decay multiplier");
         return playerConfig.mountGallopStaminaMultiplier;
     }
     else if (currentSpeed > static_cast<float>(HorseSpeed::Trot)) {
-        WriteLog(LogLevel::Verbose, "Active horse is trotting. Applying base Player stamina decay multiplier");
+        LOG(LogLevel::Verbose, "Active horse is trotting. Applying base Player stamina decay multiplier");
         return playerConfig.mountTrotStaminaMultiplier;
     }
     else {
-        WriteLog(LogLevel::Verbose, "Active horse is walking or stationary. Applying low Player stamina decay multiplier");
+        LOG(LogLevel::Verbose, "Active horse is walking or stationary. Applying low Player stamina decay multiplier");
         return playerConfig.mountWalkStaminaMultiplier;
     }
 }
@@ -344,54 +344,51 @@ float GetPlayerRunningStaminaMultiplier(const PlayerConfigSettings& playerConfig
 	float currentSpeed = g_MovementTracker.GetPlayerOnFootSpeed();
 
     if (currentSpeed > static_cast<float>(PlayerSpeed::Sprint)) {
-        WriteLog(LogLevel::Verbose, "Player is sprinting. Applying high Player stamina decay multiplier");
+        LOG(LogLevel::Verbose, "Player is sprinting. Applying high Player stamina decay multiplier");
         return playerConfig.sprintStaminaMultiplier;
     }
     else if (currentSpeed > static_cast<float>(PlayerSpeed::Jog)) {
-        WriteLog(LogLevel::Verbose, "Player is jogging. Applying medium Player stamina decay multiplier");
+        LOG(LogLevel::Verbose, "Player is jogging. Applying medium Player stamina decay multiplier");
         return playerConfig.jogStaminaMultiplier;
     }
     else {
-        WriteLog(LogLevel::Verbose, "Player is walking or stationary. Applying base Player stamina decay multiplier");
+        LOG(LogLevel::Verbose, "Player is walking or stationary. Applying base Player stamina decay multiplier");
         return 1.0f;
     }
 }
 
 float CalculateHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig) {
     float currentSpeed = g_MovementTracker.GetHorseAverageSpeed();
-    float speedMultiplier = 1.0f;
 
     // The logic automatically scales down to a base flat rate if the horse is hitched or stabled!
     if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {
-        speedMultiplier = horseConfig.gallopStaminaMultiplier;
-        WriteLog(LogLevel::Verbose, "Active Horse: Running/Galloping. Applying high stamina multiplier.");
+        LOG(LogLevel::Verbose, "Active Horse: Running/Galloping. Applying high stamina multiplier.");
+        return horseConfig.gallopStaminaMultiplier;
     }
     else if (currentSpeed > static_cast<float>(HorseSpeed::Trot)) {
-        speedMultiplier = horseConfig.trotStaminaMultiplier;
-        WriteLog(LogLevel::Verbose, "Active Horse: Trotting. Applying medium stamina multiplier.");
+        LOG(LogLevel::Verbose, "Active Horse: Trotting. Applying medium stamina multiplier.");
+        return horseConfig.trotStaminaMultiplier;
     }
     else {
-		speedMultiplier = horseConfig.grazeStaminaMultiplier;
-        WriteLog(LogLevel::Verbose, "Active Horse: Walking/Grazing. Applying base decay.");
+		LOG(LogLevel::Verbose, "Active Horse: Walking/Grazing. Applying base decay.");
+        return horseConfig.grazeStaminaMultiplier;
     }
-
-    return speedMultiplier;
 }
 
 float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerConfig, float totalPassiveHealthModifierReduction, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained) {
-        WriteLog(LogLevel::Verbose, "Player is semi-restrained. Applying restrained health decay multiplier.");
+        LOG(LogLevel::Verbose, "Player is semi-restrained. Applying restrained health decay multiplier.");
         multiplier = playerConfig.campedMultiplier;
     }
 
     if (applyPostMissionDecay) {
-        WriteLog(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission health decay multiplier.");
+        LOG(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission health decay multiplier.");
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
-    WriteLog(LogLevel::Verbose, "Active player passive modifiers: Health Reduction = " + std::to_string(totalPassiveHealthModifierReduction));
+    LOG(LogLevel::Verbose, "Active player passive modifiers: Health Reduction = {}", totalPassiveHealthModifierReduction);
 	multiplier -= totalPassiveHealthModifierReduction;
     
     return std::max(multiplier, 0.1f);
@@ -401,28 +398,28 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained) {
-        WriteLog(LogLevel::Verbose, "Player is semi-restrained. Applying restrained stamina decay multiplier.");
+        LOG(LogLevel::Verbose, "Player is semi-restrained. Applying restrained stamina decay multiplier.");
         multiplier = playerConfig.campedMultiplier;
     }
     else if (IsPlayerMounted(playerPed)) {
         float mountedStaminaMultiplier = GetPlayerMountedStaminaMultiplier(playerConfig);
         
-        WriteLog(LogLevel::Verbose, "Player is mounted. Applying conditional mounted stamina decay multiplier: " + std::to_string(mountedStaminaMultiplier));
+        LOG(LogLevel::Verbose, "Player is mounted. Applying conditional mounted stamina decay multiplier: {}", mountedStaminaMultiplier);
         multiplier = mountedStaminaMultiplier;
     }
     else {
 		float runningStaminaMultiplier = GetPlayerRunningStaminaMultiplier(playerConfig);
 
-		WriteLog(LogLevel::Verbose, "Player is on foot. Applying conditional movement stamina decay multiplier: " + std::to_string(runningStaminaMultiplier));
+		LOG(LogLevel::Verbose, "Player is on foot. Applying conditional movement stamina decay multiplier: {}", runningStaminaMultiplier);
 		multiplier = runningStaminaMultiplier;
     }
 
     if (applyPostMissionDecay) {
-        WriteLog(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission stamina decay multiplier.");
+        LOG(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission stamina decay multiplier.");
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
-    WriteLog(LogLevel::Verbose, "Active player passive modifiers: Stamina Reduction = " + std::to_string(totalPassiveStaminaModifierReduction));
+    LOG(LogLevel::Verbose, "Active player passive modifiers: Stamina Reduction = {}", totalPassiveStaminaModifierReduction);
     multiplier -= totalPassiveStaminaModifierReduction;
 
     return std::max(multiplier, 0.1f);
@@ -432,11 +429,11 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained) {
-        WriteLog(LogLevel::Verbose, "Player is semi-restrained. Applying restrained dead eye decay multiplier.");
+        LOG(LogLevel::Verbose, "Player is semi-restrained. Applying restrained dead eye decay multiplier.");
         multiplier = playerConfig.campedMultiplier;
     }
     else if (isNighttime) {
-        WriteLog(LogLevel::Verbose, "Player is in nighttime. Applying night dead eye decay multiplier.");
+        LOG(LogLevel::Verbose, "Player is in nighttime. Applying night dead eye decay multiplier.");
         multiplier = playerConfig.nightDeadEyeMultiplier;
     }
 
@@ -446,16 +443,16 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
 
     bool isDirty = dirtLevel > PLAYER_DIRT_THRESHOLD;
     if(isDirty) {
-		WriteLog(LogLevel::Verbose, "Player is dirty. Applying dirty dead eye decay multiplier.");
+		LOG(LogLevel::Verbose, "Player is dirty. Applying dirty dead eye decay multiplier.");
 		multiplier += std::max(playerConfig.deadEyeDirtyMultiplier - 1.0f, 0.0f);
     }    
 
     if (applyPostMissionDecay) {
-        WriteLog(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission dead eye decay multiplier.");
+        LOG(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission dead eye decay multiplier.");
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
-    WriteLog(LogLevel::Verbose, "Active player passive modifiers: Dead Eye Reduction = " + std::to_string(totalPassiveDeadEyeModifierReduction));
+    LOG(LogLevel::Verbose, "Active player passive modifiers: Dead Eye Reduction = {}", totalPassiveDeadEyeModifierReduction);
     multiplier -= totalPassiveDeadEyeModifierReduction;
 
     return std::max(multiplier, 0.1f);
@@ -470,14 +467,14 @@ float CalculatePlayerStaminaSleepReplenish(float currentStamina, float elapsedHo
     if (elapsedHours < MIN_SLEEP_HOURS) {
         float cap = (isNighttime || isHotelRoom) ? 40.0f : 20.0f;
         uplift = std::min(uplift, cap);
-        WriteLog(LogLevel::Standard, "Short sleep session detected (< " + std::to_string(MIN_SLEEP_HOURS) + " hours). Restorative stamina uplift capped at 40 points.");
+        LOG(LogLevel::Standard, "Short sleep session detected (< {} hours). Restorative stamina uplift capped at 40 points.", MIN_SLEEP_HOURS);
     }
 
 	// DAYTIME WILDERNESS SLEEP PENALTY (Minimum Hours but not in a hotel room)
 	// If you sleep for the minimum or more hours but it's daytime and you're not in a hotel room, your maximum reward capacity is capped hard at 50 points.
 	if (elapsedHours >= MIN_SLEEP_HOURS && (!isNighttime && !isHotelRoom)) {
         uplift = std::min(uplift, 50.0f);
-		WriteLog(LogLevel::Standard, "Daytime wilderness sleep detected. Stamina uplift capped at 50 points.");
+		LOG(LogLevel::Standard, "Daytime wilderness sleep detected. Stamina uplift capped at 50 points.");
 	}
 
 	float finalStamina = std::max(currentStamina + uplift, 1.0f);
@@ -491,12 +488,12 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
     // Luxury Hotel Quality Adjustment (+20/+10 points to caps)
     if (isHotelRoom) {
         if (isNighttime) {
-			WriteLog(LogLevel::Standard, "Luxury hotel room/own bed detected at night. Dead Eye caps increased by +20 points.");
+			LOG(LogLevel::Standard, "Luxury hotel room/own bed detected at night. Dead Eye caps increased by +20 points.");
             focusCap += 20.0f;
             fatigueCap += 20.0f;
 		}
         else {
-            WriteLog(LogLevel::Standard, "Luxury hotel room/own bed detected during daytime. Dead Eye caps increased by +10 points.");
+            LOG(LogLevel::Standard, "Luxury hotel room/own bed detected during daytime. Dead Eye caps increased by +10 points.");
             focusCap += 10.0f;
             fatigueCap += 10.0f;
         }
@@ -504,7 +501,7 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
 
 	// Daytime Wilderness Penalty (-5 points to caps)
     if (!isNighttime && !isHotelRoom) {
-		WriteLog(LogLevel::Standard, "Daytime wilderness sleep detected. Dead Eye caps decreased by -5 points.");
+		LOG(LogLevel::Standard, "Daytime wilderness sleep detected. Dead Eye caps decreased by -5 points.");
         focusCap -= 5.0f;
         fatigueCap -= 5.0f;
     }
@@ -513,7 +510,7 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
     if (elapsedHours >= OVERSLEEP_THRESHOLD_HOURS) {
 		// If current dead eye is higher than the fatigue boundary, apply the 15-point reduction penalty (5 points if in a hotel room)
         if (currentDeadEye > fatigueCap) {
-			WriteLog(LogLevel::Standard, "Over-sleep detected. Dead Eye reduced by 15 points (5 if in a hotel room).");
+			LOG(LogLevel::Standard, "Over-sleep detected. Dead Eye reduced by 15 points (5 if in a hotel room).");
             return std::max(currentDeadEye - (isHotelRoom ? 5.0f : 15.0f), fatigueCap);
         }
 
@@ -540,7 +537,7 @@ float CalculateHorseHealthDecayMultiplier(const PlayerConfigSettings& playerConf
     if(g_HorseManager.IsHorseDirty(horsePed))
         multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
 
-    WriteLog(LogLevel::Verbose, "Active horse passive modifiers: Health Reduction = " + std::to_string(totalPassiveHealthModifierReduction));
+    LOG(LogLevel::Verbose, "Active horse passive modifiers: Health Reduction = {}", totalPassiveHealthModifierReduction);
     multiplier -= totalPassiveHealthModifierReduction;    
 
     return std::max(multiplier, 0.1f);
@@ -557,7 +554,7 @@ float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerCon
     if (g_HorseManager.IsHorseDirty(horsePed))
         multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
 
-    WriteLog(LogLevel::Verbose, "Active horse passive modifiers: Stamina Reduction = " + std::to_string(totalPassiveStaminaModifierReduction));
+    LOG(LogLevel::Verbose, "Active horse passive modifiers: Stamina Reduction = {}", totalPassiveStaminaModifierReduction);
     multiplier -= totalPassiveStaminaModifierReduction;
 
     return std::max(multiplier, 0.1f);
@@ -571,7 +568,7 @@ float CalculateHorseStaminaSleepReplenish(float currentStamina, float elapsedHou
     // If you sleep for the minimum or more hours but it's daytime and you're not in a hotel room, the horse's maximum reward capacity is capped hard at 50 points.
     if (!isNighttime && !isHotelRoom) {
         uplift = std::min(uplift, 50.0f);
-        WriteLog(LogLevel::Standard, "Daytime wilderness sleep detected. Horse Stamina uplift capped at 50 points.");
+        LOG(LogLevel::Standard, "Daytime wilderness sleep detected. Horse Stamina uplift capped at 50 points.");
     }
 
     float finalStamina = std::max(currentStamina + uplift, 1.0f);
@@ -600,7 +597,7 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
         int finalHealth = static_cast<int>(std::max(targetHealth, playerConfig.campedHealthFloor));
 
         LOG_DEV("Health bathing decay calculation: currentHealth={}, elapsedHours={:.4f}, activeHealthDecay={:.4f}, targetHealth={}, minHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, playerConfig.campedHealthFloor);
-        WriteLog(LogLevel::Standard, "Player time-skipped due to bathing. Health decayed to: " + std::to_string(finalHealth));
+        LOG(LogLevel::Standard, "Player time-skipped due to bathing. Health decayed to: {}", finalHealth);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
 
@@ -609,17 +606,17 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
         float staminaUplift = 15.0f; // Flat 15 point bonus
 
         if (g_State.restrictedBathingState == BathingState::DeluxeBathing) {
-            WriteLog(LogLevel::Standard, "Player Bathing Deluxe Service: Stamina bonus doubled!!");
+            LOG(LogLevel::Standard, "Player Bathing Deluxe Service: Stamina bonus doubled!!");
             staminaUplift = 30.0f; // Double bonus for Deluxe Service (Maid)
         }
         else {
-			WriteLog(LogLevel::Standard, "Player Bathing Standard Service: Standard Stamina bonus.");
+			LOG(LogLevel::Standard, "Player Bathing Standard Service: Standard Stamina bonus.");
         }
 
         int finalStamina = static_cast<int>(std::min(startStamina + staminaUplift, 100.0f));
 
         LOG_DEV("Stamina bathing uplift calculation: currentStamina={}, elapsedHours={:.4f}, staminaUplift={}, targetStamina={}", startStamina, elapsedHours, staminaUplift, finalStamina);
-        WriteLog(LogLevel::Standard, "Bathing Stamina Uplift Reward Applied: " + std::to_string(finalStamina));
+        LOG(LogLevel::Standard, "Bathing Stamina Uplift Reward Applied: {}", finalStamina);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
 
@@ -627,7 +624,7 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
     if (!isDeadEyeGold) {
         // SPECIAL GOLDEN DEADEYE CORE REWARD (Bathing Deluxe Service (Maid))
         if (g_State.restrictedBathingState == BathingState::DeluxeBathing) {
-            WriteLog(LogLevel::Standard, "Player Bathing Deluxe Service: Dead Eye is now golden and fully fortified.");
+            LOG(LogLevel::Standard, "Player Bathing Deluxe Service: Dead Eye is now golden and fully fortified.");
             ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye), 100.0f, true);
         }
         else {
@@ -640,16 +637,16 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
 
 				deadEyeUplift = elapsedHours * upliftPerHour;
                 targetDeadEye = std::min(startDeadEye + deadEyeUplift, 80.0f);
-                WriteLog(LogLevel::Standard, "Bathing Standard Service: Dead Eye capped at a maximum baseline of 80.0f.");
+                LOG(LogLevel::Standard, "Bathing Standard Service: Dead Eye capped at a maximum baseline of 80.0f.");
             }
             else {
-                WriteLog(LogLevel::Verbose, "Bathing Standard Service: Dead Eye already at or above 80.0f. No uplift applied.");
+                LOG(LogLevel::Verbose, "Bathing Standard Service: Dead Eye already at or above 80.0f. No uplift applied.");
             }
 
 			int finalDeadEye = static_cast<int>(targetDeadEye);
 
             LOG_DEV("Dead Eye bathing uplift calculation: currentDeadEye={}, elapsedHours={:.4f}, deadEyeUplift={:.4f}, targetDeadEye={}", startDeadEye, elapsedHours, deadEyeUplift, finalDeadEye);
-            WriteLog(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye=" + std::to_string(finalDeadEye));
+            LOG(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye={}", finalDeadEye);
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
         }
     }
@@ -664,7 +661,7 @@ bool IsSleepDuringTheNight(int elapsedHours, int nightStartHour, int nightEndHou
 	bool wasNightEnd = (currentHour >= nightStartHour || currentHour < nightEndHour);
 
 	if (wasNightStart && wasNightEnd) {
-		WriteLog(LogLevel::Verbose, "Player slept completely during the night hours.");
+		LOG(LogLevel::Verbose, "Player slept completely during the night hours.");
 		return true;
 	}
 
@@ -679,12 +676,12 @@ bool IsSleepDuringTheNight(int elapsedHours, int nightStartHour, int nightEndHou
 
 	if (hoursSleptDuringNight > 0 && hoursSleptDuringNight >= std::lround(elapsedHours * SLEEP_NIGHT_PERCENTAGE_THRESHOLD)) {
 		LOG_DEV("Player slept partially during the night hours. Hours slept during night: {}, Total hours slept: {}, Percentage: {:.2f}%", hoursSleptDuringNight, elapsedHours, (static_cast<float>(hoursSleptDuringNight) / elapsedHours) * 100.0f);
-		WriteLog(LogLevel::Verbose, "Player slept partially during the night hours.");
+		LOG(LogLevel::Verbose, "Player slept partially during the night hours.");
 
 		return true;
 	}
 
-	WriteLog(LogLevel::Verbose, "Player did not sleep during the night hours.");
+	LOG(LogLevel::Verbose, "Player did not sleep during the night hours.");
 	return false;
 }
 
@@ -696,11 +693,11 @@ void ApplyBatchTimeSkipDecay(
     float elapsedHours = static_cast<float>(elapsedMinutes) / 60.0f;
 
     if (wasInMinigame) {
-		WriteLog(LogLevel::Verbose, "Player is in a minigame. Capping time skip to MINIGAME_TIMESKIP_MAX_HOURS hours for core decay calculations.");
+		LOG(LogLevel::Verbose, "Player is in a minigame. Capping time skip to MINIGAME_TIMESKIP_MAX_HOURS hours for core decay calculations.");
 		elapsedHours = std::min(elapsedHours, MINIGAME_TIMESKIP_MAX_HOURS);
     }
     else if (elapsedHours > TIMESKIP_MAX_HOURS) {
-		WriteLog(LogLevel::Verbose, "Time skip exceeds TIMESKIP_MAX_HOURS hours. Capping to TIMESKIP_MAX_HOURS hours for core decay calculations.");
+		LOG(LogLevel::Verbose, "Time skip exceeds TIMESKIP_MAX_HOURS hours. Capping to TIMESKIP_MAX_HOURS hours for core decay calculations.");
         elapsedHours = TIMESKIP_MAX_HOURS;
     }
 
@@ -715,7 +712,7 @@ void ApplyBatchTimeSkipDecay(
         // Ensure that the remaining hours do not go below zero
         g_State.PostMissionDecayHoursRemaining = std::max(g_State.PostMissionDecayHoursRemaining, 0.0f);
 
-        WriteLog(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: " + std::to_string(g_State.PostMissionDecayHoursRemaining));
+        LOG(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: {}", g_State.PostMissionDecayHoursRemaining);
     }
 
     bool isHealthGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::Health));
@@ -736,7 +733,7 @@ void ApplyBatchTimeSkipDecay(
         int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
 		LOG_DEV("Health decay calculation: currentHealth={}, elapsedHours={:.4f}, activeHealthDecay={:.4f}, targetHealth={}, minHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
-        WriteLog(LogLevel::Standard, "Player time-skipped. Health decayed to: " + std::to_string(finalHealth));
+        LOG(LogLevel::Standard, "Player time-skipped. Health decayed to: {}", finalHealth);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
 
@@ -755,7 +752,7 @@ void ApplyBatchTimeSkipDecay(
 			// SPECIAL GOLDEN STAMINA CORE REWARD (Minimum Sleep Hours-OverSleep Threshold Hours Hours in a Hotel Room at Night)
             if (isHotelRoom && sleptAtNight && elapsedHours >= MIN_SLEEP_HOURS && elapsedHours <= OVERSLEEP_THRESHOLD_HOURS) {
 				
-				WriteLog(LogLevel::Standard, "Player slept " + std::to_string(MIN_SLEEP_HOURS) + "-" + std::to_string(OVERSLEEP_THRESHOLD_HOURS) + " hours in a hotel room at night. Stamina core is now golden and fully fortified.");
+				LOG(LogLevel::Standard, "Player slept {}-{} hours in a hotel room at night. Stamina core is now golden and fully fortified.", MIN_SLEEP_HOURS, OVERSLEEP_THRESHOLD_HOURS);
 				ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
             }
 			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
@@ -763,7 +760,7 @@ void ApplyBatchTimeSkipDecay(
 
                 int finalStamina = BUILTIN::FLOOR(CalculatePlayerStaminaSleepReplenish(startStamina, elapsedHours, sleptAtNight, isHotelRoom));
 
-                WriteLog(LogLevel::Standard, "Player slept. Stamina replenished to: " + std::to_string(finalStamina));
+                LOG(LogLevel::Standard, "Player slept. Stamina replenished to: {}", finalStamina);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
             }
         }
@@ -777,7 +774,7 @@ void ApplyBatchTimeSkipDecay(
         int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, config.PlayerConfig.campedStaminaFloor));
 
         LOG_DEV("Stamina decay calculation: currentStamina={}, elapsedHours={:.4f}, activeStaminaDecay={:.4f}, targetStamina={}, minStaminaFloor={}", startStamina, elapsedHours, activeStaminaDecay, finalStamina, config.PlayerConfig.campedStaminaFloor);
-        WriteLog(LogLevel::Standard, "Player time-skipped. Stamina decayed to: " + std::to_string(finalStamina));
+        LOG(LogLevel::Standard, "Player time-skipped. Stamina decayed to: {}", finalStamina);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
 
@@ -787,7 +784,7 @@ void ApplyBatchTimeSkipDecay(
             // Standard sleep replenishment only runs if the core isn't already golden
             int finalDeadEye = BUILTIN::FLOOR(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, sleptAtNight, isHotelRoom));
             
-            WriteLog(LogLevel::Standard, "Player slept. Dead Eye adjusted to: " + std::to_string(finalDeadEye));
+            LOG(LogLevel::Standard, "Player slept. Dead Eye adjusted to: {}", finalDeadEye);
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
         }
     }
@@ -801,7 +798,7 @@ void ApplyBatchTimeSkipDecay(
         int finalDeadEye = BUILTIN::FLOOR(std::max(targetDeadEye, config.PlayerConfig.campedDeadEyeFloor));
 
         LOG_DEV("Dead Eye decay calculation: currentDeadEye={}, elapsedHours={:.4f}, activeDeadEyeDecay={:.4f}, targetDeadEye={}, minDeadEyeFloor={}", startDeadEye, elapsedHours, activeDeadEyeDecay, finalDeadEye, config.PlayerConfig.campedDeadEyeFloor);
-        WriteLog(LogLevel::Standard, "Player time-skipped. Dead Eye decayed to: " + std::to_string(finalDeadEye));
+        LOG(LogLevel::Standard, "Player time-skipped. Dead Eye decayed to: {}", finalDeadEye);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
     }
 
@@ -826,7 +823,7 @@ void ApplyBatchTimeSkipDecay(
                 int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
                 LOG_DEV("Horse Health decay calculation: currentHealth={}, elapsedHours={:.4f}, activeHealthDecay={:.4f}, targetHealth={}, minHealthFloor={}", startHorseHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
-                WriteLog(LogLevel::Standard, "Player time-skipped. Horse Health decayed to: " + std::to_string(finalHealth));
+                LOG(LogLevel::Standard, "Player time-skipped. Horse Health decayed to: {}", finalHealth);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health), finalHealth);
             }
 
@@ -839,7 +836,7 @@ void ApplyBatchTimeSkipDecay(
                     // SPECIAL GOLDEN STAMINA CORE REWARD (Hotel Stable at Night)
                     if (isHotelRoom && sleptAtNight) {
 
-                        WriteLog(LogLevel::Standard, "Horse slept in a stable (hotel) at night. Stamina core is now golden and fully fortified.");
+                        LOG(LogLevel::Standard, "Horse slept in a stable (hotel) at night. Stamina core is now golden and fully fortified.");
                         ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), 100.0f, true);
                     }
                     // REGULAR SLEEP REPLENISHMENT ROUTE
@@ -847,7 +844,7 @@ void ApplyBatchTimeSkipDecay(
 
                         int finalHorseStamina = BUILTIN::FLOOR(CalculateHorseStaminaSleepReplenish(startStamina, elapsedHours, sleptAtNight, isHotelRoom));
 
-                        WriteLog(LogLevel::Standard, "Player slept. Horse Stamina replenished to: " + std::to_string(finalHorseStamina));
+                        LOG(LogLevel::Standard, "Player slept. Horse Stamina replenished to: {}", finalHorseStamina);
                         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalHorseStamina);
                     }
                 }
@@ -862,7 +859,7 @@ void ApplyBatchTimeSkipDecay(
                 int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, config.HorseConfig.campedStaminaFloor));
 
                 LOG_DEV("Horse Stamina decay calculation: currentStamina={}, elapsedHours={:.4f}, activeStaminaDecay={:.4f}, targetStamina={}, minStaminaFloor={}", startHorseStamina, elapsedHours, activeStaminaDecay, finalStamina, config.HorseConfig.campedStaminaFloor);
-                WriteLog(LogLevel::Standard, "Player time-skipped. Horse Stamina decayed to: " + std::to_string(finalStamina));
+                LOG(LogLevel::Standard, "Player time-skipped. Horse Stamina decayed to: {}", finalStamina);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalStamina);
             }
         }
@@ -920,7 +917,7 @@ void UpdateTransientFreezeStateVariables() {
 	// Bathing check: If the player was bathing during the restriction period, we need to determine if they paid for a premium bath and adjust the cached bathing state accordingly.
 	if (g_State.restrictedBathingState == BathingState::StandardBathing) {
         if (g_State.cachedMoney > MONEY::_MONEY_GET_CASH_BALANCE()) {
-            WriteLog(LogLevel::Verbose, "Player bathing check: Player has paid for a premium bath. Setting bathing state to Premium Bathing.");
+            LOG(LogLevel::Verbose, "Player bathing check: Player has paid for a premium bath. Setting bathing state to Premium Bathing.");
             g_State.restrictedBathingState = BathingState::DeluxeBathing; // Premium Bathing
         }
 	}
@@ -954,14 +951,14 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             g_State.cachedHorseHealth = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health)));
             g_State.cachedHorseStamina = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina)));
             
-            WriteLog(LogLevel::Verbose, "Entering restricted state. Cached player data and active horse tracking metrics remotely.");
+            LOG(LogLevel::Verbose, "Entering restricted state. Cached player data and active horse tracking metrics remotely.");
         }
         else {
             g_State.hadHorse = false;
             g_State.cachedHorseHealth = 0.0f;
             g_State.cachedHorseStamina = 0.0f;
             
-            WriteLog(LogLevel::Verbose, "Entering restricted state. Cached player data (No active world mount detected).");
+            LOG(LogLevel::Verbose, "Entering restricted state. Cached player data (No active world mount detected).");
         }
     }
 
@@ -989,13 +986,13 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         if (elapsedMinutes < 0)
             elapsedMinutes += 1440; // Self-corrects midnight rollover cleanly
 
-        WriteLog(LogLevel::Verbose, "Exiting restricted state. Total elapsed game minutes: " + std::to_string(elapsedMinutes));
+        LOG(LogLevel::Verbose, "Exiting restricted state. Total elapsed game minutes: {}", elapsedMinutes);
 
         if (elapsedMinutes > 0)
 			// Mini-games are table mini-games/jail
             if (g_State.wasSleepingDuringRestriction || g_State.wasInMinigameDuringRestriction) {
                 // Uses the HISTORICAL frozen values from the cache
-				WriteLog(LogLevel::Verbose, "Player was sleeping/in a minigame/jailed during restriction. Applying batch time skip decay.");
+				LOG(LogLevel::Verbose, "Player was sleeping/in a minigame/jailed during restriction. Applying batch time skip decay.");
 
                 ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
                     g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
@@ -1005,7 +1002,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             }
             else if (g_State.restrictedBathingState != BathingState::NotBathing) {
                 // Uses the HISTORICAL frozen values from the cache
-                WriteLog(LogLevel::Verbose, "Player was bathing during restriction. Applying batch time skip decay with bathing multiplier.");
+                LOG(LogLevel::Verbose, "Player was bathing during restriction. Applying batch time skip decay with bathing multiplier.");
 
                 ApplyBathingUpdate(playerPed, elapsedMinutes,
                     g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
@@ -1019,10 +1016,10 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                     // Cap the post-mission decay hours to a maximum of 3 hours to prevent excessive decay 
                     // (in-case multiple missions accumulate over the decay multiplier period)
                     g_State.PostMissionDecayHoursRemaining = std::min(g_State.PostMissionDecayHoursRemaining, 3.0f);
-                    WriteLog(LogLevel::Verbose, "Player exited a mission. Post-mission decay hours remaining: " + std::to_string(g_State.PostMissionDecayHoursRemaining));
+                    LOG(LogLevel::Verbose, "Player exited a mission. Post-mission decay hours remaining: {}", g_State.PostMissionDecayHoursRemaining);
                 }
                 else {
-					WriteLog(LogLevel::Verbose, "Player exited a mission but elapsed time was less than the minimum threshold. No post-mission decay applied.");
+					LOG(LogLevel::Verbose, "Player exited a mission but elapsed time was less than the minimum threshold. No post-mission decay applied.");
                 }
             }
             else {
@@ -1099,7 +1096,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 		// Ensure that the remaining hours do not go below zero
 		g_State.PostMissionDecayHoursRemaining = std::max(g_State.PostMissionDecayHoursRemaining, 0.0f);
         
-        WriteLog(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: " + std::to_string(g_State.PostMissionDecayHoursRemaining));
+        LOG(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: {}", g_State.PostMissionDecayHoursRemaining);
 	}
 
     CombinedPlayerCoreModifiers passives = g_InventoryManager.GetActivePlayerPassiveModifiers();
@@ -1115,7 +1112,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
         LOG_DEV("Player Core Simulation: HoursDelta={:.4f}, HealthDecay = {:.4f}, CurrentHealth={}, TargetHealth={}, MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
-        WriteLog(LogLevel::Standard, "Player Core Sync Tick: Health=" + std::to_string(finalHealth));
+        LOG(LogLevel::Standard, "Player Core Sync Tick: Health={}", finalHealth);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
@@ -1129,7 +1126,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, minStaminaFloor));
             
         LOG_DEV("Player Core Simulation: HoursDelta={:.4f}, StaminaDecay = {:.4f}, CurrentStamina={}, TargetStamina={}, MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
-        WriteLog(LogLevel::Standard, "Player Stamina Sync Tick: Stamina=" + std::to_string(finalStamina));
+        LOG(LogLevel::Standard, "Player Stamina Sync Tick: Stamina={}", finalStamina);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
@@ -1146,7 +1143,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         int finalDeadEye = BUILTIN::FLOOR(std::max(targetDeadEye, minDeadEyeFloor));
 
         LOG_DEV("Player Core Simulation: HoursDelta={:.4f}, DeadEyeDecay = {:.4f}, CurrentDeadEye={}, TargetDeadEye={}, MinDeadEyeFloor={}", hoursDelta, activeDeadEyeDecay, currentDeadEye, finalDeadEye, minDeadEyeFloor);
-        WriteLog(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye=" + std::to_string(finalDeadEye));
+        LOG(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye={}", finalDeadEye);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
     }
@@ -1158,7 +1155,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
 	if (!hasHorse)
     {
-		WriteLog(LogLevel::Standard, "No active horse detected for the player. Skipping horse core simulation.");
+		LOG(LogLevel::Standard, "No active horse detected for the player. Skipping horse core simulation.");
         g_HorseManager.ResetSnapshot();
         return;
     }
@@ -1183,7 +1180,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
         int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
         LOG_DEV("Horse Core Simulation: HoursDelta={:.4f}, HealthDecay = {:.4f}, CurrentHealth={}, TargetHealth={}, MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
-        WriteLog(LogLevel::Standard, "Horse Core Sync Tick: Health=" + std::to_string(finalHealth));
+        LOG(LogLevel::Standard, "Horse Core Sync Tick: Health={}", finalHealth);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
@@ -1197,7 +1194,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
         // This rewards the player for using hitching posts around the world.
         
         if (g_HorseManager.IsHorseHitched()) {
-            WriteLog(LogLevel::Standard, "Active Horse is securely hitched. Freezing stamina core decay completely.");
+            LOG(LogLevel::Standard, "Active Horse is securely hitched. Freezing stamina core decay completely.");
 
             // Give a little bonus to stamina is horse is well fed
             if (isHorseHealthGold || currentHealth >= HORSE_HITCHED_HEALTH_REQ) {
@@ -1208,7 +1205,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 				if (reward >= 1.0f) {
                     int finalStamina = BUILTIN::FLOOR(std::min(currentStamina + reward, 100.0f));
 
-				    WriteLog(LogLevel::Standard, "Horse is well-fed or has golden health. Applying hitched bonus: +" + std::to_string(reward) + " to stamina core. Horse Stamina updated to: " + std::to_string(finalStamina));
+				    LOG(LogLevel::Standard, "Horse is well-fed or has golden health. Applying hitched bonus: +{} to stamina core. Horse Stamina updated to: {}", reward, finalStamina);
                     ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
 				}
             }
@@ -1220,7 +1217,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
             if (reward >= 1.0f) {
                 int finalStamina = BUILTIN::FLOOR(std::min(currentStamina + reward, 100.0f));
 
-                WriteLog(LogLevel::Standard, "Active Horse is being led by the player. Applying cached reward: +" + std::to_string(reward) + ". Horse Stamina updated to: " + std::to_string(finalStamina));
+                LOG(LogLevel::Standard, "Active Horse is being led by the player. Applying cached reward: +{}. Horse Stamina updated to: {}", reward, finalStamina);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
             }        
 		}
@@ -1234,7 +1231,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
             int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, minStaminaFloor));
 
             LOG_DEV("Horse Core Simulation: HoursDelta={:.4f}, StaminaDecay={:.4f}, CurrentStamina={}, TargetStamina={}, MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
-            WriteLog(LogLevel::Standard, "Horse Core Sync Tick: Stamina=" + std::to_string(finalStamina));
+            LOG(LogLevel::Standard, "Horse Core Sync Tick: Stamina={}", finalStamina);
 
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
 
@@ -1247,14 +1244,14 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const ConfigSnapshot& config) { 
     int elapsedMinutes = 120; // Since we are in an open-world time skip, we assume a default of 2 hours (120 minutes) for the elapsed time (maps to CalculateTimescaleDelta).
     
-    WriteLog(LogLevel::Verbose, "Open-world time skip detected. Elapsed game minutes: " + std::to_string(elapsedMinutes));
+    LOG(LogLevel::Verbose, "Open-world time skip detected. Elapsed game minutes: {}", elapsedMinutes);
 
     // Reads LIVE data from the engine at the moment of travel
     float liveHealth = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health)));
     float liveStamina = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina)));
     float liveDeadEye = static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye)));
 
-	WriteLog(LogLevel::Verbose, "Player Live Core Values: Health=" + std::to_string(liveHealth) + ", Stamina=" + std::to_string(liveStamina) + ", DeadEye=" + std::to_string(liveDeadEye));
+	LOG(LogLevel::Verbose, "Player Live Core Values: Health={}, Stamina={}, DeadEye={}", liveHealth, liveStamina, liveDeadEye);
 
     // We check horse baseline stats live too
     auto [activeHorse, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed);
@@ -1262,7 +1259,7 @@ void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const Conf
     float liveHorseHealth = hasHorse ? static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health))) : 0.0f;
     float liveHorseStamina = hasHorse ? static_cast<float>(ATTRIBUTE::_GET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina))) : 0.0f;
 
-	WriteLog(LogLevel::Verbose, "Horse Live Core Values: Health=" + std::to_string(liveHorseHealth) + ", Stamina=" + std::to_string(liveHorseStamina) + ", HasHorse=" + std::to_string(hasHorse));
+	LOG(LogLevel::Verbose, "Horse Live Core Values: Health={}, Stamina={}, HasHorse={}", liveHorseHealth, liveHorseStamina, hasHorse);
 
     // Route directly into the shared engine (Never sleeping during open-world transits)
     ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
@@ -1323,9 +1320,9 @@ ConfigSnapshot CheckForConfigChange() {
     if (g_HasConfigChanged.load(std::memory_order_acquire) || !g_State.configStructuresInitialised) {
         // Log an accurate message based on WHY we are filling the cache
         if (!g_State.configStructuresInitialised)
-            WriteLog(LogLevel::Verbose, "Initialising local simulation configuration cache for the first time...");
+            LOG(LogLevel::Verbose, "Initialising local simulation configuration cache for the first time...");
         else
-            WriteLog(LogLevel::Standard, "Dynamic config hot-reload requested. Updating transient systems...");
+            LOG(LogLevel::Standard, "Dynamic config hot-reload requested. Updating transient systems...");
 
         g_State.configStructuresInitialised = true;
 
@@ -1354,7 +1351,7 @@ bool IsInSaveLoadState(Ped playerPed) {
     // HARD RESET ENGINE
     if (isLoading || isDead || isFreshSaveLoad) {
         if (g_State.timescaleDeltaInitialised) {
-            WriteLog(LogLevel::Standard, "Hard Reset Event Verified (Save Load/Death). Purging cache cleanly...");
+            LOG(LogLevel::Standard, "Hard Reset Event Verified (Save Load/Death). Purging cache cleanly...");
             ResetSimulationState();
         }
 
@@ -1362,7 +1359,7 @@ bool IsInSaveLoadState(Ped playerPed) {
     } 
     // RE-ANCHOR ENGINE (Game start)
     else if (!g_State.timescaleDeltaInitialised) {
-        WriteLog(LogLevel::Standard, "Simulation baseline calibrated. Anchoring timestamps...");
+        LOG(LogLevel::Standard, "Simulation baseline calibrated. Anchoring timestamps...");
 
         g_State.cachedInGameTimeMinutes = GetTotalInGameMinutes();
         g_State.lastTickInGameMinutes = g_State.cachedInGameTimeMinutes;
@@ -1392,7 +1389,7 @@ void UpdateCoreSimulation() {
 
     // FAST-PATH BOUNDARY TRANSITIONS (Forcing immediate responses to missions or travel updates)
     if (context.freezeActive != g_State.wasRestrictedLastTick) {
-        WriteLog(LogLevel::Standard, "Fundamental state boundary flipped! Forcing immediate cache transition process.");
+        LOG(LogLevel::Standard, "Fundamental state boundary flipped! Forcing immediate cache transition process.");
 
         HandleStateTransitions(playerPed, context, currentTotalMinutes, config);
 
@@ -1410,21 +1407,21 @@ void UpdateCoreSimulation() {
     // SLOW-PATH APP DECAY SIMULATION (Accumulates interval smoothly over normal open world play)
     else if (!context.freezeActive) {
         g_State.accumulatedTimeMs += config.CoreConfig.stateChangeTickIntervalMs;
-        WriteLog(LogLevel::Verbose, "Accumulated time for core simulation: " + std::to_string(g_State.accumulatedTimeMs) + " ms");
+        LOG(LogLevel::Verbose, "Accumulated time for core simulation: {} ms", g_State.accumulatedTimeMs);
 
         if (g_State.accumulatedTimeMs >= config.CoreConfig.coreDrainTickIntervalMs) {
-            WriteLog(LogLevel::Verbose, "Core drain tick interval reached. Processing core simulation...");
+            LOG(LogLevel::Verbose, "Core drain tick interval reached. Processing core simulation...");
 
             float hoursDelta = CalculateTimescaleDelta(currentTotalMinutes);
 
             if (hoursDelta == 0.0f) {
                 // The real-world interval passed, but the in-game integer clock hasn't ticked up yet.
                 // Do NOT reset accumulatedTimeMs. Let it retry on the next coreConfig.stateChangeTickIntervalMs loop pass.
-                WriteLog(LogLevel::Verbose, "Interval boundary hit, but game engine clock hasn't rolled to a new integer minute. Holding accumulation cache.");
+                LOG(LogLevel::Verbose, "Interval boundary hit, but game engine clock hasn't rolled to a new integer minute. Holding accumulation cache.");
             }
             // If time actually moved forward in the engine space, process simulation and reset
             else if (hoursDelta > 0.0f && hoursDelta < 24.0f) {
-                WriteLog(LogLevel::Standard, "Processing normal core simulation for elapsed hours: " + std::to_string(hoursDelta));
+                LOG(LogLevel::Standard, "Processing normal core simulation for elapsed hours: {}", hoursDelta);
 
                 ProcessPlayerSimulation(playerPed, hoursDelta, context, config);
                 ProcessHorseSimulation(playerPed, hoursDelta, context, config);
@@ -1436,7 +1433,7 @@ void UpdateCoreSimulation() {
             }
             // If the delta is negative, it indicates a macro time jump (e.g., train, stagecoach, or fast travel)
             else {
-                WriteLog(LogLevel::Standard, "Macro time jump detected during active play (Train/Stagecoach). Triggering batch catch-up.");
+                LOG(LogLevel::Standard, "Macro time jump detected during active play (Train/Stagecoach). Triggering batch catch-up.");
 
                 // We force a manual time skip evaluation using the global cache states
                 // by temporarily simulating a transition block or a direct clean helper.
@@ -1459,18 +1456,18 @@ int CalculateStateChangeTickIntervalMs() {
 	// Safe Initialisation (mainly for logging purposes) - we want to log the first tick interval used to ensure we have a baseline for debugging
     if (g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::NotSet) {
         g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Standard;
-        WriteLog(LogLevel::Verbose, "State Change Interval Initialised: Using standard tick interval of " + std::to_string(normalTickInterval) + " ms");
+        LOG(LogLevel::Verbose, "State Change Interval Initialised: Using standard tick interval of {} ms", normalTickInterval);
     }
 
 	// If we are entering a restricted state, we want to use the restricted tick interval for faster processing of core simulation
     if (g_State.isRestricted && g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Standard) {
         g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Restricted;
-        WriteLog(LogLevel::Verbose, "State Change Interval Change: Restricted state active. Using restricted tick interval of " + std::to_string(restrictedTickInterval) + " ms");
+        LOG(LogLevel::Verbose, "State Change Interval Change: Restricted state active. Using restricted tick interval of {} ms", restrictedTickInterval);
     }
 	// If we are exiting a restricted state, we want to use the standard tick interval for normal gameplay
     else if (!g_State.isRestricted && g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Restricted) {
         g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::Standard;
-        WriteLog(LogLevel::Verbose, "State Change Interval Change: Restricted state inactive. Using standard tick interval of " + std::to_string(normalTickInterval) + " ms");
+        LOG(LogLevel::Verbose, "State Change Interval Change: Restricted state inactive. Using standard tick interval of {} ms", normalTickInterval);
     }
 
 	// If we are in the same state as before, we just return the current tick interval without logging
@@ -1492,7 +1489,7 @@ void ScriptMain() {
     // Let the global manager handle spinning up the background watcher thread
     g_ThreadManager.Initialise();    
 
-    WriteLog(LogLevel::Standard, "==== Core Drain Management Simulation Engine Initialised Successfully [" + VERSION + "] ====");	
+    LOG(LogLevel::Standard, "==== Core Drain Management Simulation Engine Initialised Successfully [{}] ====", VERSION);	
         
     while (true) {
         UpdateCoreSimulation();

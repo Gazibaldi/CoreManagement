@@ -15,8 +15,10 @@
 // __VA_OPT__(,) safely deletes the comma if you pass 0 formatting variables!
 #define LOG_DEV(fmt_str, ...) \
         do { \
-            if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev)) \
-                WriteLog(LogLevel::Dev, std::format(fmt_str __VA_OPT__(, __VA_ARGS__))); \
+            if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev)) { \
+                const std::string formatted_msg = std::format(fmt_str __VA_OPT__(, __VA_ARGS__)); \
+                WriteLog(LogLevel::Dev, formatted_msg); \
+            } \
         } while(0)
 #else
 #define LOG_DEV(fmt_str, ...) do { } while(0)
@@ -24,8 +26,10 @@
 
 #define LOG(level, fmt_str, ...) \
         do { \
-            if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(level)) \
-                WriteLog(level, std::format(fmt_str __VA_OPT__(, __VA_ARGS__))); \
+            if (g_CurrentLogLevel.load(std::memory_order_acquire) >= static_cast<int>(level)) { \
+                const std::string formatted_msg = std::format(fmt_str __VA_OPT__(, __VA_ARGS__)); \
+                WriteLog(level, formatted_msg); \
+            } \
         } while(0)
 
 enum class LogLevel : int { Disabled = 0, Standard = 1, Verbose = 2, Dev = 2105 };

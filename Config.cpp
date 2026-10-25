@@ -23,7 +23,7 @@ const bool ALLOW_DEV_LOGGING = true;
 const bool ALLOW_DEV_LOGGING = false;
 #endif
 
-const std::string VERSION = "v0.11-ALPHA";
+const std::string VERSION = "v0.12-ALPHA";
 
 std::atomic<std::shared_ptr<CoreConfigSettings>> g_CoreConfig{ std::make_shared<CoreConfigSettings>() };
 std::atomic<std::shared_ptr<GeneralConfigSettings>> g_GeneralConfig{ std::make_shared<GeneralConfigSettings>() };
@@ -100,11 +100,13 @@ void ConfigWatcherWorker() {
     }
 
     while (g_RunConfigThread) {
-        std::unique_lock<std::mutex> lock(g_ConfigMutex);
+        {
+            std::unique_lock<std::mutex> lock(g_ConfigMutex);
 
-        g_ConfigThreadCV.wait_for(lock, std::chrono::milliseconds(8000), [&] {
-            return !g_RunConfigThread.load(std::memory_order_acquire);
-            });
+            g_ConfigThreadCV.wait_for(lock, std::chrono::milliseconds(8000), [&] {
+                return !g_RunConfigThread.load(std::memory_order_acquire);
+                });
+        }
 
         // Check again immediately after waking up to handle instant shutdown
         if (!g_RunConfigThread) break;
@@ -116,15 +118,12 @@ void ConfigWatcherWorker() {
                 // Give the OS text editor 100ms to finish flushing its buffer to disk cleanly
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-                WriteLog(LogLevel::Standard, "Config change detected. Parsing INI...");
+                LOG(LogLevel::Standard, "Config change detected. Parsing INI...");
 
-                {
-                    std::lock_guard<std::mutex> lock(g_ConfigMutex);
-                    LoadConfiguration(); // Overwrites g_CoreConfig, g_GeneralConfig, etc.
-                }
-
+                LoadConfiguration(); // Overwrites g_CoreConfig, g_GeneralConfig, etc.
+                
                 g_HasConfigChanged.store(true, std::memory_order_release);
-                WriteLog(LogLevel::Standard, "Configuration dynamically reloaded.");
+                LOG(LogLevel::Standard, "Configuration dynamically reloaded.");
             }
         }
     }
@@ -237,7 +236,7 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
 
     std::ostringstream table;
     table << std::fixed << std::setprecision(2)
-        << "\n\n+---------------------------------------------+------------+\n"
+        << "+---------------------------------------------+------------+\n"
         << "| Configuration Parameter                     |      Value |\n"
         << "+---------------------------------------------+------------+\n"
         << "| Logging: Log Level                          | " << std::setw(10) << coreConfig->logLevelRaw << " |\n"
@@ -285,17 +284,17 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
         << "| Horse: Stamina Camped Floor                 | " << std::setw(10) << horseConfig->campedStaminaFloor << " |\n"
         << "+---------------------------------------------+------------+\n";
 
-    WriteLog(LogLevel::Standard, "Internal Parameter Map Hydrated:" + table.str());
+    LOG(LogLevel::Standard, "Internal Parameter Map Hydrated:\n{}", table.str());
 }
 
 void LoadConfiguration() {
     if (!DoesFileExist(g_IniPath)) {
         BuildDefaultConfigFile();
 
-        WriteLog(LogLevel::Standard, "Configuration file missing. Generating fresh defaults at: " + g_IniPath);
+		LOG(LogLevel::Standard, "Configuration file missing. Generating fresh defaults at: {}", g_IniPath);
     }
 
-    WriteLog(LogLevel::Standard, "Loading ini configuration from: " + g_IniPath);
+    LOG(LogLevel::Standard, "Loading ini configuration from: {}", g_IniPath);
 
     std::shared_ptr<CoreConfigSettings>    newCoreConfig = std::make_shared<CoreConfigSettings>();
     std::shared_ptr<GeneralConfigSettings> newGeneralConfig = std::make_shared<GeneralConfigSettings>();
