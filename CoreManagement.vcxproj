@@ -27,6 +27,7 @@
     <ClInclude Include="..\CoreSDK\inc\enums.h" />
     <ClInclude Include="..\CoreSDK\inc\natives.h" />
     <ClInclude Include="..\CoreSDK\inc\types.h" />
+    <ClInclude Include="..\magic_enum\inc\magic_enum.hpp" />
     <ClInclude Include="CMTypes.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Constants.h" />

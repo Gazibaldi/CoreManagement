@@ -6,6 +6,9 @@
 #include <functional>
 #include <concepts>
 #include <utility>
+#include <array>
+#include <optional>
+#include "../magic_enum/inc/magic_enum.hpp"
 
 enum class TransientActivityType {
 	Unknown,
@@ -49,4 +52,42 @@ public:
     [[nodiscard]] bool IsActive() const noexcept { return m_IsActive; }
     [[nodiscard]] bool IsExpired() const noexcept { return m_IsExpired; }
     [[nodiscard]] TransientActivityType GetActivityType() const noexcept { return m_Activity; }
+};
+
+struct TransientActivityRegistry {
+    static constexpr size_t TotalMonitors = magic_enum::enum_count<TransientActivityType>();
+    std::array<std::optional<TransientActivityMonitor>, TotalMonitors> storage{};
+
+public:
+    void Insert(TransientActivityType type, TransientActivityMonitor&& monitor) {
+        storage[static_cast<size_t>(type)].emplace(std::move(monitor));
+    }
+
+    TransientActivityMonitor& operator[](TransientActivityType type) {
+        return storage[static_cast<size_t>(type)].value();
+    }
+
+    const TransientActivityMonitor& operator[](TransientActivityType type) const {
+        return storage[static_cast<size_t>(type)].value();
+    }
+
+    bool HasMonitor(TransientActivityType type) const {
+        return storage[static_cast<size_t>(type)].has_value();
+    }
+
+    void ResetAll() {
+        for (auto& slot : storage) {
+            if (slot.has_value()) {
+                slot->Reset();
+            }
+        }
+    }
+
+    void RefreshAll(bool isRestricted) {
+        for (auto& slot : storage) {
+            if (slot.has_value()) {
+                slot->RefreshThreshold(isRestricted);
+            }
+        }
+    }
 };
