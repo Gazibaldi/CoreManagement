@@ -312,15 +312,15 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 
         LOG_DEV(
             "Gameplay state changed: \n"
-            "isInMission={},\n"
-            "isInMinigame={},\n"
-            "isFallingOrGoingToDie={},\n"
-            "isBathing={},\n"
-            "isSleeping={},\n"
-            "isAtCamp={},\n"
-            "isJailed={},\n"
-            "isInTimeWarp={},\n"
-            "isFreezeActive={}", 
+            "           isInMission={},\n"
+            "           isInMinigame={},\n"
+            "           isFallingOrGoingToDie={},\n"
+            "           isBathing={},\n"
+            "           isSleeping={},\n"
+            "           isAtCamp={},\n"
+            "           isJailed={},\n"
+            "           isInTimeWarp={},\n"
+            "           isFreezeActive={}", 
             ctx.isInMission, ctx.isInMinigame, isFallingOrGoingToDie, ctx.isBathing, ctx.isSleeping, ctx.isAtCamp, ctx.isJailed, ctx.isInTimeWarp, ctx.freezeActive);
     }    
 
@@ -606,7 +606,13 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
 
         int finalHealth = static_cast<int>(std::max(targetHealth, playerConfig.campedHealthFloor));
 
-        LOG_DEV("Health bathing decay calculation: currentHealth={}, elapsedHours={:.4f}, activeHealthDecay={:.4f}, targetHealth={}, minHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, playerConfig.campedHealthFloor);
+        LOG_DEV(
+            "Health bathing decay calculation:\n"
+            "           CurrentHealth={},\n"
+            "           ElapsedHours={:.4f},\n"
+            "           ActiveHealthDecay={:.4f},\n"
+            "           TargetHealth={},\n"
+            "           MinHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, playerConfig.campedHealthFloor);
         LOG(LogLevel::Standard, "Player time-skipped due to bathing. Health decayed to: {}", finalHealth);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
@@ -625,7 +631,12 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
 
         int finalStamina = static_cast<int>(std::min(startStamina + staminaUplift, 100.0f));
 
-        LOG_DEV("Stamina bathing uplift calculation: currentStamina={}, elapsedHours={:.4f}, staminaUplift={}, targetStamina={}", startStamina, elapsedHours, staminaUplift, finalStamina);
+        LOG_DEV(
+            "Stamina bathing uplift calculation:\n"
+            "           CurrentStamina={},\n"
+            "           ElapsedHours={:.4f},\n"
+            "           StaminaUplift={:.4f},\n"
+            "           TargetStamina={}", startStamina, elapsedHours, staminaUplift, finalStamina);
         LOG(LogLevel::Standard, "Bathing Stamina Uplift Reward Applied: {}", finalStamina);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
@@ -655,7 +666,12 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
 
 			int finalDeadEye = static_cast<int>(targetDeadEye);
 
-            LOG_DEV("Dead Eye bathing uplift calculation: currentDeadEye={}, elapsedHours={:.4f}, deadEyeUplift={:.4f}, targetDeadEye={}", startDeadEye, elapsedHours, deadEyeUplift, finalDeadEye);
+            LOG_DEV(
+                "Dead Eye bathing uplift calculation:\n"
+                "           CurrentDeadEye={},\n"
+                "           ElapsedHours={:.4f},\n"
+                "           DeadEyeUplift={:.4f},\n"
+                "           TargetDeadEye={}", startDeadEye, elapsedHours, deadEyeUplift, finalDeadEye);
             LOG(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye={}", finalDeadEye);
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
         }
@@ -748,7 +764,13 @@ void ApplyBatchTimeSkipDecay(
         
         int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
-		LOG_DEV("Health decay calculation: currentHealth={}, elapsedHours={:.4f}, activeHealthDecay={:.4f}, targetHealth={}, minHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
+		LOG_DEV(
+            "Health decay calculation:\n"
+            "           CurrentHealth={},\n"
+            "           ElapsedHours={:.4f},\n"
+            "           ActiveHealthDecay={:.4f},\n"
+            "           TargetHealth={},\n"
+            "           MinHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
         LOG(LogLevel::Standard, "Player time-skipped. Health decayed to: {}", finalHealth);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
@@ -789,7 +811,13 @@ void ApplyBatchTimeSkipDecay(
         
         int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, config.PlayerConfig.campedStaminaFloor));
 
-        LOG_DEV("Stamina decay calculation: currentStamina={}, elapsedHours={:.4f}, activeStaminaDecay={:.4f}, targetStamina={}, minStaminaFloor={}", startStamina, elapsedHours, activeStaminaDecay, finalStamina, config.PlayerConfig.campedStaminaFloor);
+        LOG_DEV(
+            "Stamina decay calculation:\n"
+            "           CurrentStamina={},\n"
+            "           ElapsedHours={:.4f},\n"
+            "           ActiveStaminaDecay={:.4f},\n"
+            "           TargetStamina={},\n"
+            "           MinStaminaFloor={}", startStamina, elapsedHours, activeStaminaDecay, finalStamina, config.PlayerConfig.campedStaminaFloor);
         LOG(LogLevel::Standard, "Player time-skipped. Stamina decayed to: {}", finalStamina);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
@@ -813,7 +841,13 @@ void ApplyBatchTimeSkipDecay(
         
         int finalDeadEye = BUILTIN::FLOOR(std::max(targetDeadEye, config.PlayerConfig.campedDeadEyeFloor));
 
-        LOG_DEV("Dead Eye decay calculation: currentDeadEye={}, elapsedHours={:.4f}, activeDeadEyeDecay={:.4f}, targetDeadEye={}, minDeadEyeFloor={}", startDeadEye, elapsedHours, activeDeadEyeDecay, finalDeadEye, config.PlayerConfig.campedDeadEyeFloor);
+        LOG_DEV(
+            "Dead Eye decay calculation:\n"
+            "           CurrentDeadEye={},\n"
+            "           ElapsedHours={:.4f},\n"
+            "           ActiveDeadEyeDecay={:.4f},\n"
+            "           TargetDeadEye={},\n"
+            "           MinDeadEyeFloor={}", startDeadEye, elapsedHours, activeDeadEyeDecay, finalDeadEye, config.PlayerConfig.campedDeadEyeFloor);
         LOG(LogLevel::Standard, "Player time-skipped. Dead Eye decayed to: {}", finalDeadEye);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
     }
@@ -838,7 +872,13 @@ void ApplyBatchTimeSkipDecay(
 
                 int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
-                LOG_DEV("Horse Health decay calculation: currentHealth={}, elapsedHours={:.4f}, activeHealthDecay={:.4f}, targetHealth={}, minHealthFloor={}", startHorseHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
+                LOG_DEV(
+                    "Horse Health decay calculation:\n"
+                    "           CurrentHealth={},\n"
+                    "           ElapsedHours={:.4f},\n"
+                    "           ActiveHealthDecay={:.4f},\n"
+                    "           TargetHealth={},\n"
+                    "           MinHealthFloor={}", startHorseHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
                 LOG(LogLevel::Standard, "Player time-skipped. Horse Health decayed to: {}", finalHealth);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health), finalHealth);
             }
@@ -874,7 +914,13 @@ void ApplyBatchTimeSkipDecay(
                 
                 int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, config.HorseConfig.campedStaminaFloor));
 
-                LOG_DEV("Horse Stamina decay calculation: currentStamina={}, elapsedHours={:.4f}, activeStaminaDecay={:.4f}, targetStamina={}, minStaminaFloor={}", startHorseStamina, elapsedHours, activeStaminaDecay, finalStamina, config.HorseConfig.campedStaminaFloor);
+                LOG_DEV(
+                    "Horse Stamina decay calculation:\n"
+                    "           CurrentStamina={},\n"
+                    "           ElapsedHours={:.4f},\n"
+                    "           ActiveStaminaDecay={:.4f},\n"
+                    "           TargetStamina={},\n"
+                    "           MinStaminaFloor={}", startHorseStamina, elapsedHours, activeStaminaDecay, finalStamina, config.HorseConfig.campedStaminaFloor);
                 LOG(LogLevel::Standard, "Player time-skipped. Horse Stamina decayed to: {}", finalStamina);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalStamina);
             }
@@ -892,23 +938,23 @@ void UpdateTransientFreezeStateVariables() {
 
         LOG_DEV(
             "Frozen state variables updated:\n"
-            "  isRestricted                   = {}\n"
-            "  isRestrictedVariable           = {}\n"
-            "  cachedInGameTimeMinutes        = {}\n"
-            "  lastTickInGameMinutes          = {}\n"
-            "  wasSleepingDuringRestriction   = {}\n"
-            "  wasAtCampDuringRestriction     = {}\n"
-            "  wasInMissionDuringRestriction  = {}\n"
-            "  wasInMinigameDuringRestriction = {}\n"
-            "  wasInTimeWarpDuringRestriction = {}\n"
-            "  cachedHealth                   = {}\n"
-            "  cachedStamina                  = {}\n"
-            "  cachedDeadEye                  = {}\n"
-            "  cachedMoney                    = {}\n"
-            "  cachedBathingState             = {}\n"
-            "  hadHorse                       = {}\n"
-            "  cachedHorseHealth              = {}\n"
-            "  cachedHorseStamina             = {}",
+            "           isRestricted                   = {}\n"
+            "           isRestrictedVariable           = {}\n"
+            "           cachedInGameTimeMinutes        = {}\n"
+            "           lastTickInGameMinutes          = {}\n"
+            "           wasSleepingDuringRestriction   = {}\n"
+            "           wasAtCampDuringRestriction     = {}\n"
+            "           wasInMissionDuringRestriction  = {}\n"
+            "           wasInMinigameDuringRestriction = {}\n"
+            "           wasInTimeWarpDuringRestriction = {}\n"
+            "           cachedHealth                   = {}\n"
+            "           cachedStamina                  = {}\n"
+            "           cachedDeadEye                  = {}\n"
+            "           cachedMoney                    = {}\n"
+            "           cachedBathingState             = {}\n"
+            "           hadHorse                       = {}\n"
+            "           cachedHorseHealth              = {}\n"
+            "           cachedHorseStamina             = {}",
             g_State.isRestricted,
             g_State.MonitorTransientVariablesDuringRestriction,
             g_State.cachedInGameTimeMinutes,
@@ -1127,7 +1173,13 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         
         int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
-        LOG_DEV("Player Core Simulation: HoursDelta={:.4f}, HealthDecay={:.4f}, CurrentHealth={}, TargetHealth={}, MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
+        LOG_DEV(
+            "Player Core Simulation:\n"
+            "           HoursDelta={:.4f},\n"
+            "           HealthDecay={:.4f},\n"
+            "           CurrentHealth={},\n"
+            "           TargetHealth={},\n"
+            "           MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
         LOG(LogLevel::Standard, "Player Core Sync Tick: Health={}", finalHealth);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
@@ -1141,7 +1193,13 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
         
         int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, minStaminaFloor));
             
-        LOG_DEV("Player Core Simulation: HoursDelta={:.4f}, StaminaDecay={:.4f}, CurrentStamina={}, TargetStamina={}, MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
+        LOG_DEV(
+            "Player Core Simulation:\n"
+            "           HoursDelta={:.4f},\n"
+            "           StaminaDecay={:.4f},\n"
+            "           CurrentStamina={},\n"
+            "           TargetStamina={},\n"
+            "           MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
         LOG(LogLevel::Standard, "Player Stamina Sync Tick: Stamina={}", finalStamina);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
@@ -1158,7 +1216,13 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 
         int finalDeadEye = BUILTIN::FLOOR(std::max(targetDeadEye, minDeadEyeFloor));
 
-        LOG_DEV("Player Core Simulation: HoursDelta={:.4f}, DeadEyeDecay={:.4f}, CurrentDeadEye={}, TargetDeadEye={}, MinDeadEyeFloor={}", hoursDelta, activeDeadEyeDecay, currentDeadEye, finalDeadEye, minDeadEyeFloor);
+        LOG_DEV(
+            "Player Core Simulation:\n"
+            "           HoursDelta={:.4f},\n"
+            "           DeadEyeDecay={:.4f},\n"
+            "           CurrentDeadEye={},\n"
+            "           TargetDeadEye={},\n"
+            "           MinDeadEyeFloor={}", hoursDelta, activeDeadEyeDecay, currentDeadEye, finalDeadEye, minDeadEyeFloor);
         LOG(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye={}", finalDeadEye);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
@@ -1195,7 +1259,13 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
         int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
-        LOG_DEV("Horse Core Simulation: HoursDelta={:.4f}, HealthDecay={:.4f}, CurrentHealth={}, TargetHealth={}, MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
+        LOG_DEV(
+            "Horse Core Simulation:\n"
+            "           HoursDelta={:.4f},\n"
+            "           HealthDecay={:.4f},\n"
+            "           CurrentHealth={},\n"
+            "           TargetHealth={},\n"
+            "           MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
         LOG(LogLevel::Standard, "Horse Core Sync Tick: Health={}", finalHealth);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health), finalHealth);
@@ -1246,7 +1316,13 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
             int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, minStaminaFloor));
 
-            LOG_DEV("Horse Core Simulation: HoursDelta={:.4f}, StaminaDecay={:.4f}, CurrentStamina={}, TargetStamina={}, MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
+            LOG_DEV(
+                "Horse Core Simulation:\n"
+                "           HoursDelta={:.4f},\n"
+                "           StaminaDecay={:.4f},\n"
+                "           CurrentStamina={},\n"
+                "           TargetStamina={},\n"
+                "           MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
             LOG(LogLevel::Standard, "Horse Core Sync Tick: Stamina={}", finalStamina);
 
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
@@ -1333,18 +1409,27 @@ void ResetSimulationState() {
 }
 
 ConfigSnapshot CheckForConfigChange() {
+
+	// If the config has changed OR we haven't initialised the config structures yet, we need to refresh the cache
+	// We also check if the player is in a restricted state, as we don't want to refresh the cache while the player 
+    // is in a restricted state (e.g., during a mission or minigame)
     if (g_HasConfigChanged.load(std::memory_order_acquire) || !g_State.configStructuresInitialised) {
-        // Log an accurate message based on WHY we are filling the cache
-        if (!g_State.configStructuresInitialised)
-            LOG(LogLevel::ConfigOnly, "Initialising local simulation configuration cache for the first time...");
-        else
-            LOG(LogLevel::ConfigOnly, "Dynamic config hot-reload requested. Updating transient systems...");
+        if (!g_State.isRestricted) {
+            // Log an accurate message based on WHY we are filling the cache
+            if (!g_State.configStructuresInitialised)
+                LOG(LogLevel::ConfigOnly, "Initialising local simulation configuration cache for the first time...");
+            else
+                LOG(LogLevel::ConfigOnly, "Dynamic config hot-reload requested. Updating transient systems...");
 
-        g_State.configStructuresInitialised = true;
+            g_State.configStructuresInitialised = true;
 
-		g_activeMonitors.RefreshAll(g_State.isRestricted);
+            g_activeMonitors.RefreshAll(g_State.isRestricted);
 
-        g_HasConfigChanged.store(false, std::memory_order_release);
+            g_HasConfigChanged.store(false, std::memory_order_release);
+        }
+        else {
+			LOG(LogLevel::ConfigOnly, "Dynamic config hot-reload requested, but the player is in a restricted state. Deferring config update until the next unrestricted tick.");
+        }
     }
 
     return ConfigSnapshot {
