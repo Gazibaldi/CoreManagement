@@ -306,7 +306,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     if (!ctx.freezeActive)
 		RecordTrackingSnapshots(playerPed);
     
-	if (HasDevLogCacheChanged(ctx)) {
+	if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev) && HasDevLogCacheChanged(ctx)) {
         // Update tracking baselines immediately
         UpdateDevLogCache(ctx);
 
