@@ -280,7 +280,7 @@ bool InventoryManager::DoesPlayerHaveItem(Hash itemHash, const std::string& item
         bool result = INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&itemGuid);
 
 		if(!result)
-            LOG(LogLevel::Verbose, "Item {} (hash: {}) is in player inventory but did not pass the GUID validity check", itemName, itemHash);
+            LOG_DEV("Item {} (hash: {}) is in player inventory but did not pass the GUID validity check", itemName, itemHash);
         else
             LOG(LogLevel::Verbose, "Player has item: {} (hash: {}) in their inventory. Adding core passive modifiers", itemName, itemHash);
 
@@ -309,7 +309,7 @@ bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std:
         bool result = INVENTORY::_INVENTORY_IS_GUID_VALID((Any*)&itemGuid);
 
         if (!result)
-            LOG(LogLevel::Verbose, "Item {} (hash: {}) is in horse inventory but did not pass the GUID validity check", itemName, itemHash);
+            LOG_DEV("Item {} (hash: {}) is in horse inventory but did not pass the GUID validity check", itemName, itemHash);
         else
             LOG(LogLevel::Verbose, "Horse has item: {} (hash: {}) in their inventory. Adding core passive modifiers", itemName, itemHash);
 
@@ -334,9 +334,6 @@ bool InventoryManager::DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std:
 
 [[nodiscard]] CombinedTackModifiers InventoryManager::GetActiveHorseTackModifiers(Ped horsePed) noexcept {
     CombinedTackModifiers modifiers{};
-
-	return modifiers;
-
 
 	// TODO: this just checks for items in the inventory not if they are equipped. Need to check if the horse has the item equipped instead of just in inventory.
     // Scan for Stirrups
