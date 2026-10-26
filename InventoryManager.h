@@ -61,7 +61,7 @@ class InventoryManager {
     Hash m_WardrobeContainerHash = 0;
 
     std::array<PlayerPassiveModifier, 4> m_PlayerPassiveModifiers{};
-    std::array<TackModifier, 12> m_StirrupModifiers{};
+    std::array<TackModifier, 11> m_StirrupModifiers{};
     std::array<TackModifier, 93> m_SaddleModifiers{};
 
     RDR_GUID GetPlayerInventoryItemGUID(Hash item, RDR_GUID guid, Hash slotId) noexcept;
