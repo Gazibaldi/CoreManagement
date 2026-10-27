@@ -34,6 +34,8 @@ public:
     void RecordSnapshot(Ped playerPed) noexcept;
 
     [[nodiscard]] std::tuple<Ped, bool> GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType = ActiveHorseType::Either) noexcept;
+    [[nodiscard]] std::tuple<Ped, bool> GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType, bool performDistanceCheck) noexcept;
+    [[nodiscard]] std::tuple<Ped, bool> GetActivePlayerHorse(Ped playerPed, bool performDistanceCheck) noexcept;
     
     [[nodiscard]] bool IsHorseHitched() noexcept;
     [[nodiscard]] bool IsHorseBeingLed() noexcept;

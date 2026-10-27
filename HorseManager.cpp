@@ -116,7 +116,7 @@ void HorseManager::ResetState() noexcept {
     m_HorseLeadReward = 0.0f;
 }
 
-[[nodiscard]] std::tuple<Ped, bool> HorseManager::GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType) noexcept {
+[[nodiscard]] std::tuple<Ped, bool> HorseManager::GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType, bool performDistanceCheck) noexcept {
 
     switch (horseType) {
 	    case ActiveHorseType::Mounted:
@@ -126,7 +126,7 @@ void HorseManager::ResetState() noexcept {
 	    case ActiveHorseType::Either:
             auto [activeHorse, hasHorse] = GetPlayerActiveHorse(playerPed, horseType == ActiveHorseType::Either);
 
-            if (hasHorse) {
+            if (hasHorse && performDistanceCheck) {
                 float distance = GetHorseDistanceFromPlayer(playerPed, activeHorse);
 
                 LOG_DEV("Active horse detected. Distance from player: {} metres.", distance);
@@ -146,6 +146,13 @@ void HorseManager::ResetState() noexcept {
     }
 
 	return { 0, false }; // Default return if no horse is found
+}
+
+[[nodiscard]] std::tuple<Ped, bool> HorseManager::GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType) noexcept {
+	return GetActivePlayerHorse(playerPed, horseType, true);
+}
+[[nodiscard]] std::tuple<Ped, bool> HorseManager::GetActivePlayerHorse(Ped playerPed, bool performDistanceCheck) noexcept {
+	return GetActivePlayerHorse(playerPed, ActiveHorseType::Either, performDistanceCheck);
 }
 
 [[nodiscard]] bool HorseManager::IsHorseHitched() noexcept {

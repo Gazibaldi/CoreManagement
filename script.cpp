@@ -258,8 +258,27 @@ int GetCurrentGameTimeScale() {
     return msPerInGameMinute;
 }
 
+void EvaluatePlayerHorseState(Ped playerPed) {
+	auto [activeHorse, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed, false);
+	
+    if (hasHorse) {
+        if (activeHorse != g_State.lastKnownHorsePed) {
+			LOG_DEV("Player's active horse has changed. Resetting horse snapshot.");
+            g_HorseManager.ResetSnapshot();
+            g_State.lastKnownHorsePed = activeHorse;
+        }
+	}
+	else {
+		LOG_DEV("Player does not have an active horse. Resetting horse snapshot.");
+		g_HorseManager.ResetSnapshot();
+		g_State.lastKnownHorsePed = 0;
+	}
+}
+
 GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings& generalConfig) {
     GameplayContext ctx;
+
+    EvaluatePlayerHorseState(playerPed);
 
     bool isInMission = MISC::GET_MISSION_FLAG();
     bool isInMinigame = IsPlayerPlayingTableMinigame();
@@ -1390,6 +1409,7 @@ void ResetSimulationState() {
     g_State.wasRestrictedLastTick = false;
 
     g_State.lastKnownPlayerPed = 0;
+    g_State.lastKnownHorsePed = 0;
 
     g_activeMonitors.ResetAll();
 

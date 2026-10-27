@@ -45,6 +45,7 @@ struct SimulationState {
     StateChangeIntervalType stateChangeTickIntervalMsType = StateChangeIntervalType::NotSet;
     
     Ped lastKnownPlayerPed = 0;
+    Ped lastKnownHorsePed = 0;
 	bool configStructuresInitialised = false;
 };
 
