@@ -3,29 +3,43 @@
 */
 
 #pragma once
-#include <string>
+#include <string_view>
 #include <atomic>
+#include <thread>
+#include <format>
 #include "CMTypes.h"
 
-enum class LogLevel : int { Disabled = 0, Standard = 1, Verbose = 2, Dev = 2105 };
+#ifdef DEVTEST
+// __VA_OPT__(,) safely deletes the comma if you pass 0 formatting variables!
+#define LOG_DEV(fmt_str, ...) \
+        do { \
+            if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev)) { \
+                const std::string formatted_msg = std::format(fmt_str __VA_OPT__(, __VA_ARGS__)); \
+                WriteLog(LogLevel::Dev, formatted_msg); \
+            } \
+        } while(0)
+#else
+#define LOG_DEV(fmt_str, ...) do { } while(0)
+#endif // DEVTEST
 
-struct DevLoggingCache {
-    bool lastFreezeActive = false;
-    bool lastIsAtCamp = false;
-    bool lastIsSleeping = false;
-    bool lastIsJailed = false;
-    bool lastIsBathing = false;
-	bool lastIsInMission = false;
-	bool lastIsInMinigame = false;
-};
+#define LOG(level, fmt_str, ...) \
+        do { \
+            if (g_CurrentLogLevel.load(std::memory_order_acquire) >= static_cast<int>(level)) { \
+                const std::string formatted_msg = std::format(fmt_str __VA_OPT__(, __VA_ARGS__)); \
+                WriteLog(level, formatted_msg); \
+            } \
+        } while(0)
 
-extern std::string g_LogPath;
+enum class LogLevel : int { ConfigOnly = 0, Standard = 1, Verbose = 2, Dev = 2105 };
+extern std::atomic<int> g_CurrentLogLevel;
 
-void AsyncLogWriterWorker(std::atomic<bool>& runFlag);
+[[nodiscard]] std::thread InitialiseLoggerThread();
+
+void ShutdownLogger();
 
 void TryWaitForLogQueueDrain();
 
-void WriteLog(LogLevel requiredLevel, const std::string& message);
+void WriteLog(LogLevel requiredLevel, const std::string_view message);
 
 void ClearLog();
 

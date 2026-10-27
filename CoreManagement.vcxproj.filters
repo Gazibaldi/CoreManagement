@@ -8,6 +8,9 @@
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ThreadManager.cpp" />
     <ClCompile Include="TransientActivityMonitor.cpp" />
+    <ClCompile Include="MovementVelocityTracker.cpp" />
+    <ClCompile Include="HorseManager.cpp" />
+    <ClCompile Include="InventoryManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="script.h" />
@@ -22,6 +25,9 @@
     <ClInclude Include="CMTypes.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="TransientActivityMonitor.h" />
+    <ClInclude Include="MovementVelocityTracker.h" />
+    <ClInclude Include="HorseManager.h" />
+    <ClInclude Include="InventoryManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">

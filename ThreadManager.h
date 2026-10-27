@@ -4,31 +4,17 @@
 
 #pragma once
 #include <thread>
-#include <mutex>
-#include <atomic>
-#include <condition_variable>
 
 class ScriptThreadManager {
-    std::thread iniWatcherThread;
+    std::thread configThread;
     std::thread loggerThread;
 public:
     ScriptThreadManager() = default;
     ~ScriptThreadManager() = default;
 
-    // Spawns your background threads on script boot
-    void Initialize();
+    void Initialise();
 
-    // Safely tears down and joins background threads
     void Shutdown(bool isGameExiting = false);
 };
 
 extern ScriptThreadManager g_ThreadManager;
-
-// INI Watcher synchronization
-extern std::atomic<bool> g_RunIniWatcherThread;
-extern std::condition_variable g_IniWatcherCv;
-extern std::mutex g_IniWatcherCvMutex;
-
-// Logger orchestration tools
-extern std::condition_variable g_LogCV; 
-extern std::mutex g_LogQueueMutex;

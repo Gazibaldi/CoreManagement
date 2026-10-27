@@ -5,22 +5,44 @@
 #include <windows.h>
 #include <queue>
 #include <mutex>
-#include <condition_variable>
 #include <fstream>
-#include "Config.h"
+#include <chrono>
+#include <atomic>
+#include <string>
+#include <thread>
+#include <utility>
+#include <format>
+#include <ios>
+#include <string_view>
+#include <condition_variable>
+#include <functional>
 #include "Logger.h"
 #include "CMTypes.h"
 
-std::string g_LogPath = ".\\CoreManagement.log";
 
-// Shared orchestration variables instantiated here
-std::mutex g_LogQueueMutex;
-std::condition_variable g_LogCV;
+struct DevLoggingCache {
+    bool lastFreezeActive = false;
+    bool lastIsAtCamp = false;
+    bool lastIsSleeping = false;
+    bool lastIsJailed = false;
+    bool lastIsBathing = false;
+    bool lastIsInMission = false;
+    bool lastIsInMinigame = false;
+    bool lastIsInTimeWarp = false;
+	bool lastIsInShop = false;
+};
 
-// Private, file-isolated synchronization variables (not exposed to script.cpp)
+std::atomic<int> g_CurrentLogLevel{ static_cast<int>(LogLevel::ConfigOnly) };
+
+const std::string g_LogPath = ".\\CoreManagement.log";
+
 static std::queue<std::string> s_LogQueue;
 
 DevLoggingCache g_LogCache;
+
+std::atomic<bool> g_RunLogThread(false);
+std::condition_variable g_LogCV;
+std::mutex g_LogQueueMutex;
 
 void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
     while (runFlag || !s_LogQueue.empty()) {
@@ -48,6 +70,21 @@ void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
     }
 }
 
+[[nodiscard]] std::thread InitialiseLoggerThread() {
+    g_RunLogThread.store(true, std::memory_order_release);
+    return std::thread(AsyncLogWriterWorker, std::ref(g_RunLogThread));
+}
+
+void ShutdownLogger() {
+    g_RunLogThread.store(false, std::memory_order_release);
+    
+    // Wake up the condition variable loop in case it's waiting/sleeping
+    {
+        std::lock_guard<std::mutex> lock(g_LogQueueMutex);
+        g_LogCV.notify_all();
+    }
+}
+
 void TryWaitForLogQueueDrain() {
     int timeoutTicks = 0;
     bool queueIsEmpty = false;
@@ -67,19 +104,19 @@ void TryWaitForLogQueueDrain() {
     }
 }
 
-void WriteLog(LogLevel requiredLevel, const std::string& message) {
+void WriteLog(LogLevel requiredLevel, const std::string_view message) {
     int systemLevel = g_CurrentLogLevel.load(std::memory_order_acquire);
-    if (static_cast<int>(systemLevel) < static_cast<int>(requiredLevel)) return;
+    if (systemLevel < static_cast<int>(requiredLevel)) return;
 
     SYSTEMTIME st;
     GetLocalTime(&st);
-    char timeBuffer[16];
-    sprintf_s(timeBuffer, "[%02d:%02d:%02d] ", st.wHour, st.wMinute, st.wSecond);
-    std::string formattedMessage = std::string(timeBuffer) + message;
+
+    std::string formattedMessage = std::format("[{:02d}:{:02d}:{:02d}] {}",
+        st.wHour, st.wMinute, st.wSecond, message);
 
     {
         std::lock_guard<std::mutex> lock(g_LogQueueMutex);
-        s_LogQueue.push(formattedMessage);
+        s_LogQueue.push(std::move(formattedMessage));
     }
     g_LogCV.notify_one();
 }
@@ -96,7 +133,9 @@ bool HasDevLogCacheChanged(const GameplayContext& ctx) {
 		ctx.isJailed != g_LogCache.lastIsJailed ||
 		ctx.isBathing != g_LogCache.lastIsBathing ||
         ctx.isInMission != g_LogCache.lastIsInMission ||
-        ctx.isInMinigame != g_LogCache.lastIsInMinigame);
+        ctx.isInMinigame != g_LogCache.lastIsInMinigame ||
+        ctx.isInTimeWarp != g_LogCache.lastIsInTimeWarp ||
+        ctx.isInShop != g_LogCache.lastIsInShop);
 }
 
 void UpdateDevLogCache(const GameplayContext& ctx) {
@@ -107,6 +146,8 @@ void UpdateDevLogCache(const GameplayContext& ctx) {
 	g_LogCache.lastIsBathing = ctx.isBathing;
 	g_LogCache.lastIsInMission = ctx.isInMission;
 	g_LogCache.lastIsInMinigame = ctx.isInMinigame;
+	g_LogCache.lastIsInTimeWarp = ctx.isInTimeWarp;
+	g_LogCache.lastIsInShop = ctx.isInShop;
 }
 
 void ClearDevLogCache() {
@@ -117,4 +158,6 @@ void ClearDevLogCache() {
 	g_LogCache.lastIsBathing = false;
 	g_LogCache.lastIsInMission = false;
 	g_LogCache.lastIsInMinigame = false;
+	g_LogCache.lastIsInTimeWarp = false;
+	g_LogCache.lastIsInShop = false;
 }

@@ -9,3 +9,7 @@ kepmehz's [ScriptHookRDR V2 Library SDK](https://www.nexusmods.com/reddeadredemp
 Red Dead Redemption II alloc8tors's [Native DB](https://alloc8or.re/rdr3/nativedb/)
 
 Copyright © 2026 Gary Tweddle/Gazibaldi. This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+
+## Third-Party Libraries
+This project vendorises the following open-source dependencies:
+* [magic_enum](https://github.com/Neargye/magic_enum) - Static reflection for enums in C++, licensed under the MIT License (Copyright © 2019-2026 Daniil Goncharov).
