@@ -34,6 +34,8 @@ std::array<Hash, 17> g_SleepScenarios{};
 std::array<Hash, 16> g_CampScenarios{};
 std::array<Hash, 4> g_TableMinigames{};
 
+Hash g_ShopUIHash;
+
 void PrecomputeHashes() {
 	// Precompute hashes here to avoid repeated calls to MISC::GET_HASH_KEY during gameplay.
 
@@ -84,6 +86,8 @@ void PrecomputeHashes() {
 		{ GetKey("dominoes_sp") },
 		{ GetKey("fillet_sp") }
 	} };
+
+    g_ShopUIHash = GetKey("generic_shop_ui_events");
 
     // additional hashes can be precomputed here if needed
 }
@@ -240,6 +244,17 @@ bool IsPlayerPlayingTableMinigame() {
     return false;
 }
 
+bool IsPlayerInAShop() {
+    int threadCount = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_ShopUIHash);
+    LOG_DEV("Shop thread count for hash {}: {}", g_ShopUIHash, threadCount);
+    if (threadCount > 0) {
+        LOG(LogLevel::Verbose, "Player is currently in a shop menu.");
+        return true;
+    }
+
+    return false;
+}
+
 void RecordTrackingSnapshots(Ped playerPed) {
 	g_MovementTracker.RecordSnapshot(playerPed);
 	g_HorseManager.RecordSnapshot(playerPed);
@@ -282,13 +297,20 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 
     bool isInMission = MISC::GET_MISSION_FLAG();
     bool isInMinigame = IsPlayerPlayingTableMinigame();
-    bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
+	bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
 
     LOG_DEV("Gameplay state evaluated: allowDrainInMissions={}, allowDrainInMinigames={}", generalConfig.enableDuringMissions, generalConfig.enableDuringMinigames);
 
     // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
     ctx.isInMission = isInMission && !generalConfig.enableDuringMissions;
     ctx.isInMinigame = isInMinigame && !generalConfig.enableDuringMinigames;
+
+	// If the player is in a mission or minigame, we don't allow hot-reload of the config to 
+    // avoid potential issues with state changes during those events.
+    bool enableHotReload = ShouldConfigHotReload(!(ctx.isInMission || ctx.isInMinigame));
+
+	if (!enableHotReload)
+		LOG(LogLevel::ConfigOnly, "Config hot-reload is disabled due to player being in a mission or minigame. Config will be refreshed once the player exits these states.");
     
 	// Only check the following states if the player is not already in a mission or minigame
 	// they can't be happening/change if we are in mission or minigame or falling/dying
@@ -297,6 +319,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
         ctx.isSleeping = IsInSleepScenario(playerPed);
         ctx.isJailed = IsPlayerArrested();        
         ctx.isAtCamp = IsInCampScenario(playerPed);
+		ctx.isInShop = IsPlayerInAShop();
     }
     
 	int timeScale = GetCurrentGameTimeScale();
@@ -304,15 +327,21 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 
 	ctx.isInTimeWarp = (timeScale < VANILLA_GAME_TIME_SCALE);
 
-	// If the player is in a mission/minigame/timewarp, we don't reset the time scale as it may be intended to be changed during those events.
+	// If the player is in a mission/minigame/timewarp/shop, we don't reset the time scale as it may be intended to be changed during those events.
 	// otherwise, we reset it back to the configured value to ensure the drain mechanics are consistent with the player's configuration.
-    if (timeScale != configuredTimeScale && !(isInMission || isInMinigame || ctx.isInTimeWarp)) {
-        LOG(LogLevel::Verbose, "Game time scale has changed to {} probably due to state change. Setting to configured value: {}.", timeScale, configuredTimeScale);
+    if (timeScale != configuredTimeScale && !(isInMission || isInMinigame || ctx.isInTimeWarp || ctx.isInShop)) {
+        LOG(LogLevel::Standard, "Game time scale has changed to {} due to state change. Resetting to configured value: {}.", timeScale, configuredTimeScale);
 		SetGameTimeScale(configuredTimeScale);
-    }    
+    }
+
+    if (ctx.isInShop) {
+        LOG(LogLevel::Verbose, "Player is shopping. Setting game time scale to cutscene time (9,999,999). Enjoy your browsing!");
+        SetGameTimeScale(9999999);
+    }
+
 
     // camp stays out as we want a customized slowed decay in those cases
-    ctx.freezeActive = (ctx.isInMission || ctx.isInMinigame || isFallingOrGoingToDie || ctx.isSleeping || ctx.isBathing || ctx.isJailed || ctx.isInTimeWarp);
+    ctx.freezeActive = (ctx.isInMission || ctx.isInMinigame || isFallingOrGoingToDie || ctx.isSleeping || ctx.isBathing || ctx.isJailed || ctx.isInTimeWarp || ctx.isInShop);
 	ctx.monitorTransientVarsDuringFreeze = ctx.isBathing; // We want to monitor bathing state even when freeze is active, as it can change during the freeze period. (Deluxe bathing cutscene issue)
 
     if (!ctx.freezeActive)
@@ -330,10 +359,11 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
             "           isBathing={},\n"
             "           isSleeping={},\n"
             "           isAtCamp={},\n"
+            "           isInShop={},\n"
             "           isJailed={},\n"
             "           isInTimeWarp={},\n"
             "           isFreezeActive={}", 
-            ctx.isInMission, ctx.isInMinigame, isFallingOrGoingToDie, ctx.isBathing, ctx.isSleeping, ctx.isAtCamp, ctx.isJailed, ctx.isInTimeWarp, ctx.freezeActive);
+            ctx.isInMission, ctx.isInMinigame, isFallingOrGoingToDie, ctx.isBathing, ctx.isSleeping, ctx.isAtCamp, ctx.isInShop, ctx.isJailed, ctx.isInTimeWarp, ctx.freezeActive);
     }    
 
     return ctx;
@@ -550,7 +580,7 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
     return std::min(finalDeadEye, focusCap);
 }
 
-float CalculateHorseHealthDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped horsePed, float totalPassiveHealthModifierReduction, bool isPlayerSemiRestrained = false) {
+float CalculateHorseHealthDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped horsePed, bool isPlayerSemiRestrained = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained)
@@ -559,13 +589,10 @@ float CalculateHorseHealthDecayMultiplier(const PlayerConfigSettings& playerConf
     if(g_HorseManager.IsHorseDirty(horsePed))
         multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
 
-    LOG(LogLevel::Verbose, "Active horse passive modifiers: Health Reduction={}", totalPassiveHealthModifierReduction);
-    multiplier -= totalPassiveHealthModifierReduction;    
-
     return std::max(multiplier, 0.1f);
 }
 
-float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig, Ped horsePed, float totalPassiveStaminaModifierReduction, bool isPlayerSemiRestrained = false) {
+float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig, Ped horsePed, bool isPlayerSemiRestrained = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained)
@@ -575,9 +602,6 @@ float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerCon
     
     if (g_HorseManager.IsHorseDirty(horsePed))
         multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
-
-    LOG(LogLevel::Verbose, "Active horse passive modifiers: Stamina Reduction={}", totalPassiveStaminaModifierReduction);
-    multiplier -= totalPassiveStaminaModifierReduction;
 
     return std::max(multiplier, 0.1f);
 }
@@ -873,9 +897,7 @@ void ApplyBatchTimeSkipDecay(
 
             LOG_DEV("Horse Time Skip Simulation: isHealthGold={}, isStaminaGold={}", isHorseHealthGold, isHorseStaminaGold);
 
-            CombinedTackModifiers passives = g_InventoryManager.GetActiveHorseTackModifiers(activeHorse);
-
-			// Horse Health Core Decay Logic
+            // Horse Health Core Decay Logic
             if (!isHorseHealthGold) {
                 float activeHealthDecay = config.HorseConfig.baseHealthDecay * CalculateHorseHealthDecayMultiplier(config.PlayerConfig, activeHorse, passives.totalHealthReduction);
 
@@ -1008,7 +1030,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         g_State.wasSleepingDuringRestriction = ctx.isSleeping;
         g_State.wasAtCampDuringRestriction = ctx.isAtCamp;
 		g_State.wasInMissionDuringRestriction = ctx.isInMission;
-		g_State.wasInMinigameDuringRestriction = ctx.isInMinigame || ctx.isJailed;
+		g_State.wasInMinigameDuringRestriction = ctx.isInMinigame || ctx.isJailed || ctx.isInShop;
 		g_State.wasInTimeWarpDuringRestriction = ctx.isInTimeWarp;
 		g_State.restrictedBathingState = ctx.isBathing ? BathingState::StandardBathing : BathingState::NotBathing; // Default to standard bathing state if we're in a bathing scenario, otherwise 0 (not bathing)
 
@@ -1260,11 +1282,9 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
     LOG_DEV("Horse Core Simulation: isHealthGold={}, isStaminaGold={}", isHorseHealthGold, isHorseStaminaGold);
 
-    CombinedTackModifiers passives = g_InventoryManager.GetActiveHorseTackModifiers(horsePed);
-
-	// Health Core Decay Logic (only applies if the horse's health core is not golden)
+    // Health Core Decay Logic (only applies if the horse's health core is not golden)
     if (!isHorseHealthGold) {
-        float activeHealthDecay = config.HorseConfig.baseHealthDecay * CalculateHorseHealthDecayMultiplier(config.PlayerConfig, horsePed, passives.totalHealthReduction, ctx.isAtCamp);
+        float activeHealthDecay = config.HorseConfig.baseHealthDecay * CalculateHorseHealthDecayMultiplier(config.PlayerConfig, horsePed, ctx.isAtCamp);
 
 		float targetHealth = currentHealth - (activeHealthDecay * hoursDelta);
 		float minHealthFloor = ctx.isAtCamp ? config.HorseConfig.campedHealthFloor : 0.0f; //the player is semi restrained (jail/camp/bath), so we apply the horse's restrained floor to prevent full depletion
@@ -1321,7 +1341,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 		}
         else {
             // Normal dynamic movement decay route
-            float activeStaminaDecay = config.HorseConfig.baseStaminaDecay * CalculateHorseStaminaDecayMultiplier(config.PlayerConfig, config.HorseConfig, horsePed, passives.totalStaminaReduction, ctx.isAtCamp);
+            float activeStaminaDecay = config.HorseConfig.baseStaminaDecay * CalculateHorseStaminaDecayMultiplier(config.PlayerConfig, config.HorseConfig, horsePed, ctx.isAtCamp);
             
             float targetStamina = currentStamina - (activeStaminaDecay * hoursDelta);
             float minStaminaFloor = ctx.isAtCamp ? config.HorseConfig.campedStaminaFloor : 0.0f;
@@ -1416,33 +1436,30 @@ void ResetSimulationState() {
 	g_MovementTracker.ResetSnapshot();
     g_HorseManager.ResetSnapshot();
 
-    g_State.configStructuresInitialised = false;    
+    g_State.configStructuresInitialised = false;
+
+	// Reset the config hot-reload flag to ensure hot-reload is enabled after a hard reset.
+    ShouldConfigHotReload(true);
 
     ClearDevLogCache();
 }
 
 ConfigSnapshot CheckForConfigChange() {
 
-	// If the config has changed OR we haven't initialised the config structures yet, we need to refresh the cache
-	// We also check if the player is in a restricted state, as we don't want to refresh the cache while the player 
-    // is in a restricted state (e.g., during a mission or minigame)
+	// If the config has changed OR the config structures have not been initialised, 
+    // we need to refresh the cache and update the transient systems.
     if (g_HasConfigChanged.load(std::memory_order_acquire) || !g_State.configStructuresInitialised) {
-        if (!g_State.isRestricted) {
-            // Log an accurate message based on WHY we are filling the cache
-            if (!g_State.configStructuresInitialised)
-                LOG(LogLevel::ConfigOnly, "Initialising local simulation configuration cache for the first time...");
-            else
-                LOG(LogLevel::ConfigOnly, "Dynamic config hot-reload requested. Updating transient systems...");
+        // Log an accurate message based on WHY we are filling the cache
+        if (!g_State.configStructuresInitialised)
+            LOG(LogLevel::ConfigOnly, "Initialising local simulation configuration cache for the first time...");
+        else
+            LOG(LogLevel::ConfigOnly, "Dynamic config hot-reload requested. Updating transient systems...");
 
-            g_State.configStructuresInitialised = true;
+        g_State.configStructuresInitialised = true;
 
-            g_activeMonitors.RefreshAll(g_State.isRestricted);
+        g_activeMonitors.RefreshAll(g_State.isRestricted);
 
-            g_HasConfigChanged.store(false, std::memory_order_release);
-        }
-        else {
-			LOG(LogLevel::ConfigOnly, "Dynamic config hot-reload requested, but the player is in a restricted state. Deferring config update until the next unrestricted tick.");
-        }
+        g_HasConfigChanged.store(false, std::memory_order_release);
     }
 
     return ConfigSnapshot {

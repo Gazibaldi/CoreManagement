@@ -54,6 +54,7 @@ struct GameplayContext {
     bool monitorTransientVarsDuringFreeze = false;
     bool isInMission = false;
     bool isInMinigame = false;
+    bool isInShop = false;
     bool isSleeping = false;
     bool isAtCamp = false;
     bool isJailed = false;
@@ -73,17 +74,4 @@ struct CombinedPlayerCoreModifiers {
     float totalHealthReduction = 0.0f;
     float totalStaminaReduction = 0.0f;
     float totalDeadEyeReduction = 0.0f;
-};
-
-struct TackModifier {
-    std::string_view name;
-    Hash itemHash;
-    float healthCoreMod;
-    float staminaCoreMod;
-    bool isPlayerPassive = false; // Defaulted to false inline
-};
-
-struct CombinedTackModifiers {
-    float totalHealthReduction = 0.0f;
-    float totalStaminaReduction = 0.0f;
 };

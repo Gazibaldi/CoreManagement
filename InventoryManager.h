@@ -55,14 +55,11 @@ struct RDR_ITEMINFO
 class InventoryManager {
     Hash m_NullSlotHash = 0;
     Hash m_CharacterHash = 0;
-    Hash m_ActiveHorseSlotHash = 0;
     Hash m_SatchelSlotHash = 0;
     Hash m_WardrobeSlotHash = 0;
     Hash m_WardrobeContainerHash = 0;
 
     std::array<PlayerPassiveModifier, 4> m_PlayerPassiveModifiers{};
-    std::array<TackModifier, 11> m_StirrupModifiers{};
-    std::array<TackModifier, 93> m_SaddleModifiers{};
 
     RDR_GUID GetPlayerInventoryItemGUID(Hash item, RDR_GUID guid, Hash slotId) noexcept;
     RDR_GUID GetPlayerInventoryGUID() noexcept;
@@ -70,11 +67,9 @@ class InventoryManager {
     RDR_SLOTINFO GetItemSlotInfo(Hash itemHash) noexcept;
 
     bool DoesPlayerHaveItem(Hash itemHash, const std::string& itemName) noexcept;
-    bool DoesHorseHaveItem(Ped horsePed, Hash itemHash, const std::string& itemName) noexcept;
 
 public:
     void ComputeHashes() noexcept;
     [[nodiscard]] CombinedPlayerCoreModifiers GetActivePlayerPassiveModifiers() noexcept;
-    [[nodiscard]] CombinedTackModifiers GetActiveHorseTackModifiers(Ped horsePed) noexcept;
 
 };

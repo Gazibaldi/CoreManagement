@@ -107,3 +107,5 @@ extern std::atomic<std::shared_ptr<HorseConfigSettings>> g_HorseConfig;
 void ShutdownConfig();
 
 void LoadConfiguration();
+
+bool ShouldConfigHotReload(bool enableHotReload);

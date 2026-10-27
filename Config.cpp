@@ -46,6 +46,13 @@ std::condition_variable g_ConfigThreadCV;
 
 std::mutex g_ConfigMutex;
 std::atomic<bool> g_HasConfigChanged(false);
+std::atomic<bool> g_ShouldHotReload(true);
+
+bool ShouldConfigHotReload(bool enableHotReload) {
+    g_ShouldHotReload.store(enableHotReload, std::memory_order_release);
+
+    return enableHotReload;
+}
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {
     char defaultBuffer[32];
@@ -112,7 +119,7 @@ void ConfigWatcherWorker() {
         if (!g_RunConfigThread) break;
 
         if (GetFileAttributesExA(g_IniPath.c_str(), GetFileExInfoStandard, &fileData)) {
-            if (CompareFileTime(&fileData.ftLastWriteTime, &lastWriteTime) > 0) {
+            if (CompareFileTime(&fileData.ftLastWriteTime, &lastWriteTime) > 0 && g_ShouldHotReload.load(std::memory_order_acquire)) {
                 lastWriteTime = fileData.ftLastWriteTime;
 
                 // Give the OS text editor 100ms to finish flushing its buffer to disk cleanly

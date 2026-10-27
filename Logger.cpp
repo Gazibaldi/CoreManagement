@@ -29,6 +29,7 @@ struct DevLoggingCache {
     bool lastIsInMission = false;
     bool lastIsInMinigame = false;
     bool lastIsInTimeWarp = false;
+	bool lastIsInShop = false;
 };
 
 std::atomic<int> g_CurrentLogLevel{ static_cast<int>(LogLevel::ConfigOnly) };
@@ -133,7 +134,8 @@ bool HasDevLogCacheChanged(const GameplayContext& ctx) {
 		ctx.isBathing != g_LogCache.lastIsBathing ||
         ctx.isInMission != g_LogCache.lastIsInMission ||
         ctx.isInMinigame != g_LogCache.lastIsInMinigame ||
-        ctx.isInTimeWarp != g_LogCache.lastIsInTimeWarp);
+        ctx.isInTimeWarp != g_LogCache.lastIsInTimeWarp ||
+        ctx.isInShop != g_LogCache.lastIsInShop);
 }
 
 void UpdateDevLogCache(const GameplayContext& ctx) {
@@ -145,6 +147,7 @@ void UpdateDevLogCache(const GameplayContext& ctx) {
 	g_LogCache.lastIsInMission = ctx.isInMission;
 	g_LogCache.lastIsInMinigame = ctx.isInMinigame;
 	g_LogCache.lastIsInTimeWarp = ctx.isInTimeWarp;
+	g_LogCache.lastIsInShop = ctx.isInShop;
 }
 
 void ClearDevLogCache() {
@@ -156,4 +159,5 @@ void ClearDevLogCache() {
 	g_LogCache.lastIsInMission = false;
 	g_LogCache.lastIsInMinigame = false;
 	g_LogCache.lastIsInTimeWarp = false;
+	g_LogCache.lastIsInShop = false;
 }
