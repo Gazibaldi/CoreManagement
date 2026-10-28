@@ -1361,7 +1361,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
 
-			//not hitched or led, so we reset the tracking to ensure accurate decay calculations for the next tick
+			// Reset the horse manager snapshot after applying the decay to ensure accurate tracking for the next period
 			g_HorseManager.ResetSnapshot();
         }
     }    
