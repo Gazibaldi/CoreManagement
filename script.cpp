@@ -1084,17 +1084,17 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
 
         LOG(LogLevel::Verbose, "Exiting restricted state. Total elapsed game minutes: {}", elapsedMinutes);
 
-        if (elapsedMinutes > 0)
-			// Mini-games are table mini-games/jail
+        if (elapsedMinutes > 0) {
+            // Mini-games are table mini-games/jail
             if (g_State.wasSleepingDuringRestriction || g_State.wasInMinigameDuringRestriction) {
                 // Uses the HISTORICAL frozen values from the cache
-				LOG(LogLevel::Verbose, "Player was sleeping/in a minigame/jailed during restriction. Applying batch time skip decay.");
+                LOG(LogLevel::Verbose, "Player was sleeping/in a minigame/jailed during restriction. Applying batch time skip decay.");
 
                 ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
                     g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
                     g_State.cachedHorseHealth, g_State.cachedHorseStamina, (g_State.hadHorse && !g_State.wasInMinigameDuringRestriction),
                     config,
-                    g_State.wasSleepingDuringRestriction, g_State.wasInMinigameDuringRestriction);                
+                    g_State.wasSleepingDuringRestriction, g_State.wasInMinigameDuringRestriction);
             }
             else if (g_State.restrictedBathingState != BathingState::NotBathing) {
                 // Uses the HISTORICAL frozen values from the cache
@@ -1107,7 +1107,8 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             else if (g_State.wasInMissionDuringRestriction)
             {
                 if (elapsedMinutes >= POST_MISSION_MIN_ELAPSED_MINUTES)
-                {   g_State.PostMissionDecayHoursRemaining += POST_MISSION_DECAY_HOURS;
+                {
+                    g_State.PostMissionDecayHoursRemaining += POST_MISSION_DECAY_HOURS;
 
                     // Cap the post-mission decay hours to a maximum of 3 hours to prevent excessive decay 
                     // (in-case multiple missions accumulate over the decay multiplier period)
@@ -1115,12 +1116,13 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                     LOG(LogLevel::Verbose, "Player exited a mission. Post-mission decay hours remaining: {}", g_State.PostMissionDecayHoursRemaining);
                 }
                 else {
-					LOG(LogLevel::Verbose, "Player exited a mission but elapsed time was less than the minimum threshold. No post-mission decay applied.");
+                    LOG(LogLevel::Verbose, "Player exited a mission but elapsed time was less than the minimum threshold. No post-mission decay applied.");
                 }
             }
             else {
                 LOG_DEV("Player was not sleeping, in a minigame, or in a mission during restriction. No batch decay applied.");
             }
+        }
 
 		// Reset the transient state variables after processing the batch decay to ensure accurate tracking for the next period
         g_State.wasSleepingDuringRestriction = false;
