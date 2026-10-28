@@ -409,7 +409,7 @@ float GetPlayerRunningStaminaMultiplier(const PlayerConfigSettings& playerConfig
     }
 }
 
-float CalculateHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig) {
+float GetHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig) {
     float currentSpeed = g_MovementTracker.GetHorseAverageSpeed();
 
     // The logic automatically scales down to a base flat rate if the horse is hitched or stabled!
@@ -598,7 +598,7 @@ float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerCon
     if (isPlayerSemiRestrained)
         multiplier = playerConfig.campedMultiplier;
     else
-        multiplier = CalculateHorseSpeedStaminaDecayMultiplier(horseConfig);
+        multiplier = GetHorseSpeedStaminaDecayMultiplier(horseConfig);
     
     if (g_HorseManager.IsHorseDirty(horsePed))
         multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
