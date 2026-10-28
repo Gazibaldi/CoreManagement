@@ -5,6 +5,7 @@
 #pragma once
 #include <array>
 #include <string>
+#include <format>
 #include "..\CoreSDK\inc\types.h"
 #include "CMTypes.h"
 
@@ -24,7 +25,7 @@ struct RDR_GUID
     }
 
 	std::string ToString() const {
-		return std::to_string(data1) + "-" + std::to_string(data2) + "-" + std::to_string(data3) + "-" + std::to_string(data4);
+		return std::format("{}-{}-{}-{}", data1, data2, data3, data4);
 	}
 };
 
