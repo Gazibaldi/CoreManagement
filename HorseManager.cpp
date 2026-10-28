@@ -114,6 +114,7 @@ void HorseManager::ResetState() noexcept {
     m_HorseLeadSamples = 0;
     m_HorseHitchedReward = 0.0f;
     m_HorseLeadReward = 0.0f;
+	m_HorseAccumulatedDirt = 0.0f;
 }
 
 [[nodiscard]] std::tuple<Ped, bool> HorseManager::GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType, bool performDistanceCheck) noexcept {
@@ -221,10 +222,22 @@ void HorseManager::ResetState() noexcept {
 }
 
 [[nodiscard]] bool HorseManager::IsHorseDirty(Ped horsePed) noexcept {
-	float dirtLevel = PED::_GET_PED_DIRT_LEVEL(horsePed, true);
+    bool isDirty = false;
+    float dirtLevel = 0.0f;
 
-    bool isDirty = dirtLevel > HORSE_DIRT_THRESHOLD;
+	if (m_HorseAccumulatedDirt == 0.0f || m_HorseSamples == 0) {
+		LOG_DEV("No dirt samples recorded. Falling back to in the moment check.");
 
+        dirtLevel = PED::_GET_PED_DIRT_LEVEL(horsePed, true);
+        isDirty = dirtLevel > HORSE_DIRT_THRESHOLD;
+	}
+    else {
+		dirtLevel = m_HorseAccumulatedDirt / static_cast<float>(m_HorseSamples);
+		isDirty = dirtLevel > HORSE_DIRT_THRESHOLD;
+
+        LOG_DEV("Average horse dirt level from samples: {:.4f}", dirtLevel);
+    }
+	
 	LOG_DEV("Checking if horse is dirty. Dirt level: {:.4f}, Threshold: {}, IsDirty: {}", dirtLevel, HORSE_DIRT_THRESHOLD, isDirty);
 
     return isDirty;
@@ -268,6 +281,9 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
         else {
             LOG_DEV("Player is not leading the horse.");
         }
+
+		// We also track the horse's dirt level to determine if it is dirty
+        m_HorseAccumulatedDirt += PED::_GET_PED_DIRT_LEVEL(activeHorse, true);
     }
     else {
         LOG_DEV("Player does not have an active unmounted horse.");

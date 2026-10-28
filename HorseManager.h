@@ -13,10 +13,12 @@ enum class ActiveHorseType : int { Mounted, Active, Either };
 class HorseManager {
     int m_HorseImmobileSamples = 0;
     int m_HorseLeadSamples = 0;
-	int m_HorseSamples = 0;
+    int m_HorseSamples = 0;
 
 	float m_HorseHitchedReward = 0.0f;
 	float m_HorseLeadReward = 0.0f;
+
+    float m_HorseAccumulatedDirt = 0.0f;
 
     std::mutex m_Lock;
 
