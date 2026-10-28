@@ -28,6 +28,7 @@
     <ClInclude Include="MovementVelocityTracker.h" />
     <ClInclude Include="HorseManager.h" />
     <ClInclude Include="InventoryManager.h" />
+    <ClInclude Include="magic_enum.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">
