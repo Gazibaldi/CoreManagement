@@ -4,6 +4,7 @@
 
 #pragma once
 #include <mutex>
+#include <array>
 #include "..\CoreSDK\inc\types.h"
 
 class PlayerTracker {
@@ -18,14 +19,19 @@ class PlayerTracker {
     int m_HorseSamples = 0;
 
 	float m_PlayerAccumulatedDirt = 0.0f;
+	int m_PlayerCampSamples = 0;
+
+    std::array<Hash, 33> m_CampScenarios{};
 
     std::mutex m_Lock;
 
 public:
+    void ComputeHashes() noexcept;
     void RecordSnapshot(Ped playerPed) noexcept;
 
     [[nodiscard]] float GetPlayerOnFootSpeed() noexcept;
     [[nodiscard]] float GetHorseAverageSpeed() noexcept;
     [[nodiscard]] bool IsPlayerDirty(Ped playerPed) noexcept;
+    [[nodiscard]] bool IsPlayerAtCamp(Ped playerPed, bool rightNow) noexcept;
     void ResetSnapshot() noexcept;
 };

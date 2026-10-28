@@ -14,8 +14,8 @@ enum class TransientActivityType {
 	Unknown,
     Bathing,
     Jail,
-    Barber,
-    Fishing
+    Fishing,
+	Sleeping
 };
 
 class TransientActivityMonitor {

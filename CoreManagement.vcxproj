@@ -12,6 +12,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Config.cpp" />
+    <ClCompile Include="Functions.cpp" />
+    <ClCompile Include="Functions.h" />
     <ClCompile Include="HorseManager.cpp" />
     <ClCompile Include="InventoryManager.cpp" />
     <ClCompile Include="Logger.cpp" />

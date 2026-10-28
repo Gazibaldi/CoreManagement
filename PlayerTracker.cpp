@@ -10,15 +10,63 @@
 #include "PlayerTracker.h"
 #include "Logger.h"
 #include "HorseManager.h"
+#include "Functions.h"
 
 const float PLAYER_DIRT_THRESHOLD = 0.5f;
+const float PLAYER_CAMP_THRESHOLD = 0.8f;
+
+void PlayerTracker::ComputeHashes() noexcept {
+    m_CampScenarios = { {
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_KNEEL1") },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_KNEEL2") },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_KNEEL3") },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_KNEEL4") },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SIT") },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SIT_GROUND") },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SQUAT") },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_CRAFT") },
+        { GetKey("WORLD_PLAYER_DYNAMIC_CAMP_FIRE_KNEEL_ARTHUR") },
+        { GetKey("WORLD_PLAYER_DYNAMIC_CAMP_FIRE_KNEEL_JOHN") },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SIT_ARTHUR") },
+        { GetKey("WORLD_PLAYER_CAMP_FIRE_SIT_JOHN") },
+        { GetKey("WORLD_PLAYER_REST_GROUND") },
+        { GetKey("WORLD_PLAYER_REST_GROUND_ARTHUR") },
+        { GetKey("WORLD_PLAYER_REST_GROUND_JOHN") },
+        { GetKey("PROP_CAMP_FIRE_SIT_ARTHUR") },
+        { GetKey("PROP_CAMP_FIRE_SIT_JOHN") },
+        { GetKey("WORLD_PLAYER_DYNAMIC_KNEEL") },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME") },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME_ARTHUR") },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_A_FRAME_JOHN") },
+        { GetKey("PROP_PLAYER_SLEEP_A_FRAME_TENT_PLAYER_CAMPS") },
+        { GetKey("PROP_CAMP_SLEEP_BEDROLL") },
+        { GetKey("PROP_PLAYER_SLEEP_CAMP_BEDROLL") },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_CANOPY") },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_CANOPY_ARTHUR") },
+        { GetKey("PROP_PLAYER_SLEEP_TENT_CANOPY_JOHN") },
+        { GetKey("WORLD_PLAYER_SLEEP_GROUND_ARTHUR") },
+        { GetKey("WORLD_PLAYER_SLEEP_GROUND_JOHN") },
+        { GetKey("WORLD_PLAYER_SLEEP_BEDROLL") },
+        { GetKey("WORLD_PLAYER_SLEEP_BEDROLL_ARTHUR") },
+        { GetKey("WORLD_PLAYER_SLEEP_BEDROLL_JOHN") },
+        { GetKey("WORLD_PLAYER_SLEEP_GROUND") }
+    } };
+}
 
 void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
     if (playerPed == 0 || !ENTITY::DOES_ENTITY_EXIST(playerPed)) return;
 	
-    LOG_DEV("Recording movement snapshot for player.");
+    LOG_DEV("Recording player snapshot.");
 
     std::lock_guard<std::mutex> guard(m_Lock);
+
+    m_PlayerSamples++;
+
+    if (IsPlayerAtCamp(playerPed, true))
+        m_PlayerCampSamples++;
+
+    // track the player's dirt level to determine if they are dirty
+    m_PlayerAccumulatedDirt += PED::_GET_PED_DIRT_LEVEL(playerPed, true);
 
     // Check if the player is mounted on a horse
     auto [horsePed, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed, ActiveHorseType::Mounted);
@@ -37,11 +85,7 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
         m_PlayerFootSum += playerSpeed;
         m_PlayerFootSamples++;
-    }
-
-	// track the player's dirt level to determine if they are dirty
-	m_PlayerSamples++;
-	m_PlayerAccumulatedDirt += PED::_GET_PED_DIRT_LEVEL(playerPed, true);
+    }    
 }
 
 [[nodiscard]] float PlayerTracker::GetPlayerOnFootSpeed() noexcept {
@@ -73,19 +117,48 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
     }
     else {
         dirtLevel = m_PlayerAccumulatedDirt / static_cast<float>(m_PlayerSamples);
-        
-        LOG_DEV("Average player dirt level from samples: {:.4f}", dirtLevel);
     }
 
-    bool isDirty = dirtLevel > PLAYER_DIRT_THRESHOLD;
+    bool isDirty = dirtLevel >= PLAYER_DIRT_THRESHOLD;
 
     LOG_DEV("Checking if player is dirty. Dirt level: {:.4f}, Threshold: {}, IsDirty: {}", dirtLevel, PLAYER_DIRT_THRESHOLD, isDirty);
 
     return isDirty;
 }
 
+[[nodiscard]] bool PlayerTracker::IsPlayerAtCamp(Ped playerPed, bool rightNow) noexcept {
+    std::lock_guard<std::mutex> guard(m_Lock);
+	
+    bool isAtCamp = false;
+
+	// Check if the player is actively at a camp scenario right now
+    if (rightNow) {
+		isAtCamp = IsInActiveScenario(playerPed, m_CampScenarios, "Camp");
+    }
+	// we test if the player has been at camp recently by checking the accumulated samples
+    else {
+        if (m_PlayerCampSamples == 0.0f || m_PlayerSamples == 0) {
+            LOG_DEV("No camp samples recorded. Assuming not at camp.");
+            isAtCamp = false;
+        }
+        
+        float averageCampTime = static_cast<float>(m_PlayerCampSamples / m_PlayerSamples);
+
+        isAtCamp = averageCampTime >= PLAYER_CAMP_THRESHOLD;
+
+        LOG_DEV("Checking if player is at camp. Average camp time: {:.4f}, Threshold: {}, IsAtCamp: {}", averageCampTime, PLAYER_CAMP_THRESHOLD, isAtCamp);
+    }
+
+    if (isAtCamp)
+        LOG(LogLevel::Verbose, "Player camp check: Player is at camp.");
+    else
+        LOG(LogLevel::Verbose, "Player camp check: Player is not at camp.");
+
+    return isAtCamp;
+}
+
 void PlayerTracker::ResetSnapshot() noexcept {
-	LOG_DEV("Resetting MovementVelocityTracker state.");
+	LOG_DEV("Resetting PlayerTracker state.");
 	std::lock_guard<std::mutex> guard(m_Lock);
 
 	m_PlayerSamples = 0;

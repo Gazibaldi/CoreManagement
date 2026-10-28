@@ -10,6 +10,7 @@ enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
 enum class PlayerSpeed : int { Jog = 3, Sprint = 5 };
 enum class BathingState : int { NotBathing = 0, StandardBathing = 1, DeluxeBathing = 2 };
+enum class SleepingState : int { NotSleeping = 0, Wilderness = 1, Hotel = 2 };
 enum class StateChangeIntervalType : int { NotSet, Standard, Restricted };
 
 struct SimulationState {
@@ -25,9 +26,9 @@ struct SimulationState {
     int cachedMoney = 0;
 
     BathingState restrictedBathingState = BathingState::NotBathing;
+    SleepingState restrictedSleepingState = SleepingState::NotSleeping;
 
     bool wasSleepingDuringRestriction = false;
-    bool wasAtCampDuringRestriction = false;
     bool wasInMinigameDuringRestriction = false;
     bool wasInMissionDuringRestriction = false;
     bool wasInTimeWarpDuringRestriction = false;

@@ -7,13 +7,7 @@
 #include "InventoryManager.h"
 #include "Logger.h"
 #include "CMTypes.h"
-
-Hash GetKey(const char* key) {
-    Hash hash = MISC::GET_HASH_KEY(key);
-    LOG_DEV("Precomputed hash for key '{}': {}", key, hash);
-
-    return hash;
-}
+#include "Functions.h"
 
 void InventoryManager::ComputeHashes() noexcept {
     m_NullSlotHash = GetKey("SLOTID_NONE");

@@ -37,7 +37,6 @@ const HorseConfigSettings defaultHorseConfig;
 
 const std::string g_IniPath = ".\\CoreManagement.ini";
 
-std::atomic<int> g_GameTimescaleMS(2000);
 std::atomic<int> g_StateChangeTickIntervalMs(500);
 std::atomic<int> g_StateChangeTickIntervalRestrictedMs(500);
 

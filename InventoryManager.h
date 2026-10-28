@@ -9,8 +9,6 @@
 #include "..\CoreSDK\inc\types.h"
 #include "CMTypes.h"
 
-Hash GetKey(const char* key);
-
 struct RDR_GUID
 {
     alignas(8) int data1;
