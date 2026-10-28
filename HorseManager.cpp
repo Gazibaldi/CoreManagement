@@ -130,13 +130,13 @@ void HorseManager::ResetState() noexcept {
             if (hasHorse && performDistanceCheck) {
                 float distance = GetHorseDistanceFromPlayer(playerPed, activeHorse);
 
-                LOG_DEV("Active horse detected. Distance from player: {} metres.", distance);
+                LOG_DEV("Active horse detected. Distance from player: {:.4f} metres.", distance);
 
                 // If the horse is too far away, we consider it "lost" and reset the state.
                 // HORSE_MAX_DISTANCE_FROM_PLAYER (400) metres is a generous distance, 350m is the Bonding Level 4 max whistle distance.
                 // Deters exploiting the drain mechanics for the horse by leaving it in a distant location while the player is elsewhere.
                 if (distance > HORSE_MAX_DISTANCE_FROM_PLAYER) {
-                    LOG(LogLevel::Verbose, "Active horse is too far away ({} metres). Assuming it is lost.", distance);
+                    LOG(LogLevel::Verbose, "Active horse is too far away ({:.4f} metres). Assuming it is lost.", distance);
                     hasHorse = false;
                     activeHorse = 0;
                 }
@@ -222,22 +222,22 @@ void HorseManager::ResetState() noexcept {
 }
 
 [[nodiscard]] bool HorseManager::IsHorseDirty(Ped horsePed) noexcept {
-    bool isDirty = false;
+    std::lock_guard<std::mutex> guard(m_Lock);
+
     float dirtLevel = 0.0f;
 
 	if (m_HorseAccumulatedDirt == 0.0f || m_HorseSamples == 0) {
 		LOG_DEV("No dirt samples recorded. Falling back to in the moment check.");
 
         dirtLevel = PED::_GET_PED_DIRT_LEVEL(horsePed, true);
-        isDirty = dirtLevel > HORSE_DIRT_THRESHOLD;
 	}
     else {
 		dirtLevel = m_HorseAccumulatedDirt / static_cast<float>(m_HorseSamples);
-		isDirty = dirtLevel > HORSE_DIRT_THRESHOLD;
-
+		
         LOG_DEV("Average horse dirt level from samples: {:.4f}", dirtLevel);
     }
 	
+    bool isDirty = dirtLevel > HORSE_DIRT_THRESHOLD;
 	LOG_DEV("Checking if horse is dirty. Dirt level: {:.4f}, Threshold: {}, IsDirty: {}", dirtLevel, HORSE_DIRT_THRESHOLD, isDirty);
 
     return isDirty;

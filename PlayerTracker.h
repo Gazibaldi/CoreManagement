@@ -6,12 +6,18 @@
 #include <mutex>
 #include "..\CoreSDK\inc\types.h"
 
-class MovementVelocityTracker {
+class PlayerTracker {
+    int m_PlayerSamples = 0;
+
+	// movement tracking for player on foot
     float m_PlayerFootSum = 0.0f;
     int m_PlayerFootSamples = 0;
 
+	// movement tracking for horse when player is mounted
     float m_HorseSum = 0.0f;
     int m_HorseSamples = 0;
+
+	float m_PlayerAccumulatedDirt = 0.0f;
 
     std::mutex m_Lock;
 
@@ -20,5 +26,6 @@ public:
 
     [[nodiscard]] float GetPlayerOnFootSpeed() noexcept;
     [[nodiscard]] float GetHorseAverageSpeed() noexcept;
+    [[nodiscard]] bool IsPlayerDirty(Ped playerPed) noexcept;
     void ResetSnapshot() noexcept;
 };

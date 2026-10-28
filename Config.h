@@ -108,4 +108,4 @@ void ShutdownConfig();
 
 void LoadConfiguration();
 
-bool ShouldConfigHotReload(bool enableHotReload);
+void EnableConfigHotReload(bool enableHotReload);

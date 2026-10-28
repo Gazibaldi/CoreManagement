@@ -17,7 +17,7 @@
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MovementVelocityTracker.cpp" />
+    <ClCompile Include="PlayerTracker.cpp" />
     <ClCompile Include="script.cpp" />
     <ClCompile Include="ThreadManager.cpp" />
     <ClCompile Include="TransientActivityMonitor.cpp" />
@@ -35,7 +35,7 @@
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="magic_enum.hpp" />
-    <ClInclude Include="MovementVelocityTracker.h" />
+    <ClInclude Include="PlayerTracker.h" />
     <ClInclude Include="script.h" />
     <ClInclude Include="ThreadManager.h" />
     <ClInclude Include="TransientActivityMonitor.h" />

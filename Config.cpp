@@ -48,10 +48,13 @@ std::mutex g_ConfigMutex;
 std::atomic<bool> g_HasConfigChanged(false);
 std::atomic<bool> g_ShouldHotReload(true);
 
-bool ShouldConfigHotReload(bool enableHotReload) {
-    g_ShouldHotReload.store(enableHotReload, std::memory_order_release);
+void EnableConfigHotReload(bool enableHotReload) {
+	bool currentState = g_ShouldHotReload.load(std::memory_order_acquire);
 
-    return enableHotReload;
+	if (currentState != enableHotReload) {
+        LOG(LogLevel::ConfigOnly, "Config hot-reload is disabled due to player being in a mission or minigame. Config will be refreshed once the player exits these states.");
+        g_ShouldHotReload.store(enableHotReload, std::memory_order_release);
+	}
 }
 
 float GetIniFloat(const char* section, const char* key, float defaultValue, const char* filePath) {

@@ -7,11 +7,13 @@
 #include <algorithm>
 #include <mutex>
 #include "..\CoreSDK\inc\natives.h"
-#include "MovementVelocityTracker.h"
+#include "PlayerTracker.h"
 #include "Logger.h"
 #include "HorseManager.h"
 
-void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
+const float PLAYER_DIRT_THRESHOLD = 0.5f;
+
+void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
     if (playerPed == 0 || !ENTITY::DOES_ENTITY_EXIST(playerPed)) return;
 	
     LOG_DEV("Recording movement snapshot for player.");
@@ -36,9 +38,13 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
         m_PlayerFootSum += playerSpeed;
         m_PlayerFootSamples++;
     }
+
+	// track the player's dirt level to determine if they are dirty
+	m_PlayerSamples++;
+	m_PlayerAccumulatedDirt += PED::_GET_PED_DIRT_LEVEL(playerPed, true);
 }
 
-[[nodiscard]] float MovementVelocityTracker::GetPlayerOnFootSpeed() noexcept {
+[[nodiscard]] float PlayerTracker::GetPlayerOnFootSpeed() noexcept {
 	LOG_DEV("Getting player average on-foot speed.");
     std::lock_guard<std::mutex> guard(m_Lock);
 
@@ -47,7 +53,7 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
     return m_PlayerFootSum / static_cast<float>(m_PlayerFootSamples);
 }
 
-[[nodiscard]] float MovementVelocityTracker::GetHorseAverageSpeed() noexcept {
+[[nodiscard]] float PlayerTracker::GetHorseAverageSpeed() noexcept {
 	LOG_DEV("Getting horse average speed.");
     std::lock_guard<std::mutex> guard(m_Lock);
 
@@ -56,9 +62,34 @@ void MovementVelocityTracker::RecordSnapshot(Ped playerPed) noexcept {
     return m_HorseSum / static_cast<float>(m_HorseSamples);
 }
 
-void MovementVelocityTracker::ResetSnapshot() noexcept {
+[[nodiscard]] bool PlayerTracker::IsPlayerDirty(Ped playerPed) noexcept {
+    std::lock_guard<std::mutex> guard(m_Lock);
+    float dirtLevel = 0.0f;
+
+    if (m_PlayerAccumulatedDirt == 0.0f || m_PlayerSamples == 0) {
+        LOG_DEV("No dirt samples recorded. Falling back to in the moment check.");
+
+        dirtLevel = PED::_GET_PED_DIRT_LEVEL(playerPed, true);        
+    }
+    else {
+        dirtLevel = m_PlayerAccumulatedDirt / static_cast<float>(m_PlayerSamples);
+        
+        LOG_DEV("Average player dirt level from samples: {:.4f}", dirtLevel);
+    }
+
+    bool isDirty = dirtLevel > PLAYER_DIRT_THRESHOLD;
+
+    LOG_DEV("Checking if player is dirty. Dirt level: {:.4f}, Threshold: {}, IsDirty: {}", dirtLevel, PLAYER_DIRT_THRESHOLD, isDirty);
+
+    return isDirty;
+}
+
+void PlayerTracker::ResetSnapshot() noexcept {
 	LOG_DEV("Resetting MovementVelocityTracker state.");
 	std::lock_guard<std::mutex> guard(m_Lock);
+
+	m_PlayerSamples = 0;
+	m_PlayerAccumulatedDirt = 0.0f;
 
 	m_PlayerFootSum = 0.0f;
 	m_PlayerFootSamples = 0;

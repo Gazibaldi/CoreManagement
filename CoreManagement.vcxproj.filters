@@ -8,7 +8,7 @@
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ThreadManager.cpp" />
     <ClCompile Include="TransientActivityMonitor.cpp" />
-    <ClCompile Include="MovementVelocityTracker.cpp" />
+    <ClCompile Include="PlayerTracker.cpp" />
     <ClCompile Include="HorseManager.cpp" />
     <ClCompile Include="InventoryManager.cpp" />
   </ItemGroup>
@@ -25,7 +25,7 @@
     <ClInclude Include="CMTypes.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="TransientActivityMonitor.h" />
-    <ClInclude Include="MovementVelocityTracker.h" />
+    <ClInclude Include="PlayerTracker.h" />
     <ClInclude Include="HorseManager.h" />
     <ClInclude Include="InventoryManager.h" />
     <ClInclude Include="magic_enum.hpp" />

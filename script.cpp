@@ -21,12 +21,12 @@
 #include "CMTypes.h"
 #include "Constants.h"
 #include "TransientActivityMonitor.h"
-#include "MovementVelocityTracker.h"
+#include "PlayerTracker.h"
 #include "HorseManager.h"
 #include "InventoryManager.h"
 
 SimulationState g_State;
-MovementVelocityTracker g_MovementTracker;
+PlayerTracker g_playerTracker;
 InventoryManager g_InventoryManager;
 TransientActivityRegistry g_activeMonitors;
 
@@ -256,7 +256,7 @@ bool IsPlayerInAShop() {
 }
 
 void RecordTrackingSnapshots(Ped playerPed) {
-	g_MovementTracker.RecordSnapshot(playerPed);
+    g_playerTracker.RecordSnapshot(playerPed);
 	g_HorseManager.RecordSnapshot(playerPed);
 }
 
@@ -307,11 +307,8 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 
 	// If the player is in a mission or minigame, we don't allow hot-reload of the config to 
     // avoid potential issues with state changes during those events.
-    bool enableHotReload = ShouldConfigHotReload(!(ctx.isInMission || ctx.isInMinigame));
+    EnableConfigHotReload(!(ctx.isInMission || ctx.isInMinigame));
 
-	if (!enableHotReload)
-		LOG(LogLevel::ConfigOnly, "Config hot-reload is disabled due to player being in a mission or minigame. Config will be refreshed once the player exits these states.");
-    
 	// Only check the following states if the player is not already in a mission or minigame
 	// they can't be happening/change if we are in mission or minigame or falling/dying
     if (!ctx.isInMission && !ctx.isInMinigame && !isFallingOrGoingToDie) {
@@ -376,7 +373,7 @@ bool IsPlayerMounted(Ped playerPed) {
 }
 
 float GetPlayerMountedStaminaMultiplier(const PlayerConfigSettings& playerConfig) {
-    float currentSpeed = g_MovementTracker.GetHorseAverageSpeed();
+    float currentSpeed = g_playerTracker.GetHorseAverageSpeed();
 
     if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {
         LOG(LogLevel::Verbose, "Active horse is galloping. Applying high Player stamina decay multiplier");
@@ -393,7 +390,7 @@ float GetPlayerMountedStaminaMultiplier(const PlayerConfigSettings& playerConfig
 }
 
 float GetPlayerRunningStaminaMultiplier(const PlayerConfigSettings& playerConfig) {
-	float currentSpeed = g_MovementTracker.GetPlayerOnFootSpeed();
+	float currentSpeed = g_playerTracker.GetPlayerOnFootSpeed();
 
     if (currentSpeed > static_cast<float>(PlayerSpeed::Sprint)) {
         LOG(LogLevel::Verbose, "Player is sprinting. Applying high Player stamina decay multiplier");
@@ -410,7 +407,7 @@ float GetPlayerRunningStaminaMultiplier(const PlayerConfigSettings& playerConfig
 }
 
 float GetHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig) {
-    float currentSpeed = g_MovementTracker.GetHorseAverageSpeed();
+    float currentSpeed = g_playerTracker.GetHorseAverageSpeed();
 
     // The logic automatically scales down to a base flat rate if the horse is hitched or stabled!
     if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {
@@ -440,7 +437,7 @@ float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerCon
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
-    LOG(LogLevel::Verbose, "Active player passive modifiers: Health Reduction={}", totalPassiveHealthModifierReduction);
+    LOG(LogLevel::Verbose, "Active player passive modifiers: Health Reduction={:.4f}", totalPassiveHealthModifierReduction);
 	multiplier -= totalPassiveHealthModifierReduction;
     
     return std::max(multiplier, 0.1f);
@@ -456,13 +453,13 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
     else if (IsPlayerMounted(playerPed)) {
         float mountedStaminaMultiplier = GetPlayerMountedStaminaMultiplier(playerConfig);
         
-        LOG(LogLevel::Verbose, "Player is mounted. Applying conditional mounted stamina decay multiplier: {}", mountedStaminaMultiplier);
+        LOG(LogLevel::Verbose, "Player is mounted. Applying conditional mounted stamina decay multiplier: {:.2f}", mountedStaminaMultiplier);
         multiplier = mountedStaminaMultiplier;
     }
     else {
 		float runningStaminaMultiplier = GetPlayerRunningStaminaMultiplier(playerConfig);
 
-		LOG(LogLevel::Verbose, "Player is on foot. Applying conditional movement stamina decay multiplier: {}", runningStaminaMultiplier);
+		LOG(LogLevel::Verbose, "Player is on foot. Applying conditional movement stamina decay multiplier: {:.2f}", runningStaminaMultiplier);
 		multiplier = runningStaminaMultiplier;
     }
 
@@ -471,7 +468,7 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
-    LOG(LogLevel::Verbose, "Active player passive modifiers: Stamina Reduction = {}", totalPassiveStaminaModifierReduction);
+    LOG(LogLevel::Verbose, "Active player passive modifiers: Stamina Reduction={}", totalPassiveStaminaModifierReduction);
     multiplier -= totalPassiveStaminaModifierReduction;
 
     return std::max(multiplier, 0.1f);
@@ -489,12 +486,7 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
         multiplier = playerConfig.nightDeadEyeMultiplier;
     }
 
-    float dirtLevel = PED::_GET_PED_DIRT_LEVEL(playerPed, true);
-    bool isDirty = dirtLevel > PLAYER_DIRT_THRESHOLD;
-
-    LOG_DEV("Checking if player is dirty. Dirt level: {:.4f}, Threshold: {}, IsDirty: {}", dirtLevel, PLAYER_DIRT_THRESHOLD, isDirty);
-
-    if(isDirty) {
+    if(g_playerTracker.IsPlayerDirty(playerPed)) {
 		LOG(LogLevel::Verbose, "Player is dirty. Applying dirty dead eye decay multiplier.");
 		multiplier += std::max(playerConfig.deadEyeDirtyMultiplier - 1.0f, 0.0f);
     }    
@@ -504,7 +496,7 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
-    LOG(LogLevel::Verbose, "Active player passive modifiers: Dead Eye Reduction={}", totalPassiveDeadEyeModifierReduction);
+    LOG(LogLevel::Verbose, "Active player passive modifiers: Dead Eye Reduction={:.4f}", totalPassiveDeadEyeModifierReduction);
     multiplier -= totalPassiveDeadEyeModifierReduction;
 
     return std::max(multiplier, 0.1f);
@@ -780,7 +772,7 @@ void ApplyBatchTimeSkipDecay(
         // Ensure that the remaining hours do not go below zero
         g_State.PostMissionDecayHoursRemaining = std::max(g_State.PostMissionDecayHoursRemaining, 0.0f);
 
-        LOG(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: {}", g_State.PostMissionDecayHoursRemaining);
+        LOG(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: {:.4f}", g_State.PostMissionDecayHoursRemaining);
     }
 
     bool isHealthGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::Health));
@@ -962,7 +954,7 @@ void ApplyBatchTimeSkipDecay(
     }
 
 	// Reset the tracker after applying the batch decay to ensure accurate tracking for the next period
-	g_MovementTracker.ResetSnapshot();
+    g_playerTracker.ResetSnapshot();
     g_HorseManager.ResetSnapshot();
 }
 
@@ -1113,7 +1105,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                     // Cap the post-mission decay hours to a maximum of 3 hours to prevent excessive decay 
                     // (in-case multiple missions accumulate over the decay multiplier period)
                     g_State.PostMissionDecayHoursRemaining = std::min(g_State.PostMissionDecayHoursRemaining, 3.0f);
-                    LOG(LogLevel::Verbose, "Player exited a mission. Post-mission decay hours remaining: {}", g_State.PostMissionDecayHoursRemaining);
+                    LOG(LogLevel::Verbose, "Player exited a mission. Post-mission decay hours remaining: {:.4f}", g_State.PostMissionDecayHoursRemaining);
                 }
                 else {
                     LOG(LogLevel::Verbose, "Player exited a mission but elapsed time was less than the minimum threshold. No post-mission decay applied.");
@@ -1194,7 +1186,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const GameplayCont
 		// Ensure that the remaining hours do not go below zero
 		g_State.PostMissionDecayHoursRemaining = std::max(g_State.PostMissionDecayHoursRemaining, 0.0f);
         
-        LOG(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: {}", g_State.PostMissionDecayHoursRemaining);
+        LOG(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: {:.4f}", g_State.PostMissionDecayHoursRemaining);
 	}
 
     CombinedPlayerCoreModifiers passives = g_InventoryManager.GetActivePlayerPassiveModifiers();
@@ -1325,7 +1317,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
 				if (reward >= 1.0f) {
                     int finalStamina = BUILTIN::FLOOR(std::min(currentStamina + reward, 100.0f));
 
-				    LOG(LogLevel::Standard, "Horse is well-fed or has golden health. Applying hitched bonus: +{} to stamina core. Horse Stamina updated to: {}", reward, finalStamina);
+				    LOG(LogLevel::Standard, "Horse is well-fed or has golden health. Applying hitched bonus: +{:.4f} to stamina core. Horse Stamina updated to: {}", reward, finalStamina);
                     ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
 				}
             }
@@ -1337,7 +1329,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const GameplayConte
             if (reward >= 1.0f) {
                 int finalStamina = BUILTIN::FLOOR(std::min(currentStamina + reward, 100.0f));
 
-                LOG(LogLevel::Standard, "Active Horse is being led by the player. Applying cached reward: +{}. Horse Stamina updated to: {}", reward, finalStamina);
+                LOG(LogLevel::Standard, "Active Horse is being led by the player. Applying cached reward: +{:.4f}. Horse Stamina updated to: {}", reward, finalStamina);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
             }        
 		}
@@ -1435,13 +1427,13 @@ void ResetSimulationState() {
 
     g_activeMonitors.ResetAll();
 
-	g_MovementTracker.ResetSnapshot();
+    g_playerTracker.ResetSnapshot();
     g_HorseManager.ResetSnapshot();
 
     g_State.configStructuresInitialised = false;
 
 	// Reset the config hot-reload flag to ensure hot-reload is enabled after a hard reset.
-    ShouldConfigHotReload(true);
+    EnableConfigHotReload(true);
 
     ClearDevLogCache();
 }
@@ -1581,12 +1573,12 @@ void UpdateCoreSimulation() {
             }
             // If time actually moved forward in the engine space, process simulation and reset
             else if (hoursDelta > 0.0f && hoursDelta < 24.0f) {
-                LOG(LogLevel::Standard, "Processing normal core simulation for elapsed hours: {}", hoursDelta);
+                LOG(LogLevel::Standard, "Processing normal core simulation for elapsed hours: {:.4f}", hoursDelta);
 
                 ProcessPlayerSimulation(playerPed, hoursDelta, context, config);
                 ProcessHorseSimulation(playerPed, hoursDelta, context, config);
 
-                g_MovementTracker.ResetSnapshot();
+                g_playerTracker.ResetSnapshot();
 
                 // Only clear accumulation on successful simulation cycles!
                 g_State.accumulatedTimeMs = 0;
