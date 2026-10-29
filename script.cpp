@@ -34,7 +34,6 @@ std::array<Hash, 18> g_SleepScenarios{};
 std::array<Hash, 4> g_TableMinigames{};
 
 Hash g_ShopUIHash;
-Hash g_ShavingHash;
 
 void PrecomputeHashes() {
 	// Precompute hashes here to avoid repeated calls to MISC::GET_HASH_KEY during gameplay.
@@ -72,7 +71,6 @@ void PrecomputeHashes() {
 
     g_ShopUIHash = GetKey("generic_shop_ui_events");
 
-	g_ShavingHash = GetKey("PROP_PLAYER_PRPTY_SHAVE");
     // additional hashes can be precomputed here if needed
 }
 
@@ -225,6 +223,9 @@ bool IsPlayerPlayingTableMinigame() {
 }
 
 bool IsPlayerInAShop() {
+	// this hash covers all shop types, including general stores, gunsmiths, other retail locations 
+    // as well as barbers and shaving (outfit selection at camp is also covered). Selling is not covered
+	// neither is browsing the catalogue at the general store, as that is not a shop menu, but a catalogue menu.
     int threadCount = SCRIPT::GET_NUMBER_OF_THREADS_RUNNING_THE_SCRIPT_WITH_THIS_HASH(g_ShopUIHash);
     LOG_DEV("Shop thread count for hash {}: {}", g_ShopUIHash, threadCount);
     if (threadCount > 0) {
