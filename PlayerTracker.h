@@ -3,7 +3,6 @@
 */
 
 #pragma once
-#include <mutex>
 #include <array>
 #include "..\CoreSDK\inc\types.h"
 
@@ -22,8 +21,6 @@ class PlayerTracker {
 	int m_PlayerCampSamples = 0;
 
     std::array<Hash, 33> m_CampScenarios{};
-
-    std::mutex m_Lock;
 
 public:
     void ComputeHashes() noexcept;

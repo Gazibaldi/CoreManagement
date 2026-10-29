@@ -2,7 +2,6 @@
         Copyright © 2026 Gary Tweddle / Gazibaldi.This program is free software : you can redistribute it and /or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
 */
 #include <tuple>
-#include <mutex>
 #include <string>
 #include "..\CoreSDK\inc\natives.h"
 #include "..\CoreSDK\inc\types.h"
@@ -86,8 +85,6 @@ bool HorseManager::IsBeingLedByPlayer(Ped playerPed, Ped horsePed) noexcept {
 }
 
 bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) noexcept {
-    std::lock_guard<std::mutex> guard(m_Lock);
-
     if (samples == 0 || m_HorseSamples == 0) {
 		if (sampleType == HorseSampleType::Lead)
             LOG(LogLevel::Verbose, "No lead samples recorded. Horse is not considered led.");
@@ -108,17 +105,7 @@ bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) 
     return result;
 }
 
-void HorseManager::ResetState() noexcept {
-    m_HorseSamples = 0;
-    m_HorseImmobileSamples = 0;
-    m_HorseLeadSamples = 0;
-    m_HorseHitchedReward = 0.0f;
-    m_HorseLeadReward = 0.0f;
-	m_HorseAccumulatedDirt = 0.0f;
-}
-
 [[nodiscard]] std::tuple<Ped, bool> HorseManager::GetActivePlayerHorse(Ped playerPed, ActiveHorseType horseType, bool performDistanceCheck) noexcept {
-
     switch (horseType) {
 	    case ActiveHorseType::Mounted:
 		    return GetPlayerMountedHorse(playerPed);
@@ -157,14 +144,12 @@ void HorseManager::ResetState() noexcept {
 }
 
 [[nodiscard]] bool HorseManager::IsHorseHitched() noexcept {
-    LOG_DEV("Getting horse hitched state.");
-    
+    LOG_DEV("Getting horse hitched state.");    
     return TestSampleThreshold(m_HorseImmobileSamples, HorseSampleType::Hitched);
 }
 
 [[nodiscard]] bool HorseManager::IsHorseBeingLed() noexcept {
     LOG_DEV("Getting horse being led state.");
-
     return TestSampleThreshold(m_HorseLeadSamples, HorseSampleType::Lead);
 }
 
@@ -222,8 +207,6 @@ void HorseManager::ResetState() noexcept {
 }
 
 [[nodiscard]] bool HorseManager::IsHorseDirty(Ped horsePed) noexcept {
-    std::lock_guard<std::mutex> guard(m_Lock);
-
     float dirtLevel = 0.0f;
 
 	if (m_HorseAccumulatedDirt == 0.0f || m_HorseSamples == 0) {
@@ -245,7 +228,6 @@ void HorseManager::ResetState() noexcept {
 
 void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
     LOG_DEV("Recording hitched/led snapshot for horse.");
-    std::lock_guard<std::mutex> guard(m_Lock);
 
     // Check if the player has an active horse (saddled only) not mounted.
 	// Hitched horses can't be rewarded if the player is mounted
@@ -287,13 +269,17 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
     }
     else {
         LOG_DEV("Player does not have an active unmounted horse.");
-        ResetState();
+        ResetSnapshot();
     }
 }
 
 void HorseManager::ResetSnapshot() noexcept {
 	LOG_DEV("Resetting horse hitched/led snapshot.");
 
-	std::lock_guard<std::mutex> guard(m_Lock);
-    ResetState();
+    m_HorseSamples = 0;
+    m_HorseImmobileSamples = 0;
+    m_HorseLeadSamples = 0;
+    m_HorseHitchedReward = 0.0f;
+    m_HorseLeadReward = 0.0f;
+    m_HorseAccumulatedDirt = 0.0f;
 }

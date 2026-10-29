@@ -299,7 +299,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 		ctx.isInShop = IsPlayerInAShop();
     }
     
-	int timeScale = GetCurrentGameTimeScale();
+    int timeScale = GetCurrentGameTimeScale();
 	int configuredTimeScale = generalConfig.msPerInGameMinute;
 
 	ctx.isInTimeWarp = (timeScale < VANILLA_GAME_TIME_SCALE);
@@ -322,7 +322,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 
     if (!ctx.freezeActive)
 		RecordTrackingSnapshots(playerPed);
-    
+
 	if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev) && HasDevLogCacheChanged(ctx)) {
         // Update tracking baselines immediately
         UpdateDevLogCache(ctx);
@@ -340,7 +340,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
             "           isInTimeWarp={},\n"
             "           isFreezeActive={}", 
             ctx.isInMission, ctx.isInMinigame, isFallingOrGoingToDie, ctx.isBathing, ctx.isSleeping, ctx.isAtCamp, ctx.isInShop, ctx.isJailed, ctx.isInTimeWarp, ctx.freezeActive);
-    }    
+    }  
 
     return ctx;
 }
@@ -1605,8 +1605,7 @@ void ScriptMain() {
     PrecomputeHashes();
     InitialiseActivityMonitors();
     
-    // Start the INI watcher thread to monitor for configuration changes
-    // Let the global manager handle spinning up the background watcher thread
+    // Let the global manager handle spinning up the background watcher threads
     g_ThreadManager.Initialise();    
 
     LOG(LogLevel::ConfigOnly, "==== Core Drain Management Simulation Engine Initialised Successfully [{}] ====", VERSION);	

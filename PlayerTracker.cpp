@@ -5,7 +5,6 @@
 #define NOMINMAX
 
 #include <algorithm>
-#include <mutex>
 #include "..\CoreSDK\inc\natives.h"
 #include "PlayerTracker.h"
 #include "Logger.h"
@@ -58,8 +57,6 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 	
     LOG_DEV("Recording player snapshot.");
 
-    std::lock_guard<std::mutex> guard(m_Lock);
-
     m_PlayerSamples++;
 
     if (IsPlayerAtCamp(playerPed, true))
@@ -90,7 +87,6 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
 [[nodiscard]] float PlayerTracker::GetPlayerOnFootSpeed() noexcept {
 	LOG_DEV("Getting player average on-foot speed.");
-    std::lock_guard<std::mutex> guard(m_Lock);
 
     if (m_PlayerFootSamples == 0) return 0.0f;
 
@@ -99,7 +95,6 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
 [[nodiscard]] float PlayerTracker::GetHorseAverageSpeed() noexcept {
 	LOG_DEV("Getting horse average speed.");
-    std::lock_guard<std::mutex> guard(m_Lock);
 
     if (m_HorseSamples == 0) return 0.0f;
 
@@ -107,7 +102,6 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 }
 
 [[nodiscard]] bool PlayerTracker::IsPlayerDirty(Ped playerPed) noexcept {
-    std::lock_guard<std::mutex> guard(m_Lock);
     float dirtLevel = 0.0f;
 
     if (m_PlayerAccumulatedDirt == 0.0f || m_PlayerSamples == 0) {
@@ -127,8 +121,6 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 }
 
 [[nodiscard]] bool PlayerTracker::IsPlayerAtCamp(Ped playerPed, bool rightNow) noexcept {
-    std::lock_guard<std::mutex> guard(m_Lock);
-	
     bool isAtCamp = false;
 
 	// Check if the player is actively at a camp scenario right now
@@ -159,7 +151,6 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
 void PlayerTracker::ResetSnapshot() noexcept {
 	LOG_DEV("Resetting PlayerTracker state.");
-	std::lock_guard<std::mutex> guard(m_Lock);
 
 	m_PlayerSamples = 0;
 	m_PlayerAccumulatedDirt = 0.0f;

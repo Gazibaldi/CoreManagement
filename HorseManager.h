@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <mutex>
 #include <tuple>
 #include "..\CoreSDK\inc\types.h"
 
@@ -20,8 +19,6 @@ class HorseManager {
 
     float m_HorseAccumulatedDirt = 0.0f;
 
-    std::mutex m_Lock;
-
     enum class HorseSampleType : int { Lead, Hitched };
 
     std::tuple<Ped, bool> GetPlayerMountedHorse(Ped playerPed) noexcept;
@@ -30,7 +27,6 @@ class HorseManager {
     float GetHorseDistanceFromPlayer(Ped playerPed, Ped horsePed) noexcept;
     bool IsBeingLedByPlayer(Ped playerPed, Ped horsePed) noexcept;
     bool TestSampleThreshold(int samples, HorseSampleType sampleType) noexcept;
-	void ResetState() noexcept;
 
 public:
     void RecordSnapshot(Ped playerPed) noexcept;
