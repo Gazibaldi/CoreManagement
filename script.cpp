@@ -250,7 +250,7 @@ void SetGameTimeScale(int msPerInGameMinute) {
 int GetCurrentGameTimeScale() {
     int msPerInGameMinute = CLOCK::GET_MILLISECONDS_PER_GAME_MINUTE();
 
-	LOG_DEV("Current game time scale (ms per in-game minute): {}", msPerInGameMinute);
+    LOG(LogLevel::Verbose, "Current game time scale (ms per in-game minute): {}", msPerInGameMinute);
     return msPerInGameMinute;
 }
 
@@ -1007,6 +1007,20 @@ void UpdateTransientFreezeStateVariables() {
 	// Add more frozen state variable updates here as needed in the future
 }
 
+bool IsDrainTickDue(int drainTickIntervalMs) {
+    // Reset the accumulated time after processing the post-mission decay
+    // if the accumulated time is greater than 70% of the drain tick interval, we keep it, as we are close enough to the next tick to process it
+    // otherwise we reset it to 0
+    bool isCloseToNextTick = g_State.accumulatedTimeMs > (drainTickIntervalMs * 0.7);
+
+    if (isCloseToNextTick)
+        LOG(LogLevel::Verbose, "Player exited a mission. Accumulated time before reset: {} ms. Is close to next tick: true. Keeping accumulated time for next drain tick.", g_State.accumulatedTimeMs);
+    else
+        LOG(LogLevel::Verbose, "Player exited a mission. Accumulated time before reset: {} ms. Is close to next tick: false. Resetting accumulated time to 0.", g_State.accumulatedTimeMs);
+
+	return isCloseToNextTick;
+}
+
 void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int currentTotalMinutes, const ConfigSnapshot& config) {
     if (ctx.freezeActive && !g_State.isRestricted) {
         g_State.isRestricted = true;
@@ -1081,6 +1095,8 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                     g_State.cachedHorseHealth, g_State.cachedHorseStamina, (g_State.hadHorse && !g_State.wasInMinigameDuringRestriction),
                     config,
                     g_State.wasSleepingDuringRestriction, g_State.wasInMinigameDuringRestriction);
+
+				g_State.accumulatedTimeMs = 0;
             }
             else if (g_State.restrictedBathingState != BathingState::NotBathing) {
                 // Uses the HISTORICAL frozen values from the cache
@@ -1089,6 +1105,8 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                 ApplyBathingUpdate(playerPed, elapsedMinutes,
                     g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
                     config);
+
+                g_State.accumulatedTimeMs = 0; 
             }
             else if (g_State.wasInMissionDuringRestriction)
             {
@@ -1104,9 +1122,15 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                 else {
                     LOG(LogLevel::Verbose, "Player exited a mission but elapsed time was less than the minimum threshold. No post-mission decay applied.");
                 }
+
+                if (!IsDrainTickDue(config.CoreConfig.coreDrainTickIntervalMs))
+                    g_State.accumulatedTimeMs = 0;
             }
             else {
                 LOG_DEV("Player was not sleeping, in a minigame, or in a mission during restriction. No batch decay applied.");
+
+                if (!IsDrainTickDue(config.CoreConfig.coreDrainTickIntervalMs))
+                    g_State.accumulatedTimeMs = 0;
             }
         }
 
@@ -1553,7 +1577,6 @@ void UpdateCoreSimulation() {
         HandleStateTransitions(playerPed, context, currentTotalMinutes, config);
 
         g_State.wasRestrictedLastTick = context.freezeActive;
-        g_State.accumulatedTimeMs = 0;
     }
     // If we are in a restricted state and monitoring transient variables, we need to update the frozen state variables based on the cached values.
     else if (g_State.isRestricted && g_State.MonitorTransientVariablesDuringRestriction) {
