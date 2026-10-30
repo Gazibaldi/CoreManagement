@@ -59,7 +59,7 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
     m_PlayerSamples++;
 
-    if (IsPlayerAtCamp(playerPed, true))
+    if (IsPlayerAtCamp(playerPed, true, false))
         m_PlayerCampSamples++;
 
     // track the player's dirt level to determine if they are dirty
@@ -120,20 +120,20 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
     return isDirty;
 }
 
-[[nodiscard]] bool PlayerTracker::IsPlayerAtCamp(Ped playerPed, bool rightNow) noexcept {
+[[nodiscard]] bool PlayerTracker::IsPlayerAtCamp(Ped playerPed, bool rightNow, bool logOutcome) noexcept {
     bool isAtCamp = false;
 
-	// Check if the player is actively at a camp scenario right now
+    // Check if the player is actively at a camp scenario right now
     if (rightNow) {
-		isAtCamp = IsInActiveScenario(playerPed, m_CampScenarios, "Camp");
+        isAtCamp = IsInActiveScenario(playerPed, m_CampScenarios, "Camp");
     }
-	// we test if the player has been at camp recently by checking the accumulated samples
+    // we test if the player has been at camp recently by checking the accumulated samples
     else {
         if (m_PlayerCampSamples == 0.0f || m_PlayerSamples == 0) {
             LOG_DEV("No camp samples recorded. Assuming not at camp.");
             isAtCamp = false;
         }
-        
+
         float averageCampTime = static_cast<float>(m_PlayerCampSamples / m_PlayerSamples);
 
         isAtCamp = averageCampTime >= PLAYER_CAMP_THRESHOLD;
@@ -141,10 +141,12 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
         LOG_DEV("Checking if player is at camp. Average camp time: {:.4f}, Threshold: {}, IsAtCamp: {}", averageCampTime, PLAYER_CAMP_THRESHOLD, isAtCamp);
     }
 
-    if (isAtCamp)
-        LOG(LogLevel::Verbose, "Player camp check: Player is at camp.");
-    else
-        LOG(LogLevel::Verbose, "Player camp check: Player is not at camp.");
+    if (logOutcome) {
+        if (isAtCamp)
+            LOG(LogLevel::Verbose, "Player camp check: Player is at camp.");
+        else
+            LOG(LogLevel::Verbose, "Player camp check: Player is not at camp.");
+    }
 
     return isAtCamp;
 }

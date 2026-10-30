@@ -29,6 +29,6 @@ public:
     [[nodiscard]] float GetPlayerOnFootSpeed() noexcept;
     [[nodiscard]] float GetHorseAverageSpeed() noexcept;
     [[nodiscard]] bool IsPlayerDirty(Ped playerPed) noexcept;
-    [[nodiscard]] bool IsPlayerAtCamp(Ped playerPed, bool rightNow) noexcept;
+    [[nodiscard]] bool IsPlayerAtCamp(Ped playerPed, bool rightNow, bool logOutcome = true) noexcept;
     void ResetSnapshot() noexcept;
 };
