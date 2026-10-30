@@ -1540,6 +1540,16 @@ void UpdateCoreSimulation() {
     if (context.freezeActive != g_State.wasRestrictedLastTick) {
         LOG(LogLevel::Standard, "Fundamental state boundary flipped! Forcing immediate cache transition process.");
 
+		// Entering a mission or minigame event
+        if (context.freezeActive && (context.isInMission || context.isInMinigame))
+            LOG(LogLevel::Standard, "Player is starting a mission or minigame event. Freezing core decay.");
+		// Exiting a mission or minigame event
+        else if (!context.freezeActive && (g_State.wasInMissionDuringRestriction || g_State.wasInMinigameDuringRestriction))
+            LOG(LogLevel::Standard, "Player is exiting a mission or minigame event. Renabling core decay.");
+		// Entering a sleep event
+        else if (context.isSleeping && context.freezeActive)
+            LOG(LogLevel::Standard, "Player is sleeping. Freezing core decay.");		
+
         HandleStateTransitions(playerPed, context, currentTotalMinutes, config);
 
         g_State.wasRestrictedLastTick = context.freezeActive;

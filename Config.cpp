@@ -51,7 +51,11 @@ void EnableConfigHotReload(bool enableHotReload) {
 	bool currentState = g_ShouldHotReload.load(std::memory_order_acquire);
 
 	if (currentState != enableHotReload) {
-        LOG(LogLevel::ConfigOnly, "Config hot-reload is disabled due to player being in a mission or minigame. Config will be refreshed once the player exits these states.");
+        if(!enableHotReload)
+            LOG(LogLevel::ConfigOnly, "Config hot-reload is disabled due to player being in a mission or minigame. Config will be refreshed once the player exits these states.");
+        else
+            LOG(LogLevel::ConfigOnly, "Config hot-reload is enabled.");
+
         g_ShouldHotReload.store(enableHotReload, std::memory_order_release);
 	}
 }
