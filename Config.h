@@ -13,8 +13,8 @@
 extern const std::string VERSION;
 
 struct CoreConfigSettings {
-    int coreDrainTickIntervalMs = 10000;
-    int stateChangeTickIntervalMs = 500;
+    int coreDrainTickIntervalMs = 60000;
+    int stateChangeTickIntervalMs = 1000;
     float restrictedStateChangeTickIntervalMultiplier = 1.0f;
     int logLevelRaw = 1;
 
@@ -47,10 +47,10 @@ struct PlayerConfigSettings {
     float mountTrotStaminaMultiplier = 1.0f;
     float mountGallopStaminaMultiplier = 1.2f;
 
-    float healthTimeSkipFloor = 15.0f;
-    float campedHealthFloor = 5.0f;
-    float campedStaminaFloor = 5.0f;
-    float campedDeadEyeFloor = 5.0f;
+    float healthTimeSkipFloor = 25.0f;
+    float campedHealthFloor = 15.0f;
+    float campedStaminaFloor = 15.0f;
+    float campedDeadEyeFloor = 15.0f;
 };
 
 struct HorseConfigSettings {
@@ -61,9 +61,9 @@ struct HorseConfigSettings {
     float trotStaminaMultiplier = 1.3f;
     float gallopStaminaMultiplier = 4.5f;
 
-    float healthTimeSkipFloor = 15.0f;
-    float campedHealthFloor = 5.0f;
-    float campedStaminaFloor = 5.0f;
+    float healthTimeSkipFloor = 25.0f;
+    float campedHealthFloor = 15.0f;
+    float campedStaminaFloor = 15.0f;
 };
 
 struct ConfigSnapshot {

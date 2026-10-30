@@ -166,7 +166,7 @@ void BuildDefaultConfigFile() {
             << "coreDrainTickIntervalMs = " << defaultCoreConfig.coreDrainTickIntervalMs << "\n"
             << "; How often the main state simulation should run (in milliseconds)\n"
             << "; This should be low to capture mission triggers etc. The drain will be forced  in such cases\n"
-            << "; Just leave it at 500 unless it causes performance issues\n"
+            << "; Just leave it at 1000 unless it causes performance issues\n"
             << "; Adjust log level first though as that is definitely the first place to gain performance\n"
 			<< "; Minimum is 0.1 seconds (100 ms). Maximum interval is 1 second (1000 ms)\n"
             << "stateChangeTickIntervalMs = " << defaultCoreConfig.stateChangeTickIntervalMs << "\n"
@@ -357,10 +357,10 @@ void LoadConfiguration() {
     newPlayerConfig->mountTrotStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedTrotStaminaMultiplier", defaultPlayerConfig.mountTrotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 3.0f);
     newPlayerConfig->mountGallopStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedGallopStaminaMultiplier", defaultPlayerConfig.mountGallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
 
-    newPlayerConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("Floors", "HealthTimeSkipFloor", defaultPlayerConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 15.0f);
-    newPlayerConfig->campedHealthFloor = std::clamp(GetIniFloat("Floors", "CampedHealthFloor", defaultPlayerConfig.campedHealthFloor, g_IniPath.c_str()), 5.0f, 10.0f);
-    newPlayerConfig->campedStaminaFloor = std::clamp(GetIniFloat("Floors", "CampedStaminaFloor", defaultPlayerConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 10.0f);
-    newPlayerConfig->campedDeadEyeFloor = std::clamp(GetIniFloat("Floors", "CampedDeadEyeFloor", defaultPlayerConfig.campedDeadEyeFloor, g_IniPath.c_str()), 1.0f, 10.0f);
+    newPlayerConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("Floors", "HealthTimeSkipFloor", defaultPlayerConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 25.0f);
+    newPlayerConfig->campedHealthFloor = std::clamp(GetIniFloat("Floors", "CampedHealthFloor", defaultPlayerConfig.campedHealthFloor, g_IniPath.c_str()), 5.0f, 15.0f);
+    newPlayerConfig->campedStaminaFloor = std::clamp(GetIniFloat("Floors", "CampedStaminaFloor", defaultPlayerConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 15.0f);
+    newPlayerConfig->campedDeadEyeFloor = std::clamp(GetIniFloat("Floors", "CampedDeadEyeFloor", defaultPlayerConfig.campedDeadEyeFloor, g_IniPath.c_str()), 1.0f, 15.0f);
 
     newHorseConfig->baseHealthDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseHealthDecayBase", defaultHorseConfig.baseHealthDecay, g_IniPath.c_str()), 1.0f, 100.0f);
     newHorseConfig->baseStaminaDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", defaultHorseConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
@@ -369,9 +369,9 @@ void LoadConfiguration() {
     newHorseConfig->trotStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", defaultHorseConfig.trotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
     newHorseConfig->gallopStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", defaultHorseConfig.gallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 8.0f);
 
-    newHorseConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("HorseFloors", "HorseHealthTimeSkipFloor", defaultHorseConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 15.0f);
-    newHorseConfig->campedHealthFloor = std::clamp(GetIniFloat("HorseFloors", "CampedHealthFloor", defaultHorseConfig.campedHealthFloor, g_IniPath.c_str()), 1.0f, 10.0f);
-    newHorseConfig->campedStaminaFloor = std::clamp(GetIniFloat("HorseFloors", "CampedStaminaFloor", defaultHorseConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 10.0f);
+    newHorseConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("HorseFloors", "HorseHealthTimeSkipFloor", defaultHorseConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 25.0f);
+    newHorseConfig->campedHealthFloor = std::clamp(GetIniFloat("HorseFloors", "CampedHealthFloor", defaultHorseConfig.campedHealthFloor, g_IniPath.c_str()), 1.0f, 15.0f);
+    newHorseConfig->campedStaminaFloor = std::clamp(GetIniFloat("HorseFloors", "CampedStaminaFloor", defaultHorseConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 15.0f);
 
     switch (newCoreConfig->logLevelRaw) {
 	case 0:
