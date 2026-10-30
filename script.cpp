@@ -103,7 +103,7 @@ void InitialiseActivityMonitors() {
 
     g_activeMonitors.Insert(TransientActivityType::Sleeping, TransientActivityMonitor(
         TransientActivityType::Sleeping,
-        17, // 17 seconds threshold for sleeping reset
+        15, // 15 seconds threshold for sleeping reset
         []() -> bool {
             Ped playerPed = PLAYER::PLAYER_PED_ID();
 
@@ -700,17 +700,17 @@ bool IsSleepDuringTheNight(int elapsedHours, int nightStartHour, int nightEndHou
     int sleepStartHour = currentHour - elapsedHours;
 	if (sleepStartHour < 0) sleepStartHour += 24; // Wrap around if negative
 
-	bool wasNightStart = (sleepStartHour >= nightStartHour || sleepStartHour < nightEndHour);
-	bool wasNightEnd = (currentHour >= nightStartHour || currentHour < nightEndHour);
+	bool wasNightStart = (sleepStartHour >= nightStartHour || sleepStartHour <= nightEndHour);
+	bool wasNightEnd = (currentHour >= nightStartHour || currentHour <= nightEndHour);
 
 	LOG_DEV(
         "Sleep evaluation:\n"
-        "SleepStartHour={},\n"
-        "CurrentHour={},\n"
-        "NightStartHour={},\n"
-        "NightEndHour={},\n"
-        "WasNightStart={},\n"
-        "WasNightEnd={}",
+        "           SleepStartHour={},\n"
+        "           CurrentHour={},\n"
+        "           NightStartHour={},\n"
+        "           NightEndHour={},\n"
+        "           WasNightStart={},\n"
+        "           WasNightEnd={}",
 		sleepStartHour, currentHour, nightStartHour, nightEndHour, wasNightStart ? "true" : "false", wasNightEnd ? "true" : "false");
 
 	if (wasNightStart && wasNightEnd) {
@@ -811,7 +811,7 @@ void ApplyBatchTimeSkipDecay(
 			// SPECIAL GOLDEN STAMINA CORE REWARD (Minimum Sleep Hours-OverSleep Threshold Hours Hours in a Hotel Room at Night)
             if (isHotelRoom && sleptAtNight && elapsedHours >= MIN_SLEEP_HOURS && elapsedHours <= OVERSLEEP_THRESHOLD_HOURS) {
 				
-				LOG(LogLevel::Standard, "Player slept {} hours in a hotel room at night. Stamina core is now golden and fully fortified for 12 in game hours.", elapsedHours);
+				LOG(LogLevel::Standard, "Player slept {:.2f} hours in a hotel room/own bed at night. Stamina core is now golden and fully fortified for 12 in game hours.", elapsedHours);
 				ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * 720.0f, true);
             }
 			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
