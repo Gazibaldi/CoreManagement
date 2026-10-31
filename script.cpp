@@ -792,8 +792,11 @@ void ApplyBatchTimeSkipDecay(
             "           ActiveHealthDecay={:.4f},\n"
             "           TargetHealth={},\n"
             "           MinHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
-        LOG(LogLevel::Standard, "Player time-skipped. Current Health: {} Final Health: {}", static_cast<int>(startHealth), finalHealth);
+        LOG(LogLevel::Standard, "Player time-skipped. Current Health: {} New Health: {}", static_cast<int>(startHealth), finalHealth);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
+    }
+    else {
+        LOG(LogLevel::Standard, "Player Health Core is golden. No decay applied.");
     }
 
     bool sleptAtNight = false;
@@ -839,8 +842,11 @@ void ApplyBatchTimeSkipDecay(
             "           ActiveStaminaDecay={:.4f},\n"
             "           TargetStamina={},\n"
             "           MinStaminaFloor={}", startStamina, elapsedHours, activeStaminaDecay, finalStamina, config.PlayerConfig.campedStaminaFloor);
-        LOG(LogLevel::Standard, "Player time-skipped. Current Stamina: {} Final Stamina: {}", static_cast<int>(startStamina), finalStamina);
+        LOG(LogLevel::Standard, "Player time-skipped. Current Stamina: {} New Stamina: {}", static_cast<int>(startStamina), finalStamina);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
+    }
+    else {
+        LOG(LogLevel::Standard, "Player Stamina Core is golden. No decay applied.");
     }
 
 	// Dead Eye Core Replenishment Logic
@@ -869,8 +875,11 @@ void ApplyBatchTimeSkipDecay(
             "           ActiveDeadEyeDecay={:.4f},\n"
             "           TargetDeadEye={},\n"
             "           MinDeadEyeFloor={}", startDeadEye, elapsedHours, activeDeadEyeDecay, finalDeadEye, config.PlayerConfig.campedDeadEyeFloor);
-        LOG(LogLevel::Standard, "Player time-skipped. Current Dead Eye: {} Final Dead Eye: {}", static_cast<int>(startDeadEye), finalDeadEye);
+        LOG(LogLevel::Standard, "Player time-skipped. Current Dead Eye: {} New Dead Eye: {}", static_cast<int>(startDeadEye), finalDeadEye);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
+    }
+    else {
+        LOG(LogLevel::Standard, "Player DeadEye Core is golden. No decay applied.");
     }
 
     // Compute Horse Core Reductions
@@ -898,8 +907,11 @@ void ApplyBatchTimeSkipDecay(
                     "           ActiveHealthDecay={:.4f},\n"
                     "           TargetHealth={},\n"
                     "           MinHealthFloor={}", startHorseHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
-                LOG(LogLevel::Standard, "Player time-skipped. Current Horse Health: {} Final Horse Health: {}", static_cast<int>(startHorseHealth), finalHealth);
+                LOG(LogLevel::Standard, "Player time-skipped. Current Horse Health: {} New Horse Health: {}", static_cast<int>(startHorseHealth), finalHealth);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health), finalHealth);
+            }
+            else {
+                LOG(LogLevel::Standard, "Horse Health Core is golden. No decay applied.");
             }
 
 			// Horse Stamina Core Decay Logic
@@ -940,8 +952,11 @@ void ApplyBatchTimeSkipDecay(
                     "           ActiveStaminaDecay={:.4f},\n"
                     "           TargetStamina={},\n"
                     "           MinStaminaFloor={}", startHorseStamina, elapsedHours, activeStaminaDecay, finalStamina, config.HorseConfig.campedStaminaFloor);
-                LOG(LogLevel::Standard, "Player time-skipped. Current Horse Stamina: {} Final Horse Stamina: {}", static_cast<int>(startHorseStamina), finalStamina);
+                LOG(LogLevel::Standard, "Player time-skipped. Current Horse Stamina: {} New Horse Stamina: {}", static_cast<int>(startHorseStamina), finalStamina);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalStamina);
+            }
+            else {
+                LOG(LogLevel::Standard, "Horse Stamina Core is golden. No decay applied.");
             }
         }
     }
@@ -1228,9 +1243,12 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
             "           CurrentHealth={},\n"
             "           TargetHealth={},\n"
             "           MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
-        LOG(LogLevel::Standard, "Player Core Sync Tick: Current Health={} Final Health={}", static_cast<int>(currentHealth), finalHealth);
+        LOG(LogLevel::Standard, "Player Core Sync Tick: Current Health={} New Health={}", static_cast<int>(currentHealth), finalHealth);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
+    }
+    else {
+        LOG(LogLevel::Standard, "Player Health Core is golden. No decay applied.");
     }
 
 	if (!isStaminaGold) {
@@ -1248,9 +1266,12 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
             "           CurrentStamina={},\n"
             "           TargetStamina={},\n"
             "           MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
-        LOG(LogLevel::Standard, "Player Stamina Sync Tick: Current Stamina={} Final Stamina={}", static_cast<int>(currentStamina), finalStamina);
+        LOG(LogLevel::Standard, "Player Stamina Sync Tick: Current Stamina={} New Stamina={}", static_cast<int>(currentStamina), finalStamina);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
+    }
+    else {
+        LOG(LogLevel::Standard, "Player Stamina Core is golden. No decay applied.");
     }
 
     if (!isDeadEyeGold) {
@@ -1271,9 +1292,12 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
             "           CurrentDeadEye={},\n"
             "           TargetDeadEye={},\n"
             "           MinDeadEyeFloor={}", hoursDelta, activeDeadEyeDecay, currentDeadEye, finalDeadEye, minDeadEyeFloor);
-        LOG(LogLevel::Standard, "Player DeadEye Sync Tick: Current DeadEye={} Final DeadEye={}", static_cast<int>(currentDeadEye), finalDeadEye);
+        LOG(LogLevel::Standard, "Player DeadEye Sync Tick: Current Dead Eye={} New Dead Eye={}", static_cast<int>(currentDeadEye), finalDeadEye);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
+    }
+    else {
+        LOG(LogLevel::Standard, "Player Dead Eye Core is golden. No decay applied.");
     }
 }
 
@@ -1313,9 +1337,12 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsho
             "           CurrentHealth={},\n"
             "           TargetHealth={},\n"
             "           MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
-        LOG(LogLevel::Standard, "Horse Core Sync Tick: Current Horse Health={} Final Horse Health={}", static_cast<int>(currentHealth), finalHealth);
+        LOG(LogLevel::Standard, "Horse Core Sync Tick: Current Horse Health={} New Horse Health={}", static_cast<int>(currentHealth), finalHealth);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health), finalHealth);
+    }
+    else {
+        LOG(LogLevel::Standard, "Horse Health Core is golden. No decay applied.");
     }
 
 	// Stamina Core Decay Logic (only applies if the horse's stamina core is not golden)
@@ -1370,14 +1397,17 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsho
                 "           CurrentStamina={},\n"
                 "           TargetStamina={},\n"
                 "           MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
-            LOG(LogLevel::Standard, "Horse Core Sync Tick: Current Horse Stamina={} Final Horse Stamina={}", static_cast<int>(currentStamina), finalStamina);
+            LOG(LogLevel::Standard, "Horse Core Sync Tick: Current Horse Stamina={} New Horse Stamina={}", static_cast<int>(currentStamina), finalStamina);
 
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
 
 			// Reset the horse manager snapshot after applying the decay to ensure accurate tracking for the next period
 			g_HorseManager.ResetSnapshot();
         }
-    }    
+    }
+    else {
+        LOG(LogLevel::Standard, "Horse Stamina Core is golden. No decay applied.");
+    }
 }
 
 void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const ConfigSnapshot& config) { 
