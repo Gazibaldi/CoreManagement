@@ -24,4 +24,6 @@ const float SLEEP_NIGHT_PERCENTAGE_THRESHOLD = 0.6f; // Percentage of sleep that
 
 const float BATHING_TIMESKIP_MAX_HOURS = 2.0f;
 
+const float CORE_OVERPOWER_LENGTH_MINS = 360.f
+
 const std::unordered_set<std::string> VALID_BATHING_STATES{ "BATHING", "Bathing", "Scrub_Idle", "Scrub_Head", "Scrub_Left_Arm", "Scrub_Right_Arm", "Scrub_Left_Leg", "Scrub_Right_Leg" };

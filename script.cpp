@@ -655,8 +655,8 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
     if (!isDeadEyeGold) {
         // SPECIAL GOLDEN DEADEYE CORE REWARD (Bathing Deluxe Service (Maid))
         if (g_State.restrictedBathingState == BathingState::DeluxeBathing) {
-            LOG(LogLevel::Standard, "Player Bathing Deluxe Service: Dead Eye is now golden and fully fortified for 12 in game hours.");
-            ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * 720.0f, true);
+            LOG(LogLevel::Standard, "Player Bathing Deluxe Service: Dead Eye is now golden and fully fortified for {} in game hours.", CORE_OVERPOWER_LENGTH_MINS / 60.0f);
+            ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * CORE_OVERPOWER_LENGTH_MINS, true);
         }
         else {
 			float targetDeadEye = startDeadEye;
@@ -811,8 +811,8 @@ void ApplyBatchTimeSkipDecay(
 			// SPECIAL GOLDEN STAMINA CORE REWARD (Minimum Sleep Hours-OverSleep Threshold Hours Hours in a Hotel Room at Night)
             if (isHotelRoom && sleptAtNight && elapsedHours >= MIN_SLEEP_HOURS && elapsedHours <= OVERSLEEP_THRESHOLD_HOURS) {
 				
-				LOG(LogLevel::Standard, "Player slept {:.2f} hours in a hotel room/own bed at night. Stamina core is now golden and fully fortified for 12 in game hours.", elapsedHours);
-				ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * 720.0f, true);
+				LOG(LogLevel::Standard, "Player slept {:.2f} hours in a hotel room/own bed at night. Stamina core is now golden and fully fortified for {} in game hours.", elapsedHours, CORE_OVERPOWER_LENGTH_MINS / 60.0f);
+				ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * CORE_OVERPOWER_LENGTH_MINS, true);
             }
 			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
             else {
@@ -911,8 +911,8 @@ void ApplyBatchTimeSkipDecay(
                     // SPECIAL GOLDEN STAMINA CORE REWARD (Hotel Stable at Night)
                     if (isHotelRoom && sleptAtNight) {
 
-                        LOG(LogLevel::Standard, "Horse slept in a stable (hotel) at night. Stamina core is now golden and fully fortified for 12 in game hours.");
-                        ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * 720.0f, true);
+                        LOG(LogLevel::Standard, "Horse slept in a stable (hotel) at night. Stamina core is now golden and fully fortified for {} in game hours.", CORE_OVERPOWER_LENGTH_MINS / 60.0f);
+                        ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * CORE_OVERPOWER_LENGTH_MINS, true);
                     }
                     // REGULAR SLEEP REPLENISHMENT ROUTE
                     else {
