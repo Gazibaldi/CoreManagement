@@ -126,7 +126,8 @@ bool InventoryManager::DoesPlayerHaveItem(Hash itemHash, const std::string& item
     CombinedPlayerCoreModifiers modifiers{};
 
     for (const auto& passive : m_PlayerPassiveModifiers) {
-		LOG(LogLevel::Verbose, "Checking for player passive item: {} (hash: {})", passive.name, passive.itemHash);
+		LOG(LogLevel::Verbose, "Checking for player passive item: {}", passive.name);
+        LOG_DEV("Checking for player passive item: {} (hash: {})", passive.name, passive.itemHash);
         if (DoesPlayerHaveItem(passive.itemHash, std::string(passive.name))) {
             modifiers.totalHealthReduction += passive.healthCoreMod;
             modifiers.totalStaminaReduction += passive.staminaCoreMod;
