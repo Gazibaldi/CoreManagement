@@ -250,7 +250,11 @@ void SetGameTimeScale(int msPerInGameMinute) {
 int GetCurrentGameTimeScale() {
     int msPerInGameMinute = CLOCK::GET_MILLISECONDS_PER_GAME_MINUTE();
 
-    LOG(LogLevel::Verbose, "Current game time scale (ms per in-game minute): {}", msPerInGameMinute);
+    if (msPerInGameMinute != g_State.cachedGameTimescaleMs) {
+        LOG(LogLevel::Verbose, "Current game time scale (ms per in-game minute): {}", msPerInGameMinute);
+		g_State.cachedGameTimescaleMs = msPerInGameMinute;
+    }
+
     return msPerInGameMinute;
 }
 
@@ -1487,6 +1491,8 @@ void ResetSimulationState() {
     g_State.lastTickInGameMinutes = 0;
     g_State.timescaleDeltaInitialised = false;
     g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::NotSet;
+
+    g_State.cachedGameTimescaleMs = 0;
 
     g_State.accumulatedTimeMs = 0;
     g_State.cachedHealth = 100.0f;

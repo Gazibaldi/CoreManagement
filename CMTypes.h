@@ -20,6 +20,8 @@ struct SimulationState {
     int cachedInGameTimeMinutes = 0;
     int accumulatedTimeMs = 0;
 
+	int cachedGameTimescaleMs = 0;
+
     float cachedHealth = 100.0f;
     float cachedStamina = 100.0f;
     float cachedDeadEye = 100.0f;
