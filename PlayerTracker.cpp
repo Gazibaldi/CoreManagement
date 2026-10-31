@@ -12,7 +12,7 @@
 #include "Functions.h"
 
 const float PLAYER_DIRT_THRESHOLD = 0.5f;
-const float PLAYER_CAMP_THRESHOLD = 0.8f;
+const float PLAYER_CAMP_THRESHOLD = 0.66f;
 
 void PlayerTracker::ComputeHashes() noexcept {
     m_CampScenarios = { {
@@ -169,9 +169,9 @@ void PlayerTracker::RecordLastSleptDetails(int secondsSinceBaseYear, bool sleptA
 
     if (logOutcome) {
         if (isAtCamp)
-            LOG(LogLevel::Verbose, "Player camp check: Player is at camp.");
+            LOG(LogLevel::Verbose, "Player camp check: Player is at camp (average over drain tick).");
         else
-            LOG(LogLevel::Verbose, "Player camp check: Player is not at camp.");
+            LOG(LogLevel::Verbose, "Player camp check: Player is not at camp (average over drain tick).");
     }
 
     return isAtCamp;
