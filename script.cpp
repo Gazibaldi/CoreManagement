@@ -103,7 +103,7 @@ void InitialiseActivityMonitors() {
 
     g_activeMonitors.Insert(TransientActivityType::Sleeping, TransientActivityMonitor(
         TransientActivityType::Sleeping,
-        15, // 15 seconds threshold for sleeping reset
+        8, // 8 seconds threshold for sleeping reset
         []() -> bool {
             Ped playerPed = PLAYER::PLAYER_PED_ID();
 
