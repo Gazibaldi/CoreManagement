@@ -1624,6 +1624,8 @@ void UpdateCoreSimulation() {
                 g_State.accumulatedTimeMs = 0; // Clear the accumulation safely
             }
 
+            LOG(LogLevel::Verbose, "Core drain tick interval completed. Successfully processed core simulation.");
+
             // Update the last tick time to the current total minutes after processing
             LOG_DEV("Updating last tick in-game minutes from {} to {}", g_State.lastTickInGameMinutes, currentTotalMinutes);
             g_State.lastTickInGameMinutes = currentTotalMinutes;
