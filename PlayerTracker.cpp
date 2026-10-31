@@ -192,13 +192,8 @@ void PlayerTracker::RecordLastSleptDetails(int secondsSinceBaseYear, bool sleptA
 
 	LOG_DEV("Calculating player tiredness. Last slept at: {} seconds since base year, Current time: {} seconds since base year, Hours since last sleep: {:.4f}, Tiredness threshold: {:.4f}", m_LastSleptSeconds, secondsSinceBaseYear, hoursSinceLastSleep, tirednessThreshold);
 
-    if (hoursSinceLastSleep > tirednessThreshold) {
-		float tirednessHours = hoursSinceLastSleep - tirednessThreshold;
-		float tiredness = std::min(tirednessHours * 0.1f, 1.0f);
-		LOG(LogLevel::Verbose, "Player is tired. Hours since last sleep: {:.4f}, Tiredness hours: {:.4f}, Tiredness multiplier: {:.4f}", hoursSinceLastSleep, tirednessHours, tiredness);
-
-		return tiredness;
-    }
+    if (hoursSinceLastSleep > tirednessThreshold)
+		return std::min((hoursSinceLastSleep - tirednessThreshold) * 0.1f, 1.0f);
 
     return 0.0f;
 }
