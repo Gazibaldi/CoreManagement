@@ -22,13 +22,19 @@ class PlayerTracker {
 
     std::array<Hash, 33> m_CampScenarios{};
 
+	// sleep tracking
+    int m_LastSleptSeconds = -1;
+    bool m_LastSleptAtNight = false;
+
 public:
     void ComputeHashes() noexcept;
     void RecordSnapshot(Ped playerPed) noexcept;
+    void RecordLastSleptDetails(int hour, bool sleptAtNight) noexcept;
 
     [[nodiscard]] float GetPlayerOnFootSpeed() noexcept;
     [[nodiscard]] float GetHorseAverageSpeed() noexcept;
     [[nodiscard]] bool IsPlayerDirty(Ped playerPed) noexcept;
     [[nodiscard]] bool IsPlayerAtCamp(Ped playerPed, bool rightNow, bool logOutcome = true) noexcept;
-    void ResetSnapshot() noexcept;
+	[[nodiscard]] float GetPlayerTiredness(Ped playerPed, int currentHour) noexcept;
+    void ResetSnapshot(bool includeSleepDetails = false) noexcept;
 };

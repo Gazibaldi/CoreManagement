@@ -474,7 +474,13 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
     if(g_playerTracker.IsPlayerDirty(playerPed)) {
 		LOG(LogLevel::Verbose, "Player is dirty. Applying dirty dead eye decay multiplier.");
 		multiplier += std::max(playerConfig.deadEyeDirtyMultiplier - 1.0f, 0.0f);
-    }    
+    }  
+
+	float tiredness = g_playerTracker.GetPlayerTiredness(playerPed, CLOCK::_GET_SECONDS_SINCE_BASE_YEAR());
+    if (tiredness > 0.0f) {
+        LOG(LogLevel::Verbose, "Player is tired. Applying tired dead eye decay multiplier.");
+        multiplier += tiredness;
+    }
 
     if (applyPostMissionDecay) {
         LOG(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission dead eye decay multiplier.");
@@ -966,7 +972,10 @@ void ApplyBatchTimeSkipDecay(
         }
     }
 
-	// Reset the tracker after applying the batch decay to ensure accurate tracking for the next period
+    if (wasSleeping)
+        g_playerTracker.RecordLastSleptDetails(CLOCK::_GET_SECONDS_SINCE_BASE_YEAR(), sleptAtNight);
+
+    // Reset the tracker after applying the batch decay to ensure accurate tracking for the next period
     g_playerTracker.ResetSnapshot();
     g_HorseManager.ResetSnapshot();
 }
@@ -1507,7 +1516,7 @@ void ResetSimulationState() {
 
     g_activeMonitors.ResetAll();
 
-    g_playerTracker.ResetSnapshot();
+    g_playerTracker.ResetSnapshot(true);
     g_HorseManager.ResetSnapshot();
 
     g_State.configStructuresInitialised = false;
@@ -1597,6 +1606,9 @@ bool IsInSaveLoadState(Ped playerPed) {
         g_State.cachedInGameTimeMinutes = GetTotalInGameMinutes();
         g_State.lastTickInGameMinutes = g_State.cachedInGameTimeMinutes;
         g_State.accumulatedTimeMs = 0;
+
+		// benefit of the doubt, we assume the player has just slept (and at night)
+		g_playerTracker.RecordLastSleptDetails(CLOCK::_GET_SECONDS_SINCE_BASE_YEAR(), true);
 
         g_State.timescaleDeltaInitialised = true;
 

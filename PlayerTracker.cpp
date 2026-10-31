@@ -85,6 +85,13 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
     }    
 }
 
+void PlayerTracker::RecordLastSleptDetails(int secondsSinceBaseYear, bool sleptAtNight) noexcept {
+	LOG_DEV("Recording last slept details: secondsSinceBaseYear={}, sleptAtNight={}", secondsSinceBaseYear, sleptAtNight);
+
+    m_LastSleptSeconds = secondsSinceBaseYear;
+    m_LastSleptAtNight = sleptAtNight;
+}
+
 [[nodiscard]] float PlayerTracker::GetPlayerOnFootSpeed() noexcept {
 	LOG_DEV("Getting player average on-foot speed.");
 
@@ -151,7 +158,31 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
     return isAtCamp;
 }
 
-void PlayerTracker::ResetSnapshot() noexcept {
+[[nodiscard]] float PlayerTracker::GetPlayerTiredness(Ped playerPed, int secondsSinceBaseYear) noexcept {
+	// non-night sleep is tiredness starting at 16 hours after last sleep
+	// night sleep is tiredness starting at 24 hours after last sleep
+	// each hour of tiredness adds a 0.1 multiplier to dead eye decay, up to a maximum of 1.0 (10 hours of tiredness)
+
+	if (m_LastSleptSeconds < 0)
+        return 0.0f;
+
+	float hoursSinceLastSleep = static_cast<float>(secondsSinceBaseYear - m_LastSleptSeconds) / 3600.0f;
+	float tirednessThreshold = m_LastSleptAtNight ? 24.0f : 16.0f;
+
+	LOG_DEV("Calculating player tiredness. Last slept at: {} seconds since base year, Current time: {} seconds since base year, Hours since last sleep: {:.4f}, Tiredness threshold: {:.4f}", m_LastSleptSeconds, secondsSinceBaseYear, hoursSinceLastSleep, tirednessThreshold);
+
+    if (hoursSinceLastSleep > tirednessThreshold) {
+		float tirednessHours = hoursSinceLastSleep - tirednessThreshold;
+		float tiredness = std::min(tirednessHours * 0.1f, 1.0f);
+		LOG(LogLevel::Verbose, "Player is tired. Hours since last sleep: {:.4f}, Tiredness hours: {:.4f}, Tiredness multiplier: {:.4f}", hoursSinceLastSleep, tirednessHours, tiredness);
+
+		return tiredness;
+    }
+
+    return 0.0f;
+}
+
+void PlayerTracker::ResetSnapshot(bool includeSleepDetails) noexcept {
 	LOG_DEV("Resetting PlayerTracker state.");
 
 	m_PlayerSamples = 0;
@@ -162,4 +193,9 @@ void PlayerTracker::ResetSnapshot() noexcept {
 
 	m_HorseSum = 0.0f;
 	m_HorseSamples = 0;
+	
+    if (includeSleepDetails) {
+		m_LastSleptSeconds = -1;
+		m_LastSleptAtNight = false;
+	}
 }
