@@ -792,7 +792,7 @@ void ApplyBatchTimeSkipDecay(
             "           ActiveHealthDecay={:.4f},\n"
             "           TargetHealth={},\n"
             "           MinHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
-        LOG(LogLevel::Standard, "Player time-skipped. Health decayed to: {}", finalHealth);
+        LOG(LogLevel::Standard, "Player time-skipped. Current Health: {} Final Health: {}", static_cast<int>(startHealth), finalHealth);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
 
@@ -839,7 +839,7 @@ void ApplyBatchTimeSkipDecay(
             "           ActiveStaminaDecay={:.4f},\n"
             "           TargetStamina={},\n"
             "           MinStaminaFloor={}", startStamina, elapsedHours, activeStaminaDecay, finalStamina, config.PlayerConfig.campedStaminaFloor);
-        LOG(LogLevel::Standard, "Player time-skipped. Stamina decayed to: {}", finalStamina);
+        LOG(LogLevel::Standard, "Player time-skipped. Current Stamina: {} Final Stamina: {}", static_cast<int>(startStamina), finalStamina);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
 
@@ -869,7 +869,7 @@ void ApplyBatchTimeSkipDecay(
             "           ActiveDeadEyeDecay={:.4f},\n"
             "           TargetDeadEye={},\n"
             "           MinDeadEyeFloor={}", startDeadEye, elapsedHours, activeDeadEyeDecay, finalDeadEye, config.PlayerConfig.campedDeadEyeFloor);
-        LOG(LogLevel::Standard, "Player time-skipped. Dead Eye decayed to: {}", finalDeadEye);
+        LOG(LogLevel::Standard, "Player time-skipped. Current Dead Eye: {} Final Dead Eye: {}", static_cast<int>(startDeadEye), finalDeadEye);
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
     }
 
@@ -898,7 +898,7 @@ void ApplyBatchTimeSkipDecay(
                     "           ActiveHealthDecay={:.4f},\n"
                     "           TargetHealth={},\n"
                     "           MinHealthFloor={}", startHorseHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
-                LOG(LogLevel::Standard, "Player time-skipped. Horse Health decayed to: {}", finalHealth);
+                LOG(LogLevel::Standard, "Player time-skipped. Current Horse Health: {} Final Horse Health: {}", static_cast<int>(startHorseHealth), finalHealth);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health), finalHealth);
             }
 
@@ -940,7 +940,7 @@ void ApplyBatchTimeSkipDecay(
                     "           ActiveStaminaDecay={:.4f},\n"
                     "           TargetStamina={},\n"
                     "           MinStaminaFloor={}", startHorseStamina, elapsedHours, activeStaminaDecay, finalStamina, config.HorseConfig.campedStaminaFloor);
-                LOG(LogLevel::Standard, "Player time-skipped. Horse Stamina decayed to: {}", finalStamina);
+                LOG(LogLevel::Standard, "Player time-skipped. Current Horse Stamina: {} Final Horse Stamina: {}", static_cast<int>(startHorseStamina), finalStamina);
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalStamina);
             }
         }
@@ -1228,7 +1228,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
             "           CurrentHealth={},\n"
             "           TargetHealth={},\n"
             "           MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
-        LOG(LogLevel::Standard, "Player Core Sync Tick: Health={}", finalHealth);
+        LOG(LogLevel::Standard, "Player Core Sync Tick: Current Health={} Final Health={}", static_cast<int>(currentHealth), finalHealth);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
@@ -1248,7 +1248,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
             "           CurrentStamina={},\n"
             "           TargetStamina={},\n"
             "           MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
-        LOG(LogLevel::Standard, "Player Stamina Sync Tick: Stamina={}", finalStamina);
+        LOG(LogLevel::Standard, "Player Stamina Sync Tick: Current Stamina={} Final Stamina={}", static_cast<int>(currentStamina), finalStamina);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
@@ -1271,7 +1271,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
             "           CurrentDeadEye={},\n"
             "           TargetDeadEye={},\n"
             "           MinDeadEyeFloor={}", hoursDelta, activeDeadEyeDecay, currentDeadEye, finalDeadEye, minDeadEyeFloor);
-        LOG(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye={}", finalDeadEye);
+        LOG(LogLevel::Standard, "Player DeadEye Sync Tick: Current DeadEye={} Final DeadEye={}", static_cast<int>(currentDeadEye), finalDeadEye);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
     }
@@ -1313,7 +1313,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsho
             "           CurrentHealth={},\n"
             "           TargetHealth={},\n"
             "           MinHealthFloor={}", hoursDelta, activeHealthDecay, currentHealth, finalHealth, minHealthFloor);
-        LOG(LogLevel::Standard, "Horse Core Sync Tick: Health={}", finalHealth);
+        LOG(LogLevel::Standard, "Horse Core Sync Tick: Current Horse Health={} Final Horse Health={}", static_cast<int>(currentHealth), finalHealth);
 
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
@@ -1370,7 +1370,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsho
                 "           CurrentStamina={},\n"
                 "           TargetStamina={},\n"
                 "           MinStaminaFloor={}", hoursDelta, activeStaminaDecay, currentStamina, finalStamina, minStaminaFloor);
-            LOG(LogLevel::Standard, "Horse Core Sync Tick: Stamina={}", finalStamina);
+            LOG(LogLevel::Standard, "Horse Core Sync Tick: Current Horse Stamina={} Final Horse Stamina={}", static_cast<int>(currentStamina), finalStamina);
 
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(horsePed, static_cast<int>(CoreIndex::Stamina), finalStamina);
 
