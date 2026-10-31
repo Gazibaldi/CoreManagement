@@ -1607,10 +1607,7 @@ bool IsInSaveLoadState(Ped playerPed) {
         g_State.lastTickInGameMinutes = g_State.cachedInGameTimeMinutes;
         g_State.accumulatedTimeMs = 0;
 
-		// benefit of the doubt, we assume the player has just slept (and at night)
-		g_playerTracker.RecordLastSleptDetails(CLOCK::_GET_SECONDS_SINCE_BASE_YEAR(), true);
-
-        g_State.timescaleDeltaInitialised = true;
+		g_State.timescaleDeltaInitialised = true;
 
         CalculateStateChangeTickIntervalMs();
     }

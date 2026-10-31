@@ -163,8 +163,25 @@ void PlayerTracker::RecordLastSleptDetails(int secondsSinceBaseYear, bool sleptA
 	// night sleep is tiredness starting at 24 hours after last sleep
 	// each hour of tiredness adds a 0.1 multiplier to dead eye decay, up to a maximum of 1.0 (10 hours of tiredness)
 
-	if (m_LastSleptSeconds < 0)
+    if (m_LastSleptSeconds < 0) {
+		// Give the player the benefit of the doubt if we don't have a record of their last sleep. We assume they are not tired.
+		// But we set the last slept time to 6am (or now if prior to 6am) this morning to start the tiredness clock ticking for future checks.
+
+        int currentHour = CLOCK::GET_CLOCK_HOURS();
+		if (currentHour < 6) {
+			m_LastSleptSeconds = secondsSinceBaseYear;
+		}
+	    else {
+		    int daysSinceBaseYear = (secondsSinceBaseYear / 3600) / 24;
+		    m_LastSleptSeconds = ((daysSinceBaseYear * 24) + 6) * 3600;
+	    }
+
+        m_LastSleptAtNight = true;
+
+		LOG_DEV("No record of last sleep. Assuming player is not tired. Setting last slept time to {} seconds since base year (based on current seconds since base year {}).", m_LastSleptSeconds, secondsSinceBaseYear);
+        
         return 0.0f;
+    }
 
 	float hoursSinceLastSleep = static_cast<float>(secondsSinceBaseYear - m_LastSleptSeconds) / 3600.0f;
 	float tirednessThreshold = m_LastSleptAtNight ? 24.0f : 16.0f;
