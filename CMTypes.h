@@ -54,7 +54,9 @@ struct GameplayContext {
     bool freezeActive = false;
     bool monitorTransientVarsDuringFreeze = false;
     bool isInMission = false;
+    bool EnableStandardMissionDecay = false;
     bool isInMinigame = false;
+    bool EnableStandardMinigameDecay = false;
     bool isInShop = false;
     bool isSleeping = false;
     bool isAtCamp = false;

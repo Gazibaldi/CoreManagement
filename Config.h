@@ -48,9 +48,14 @@ struct PlayerConfigSettings {
     float mountGallopStaminaMultiplier = 1.2f;
 
     float healthTimeSkipFloor = 25.0f;
+
     float campedHealthFloor = 15.0f;
     float campedStaminaFloor = 15.0f;
     float campedDeadEyeFloor = 15.0f;
+
+    float missionHealthFloor = 15.0f;
+    float missionStaminaFloor = 15.0f;
+    float missionDeadEyeFloor = 15.0f;
 };
 
 struct HorseConfigSettings {
@@ -62,8 +67,12 @@ struct HorseConfigSettings {
     float gallopStaminaMultiplier = 4.5f;
 
     float healthTimeSkipFloor = 25.0f;
+
     float campedHealthFloor = 15.0f;
     float campedStaminaFloor = 15.0f;
+
+    float missionHealthFloor = 15.0f;
+    float missionStaminaFloor = 15.0f;
 };
 
 struct ConfigSnapshot {

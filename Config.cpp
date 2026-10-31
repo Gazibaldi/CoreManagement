@@ -172,12 +172,12 @@ void BuildDefaultConfigFile() {
             << "; This should be low to capture mission triggers etc. The drain will be forced  in such cases\n"
             << "; Just leave it at 1000 unless it causes performance issues\n"
             << "; Adjust log level first though as that is definitely the first place to gain performance\n"
-			<< "; Minimum is 0.1 seconds (100 ms). Maximum interval is 1 second (1000 ms)\n"
+            << "; Minimum is 0.1 seconds (100 ms). Maximum interval is 1 second (1000 ms)\n"
             << "stateChangeTickIntervalMs = " << defaultCoreConfig.stateChangeTickIntervalMs << "\n"
             << "; This multiplier is applied to the state change tick interval when the player is in mission or minigame state\n"
             << "; The higher the value, the more the state change tick interval is increased, resulting in slower state changes but higher performance\n"
             << "; Only active if EnableDuringMissions or EnableDuringMinigames is false\n"
-			<< "; Minimum is 1.0 (no change). Maximum is 3.0 (3x slower)\n"
+            << "; Minimum is 1.0 (no change). Maximum is 3.0 (3x slower)\n"
             << "restrictedStateChangeTickIntervalMultiplier = " << defaultCoreConfig.restrictedStateChangeTickIntervalMultiplier << "\n\n"
 
             << "[Logging]\n"
@@ -187,7 +187,7 @@ void BuildDefaultConfigFile() {
             << "[General]\n"
             << "; length of in-game minute in real-time milliseconds (vanilla: 2000ms - 2 seconds)\n"
             << "; Minimum interval is 2 seconds (2000 ms). Maximum is 60 seconds (60000 ms)\n"
-           	<< "msPerInGameMinute = " << defaultGeneralConfig.msPerInGameMinute << "\n"
+            << "msPerInGameMinute = " << defaultGeneralConfig.msPerInGameMinute << "\n"
             << "; in-game hour in which night officially begins\n"
             << "; valid range : 18 - 22 (6pm - 10pm)\n"
             << "NightStartHour = " << defaultGeneralConfig.nightStartHour << "\n"
@@ -226,15 +226,23 @@ void BuildDefaultConfigFile() {
             << "MountedGallopStaminaMultiplier = " << defaultPlayerConfig.mountGallopStaminaMultiplier << "\n\n"
 
             << "[Floors]\n"
-            << "; minimum core levels in the event of a time skip (fast-travel, minigames, sleep).\n"
-            << "; is inactive for the corresponding gameplay type if EnableDuringMinigames is active. Always active for sleep and other events\n"
-            << "; in general gameplay these are ignored and you can drop to zero core\n"
-            << "; for example, when you sleep for 12 hours you will awaken with minimum cores of:\n"
-			<< "; Health - 15.0\n" // todo: add stamina and dead eye values here too, as well as a non -sleep example for the player to understand the difference between sleep and non-sleep time skips
-            << "HealthTimeSkipFloor = " << defaultPlayerConfig.healthTimeSkipFloor << "\n"
+            << "; Minimum core levels in the event of a time skip (fast-travel, sleep).\n"
+			<< "; The HealthTimeSkipFloor is the minimum HEALTH core level after a time skip.\n"
+			<< "; The CampedHealthFloor, CampedStaminaFloor, and CampedDeadEyeFloor are the minimum core levels when the player is in a camped state,\n"
+			<< "; or mini-game state when EnableDuringMinigames is disabled (e.g., poker, blackjack, etc.).\n"
+            << "; CampedStaminaFloor, and CampedDeadEyeFloor are also used in a sleep scenario. HealthTimeSkipFloor is a special case for sleep.\n"
+            << "; The mission based floor are only active if EnableDuringMissions or EnableDuringMinigames is active.\n"
+            << "; These floors ensure that the player's cores do not drop below a certain level during missions or minigames due to the core decay mechanics.\n"
+			<< "; The cores can still be depleted lower by other means such as damage or exertion.\n"
+            << "; In general open world gameplay these are ignored and you can drop to zero core\n"
+            << "; Also applies to horse cores as found below\n"
+            << "HealthTimeSkipFloor = " << defaultPlayerConfig.healthTimeSkipFloor << "\n\n"
             << "CampedHealthFloor = " << defaultPlayerConfig.campedHealthFloor << "\n"
             << "CampedStaminaFloor = " << defaultPlayerConfig.campedStaminaFloor << "\n"
-            << "CampedDeadEyeFloor = " << defaultPlayerConfig.campedDeadEyeFloor << "\n\n"
+            << "CampedDeadEyeFloor = " << defaultPlayerConfig.campedDeadEyeFloor << "\n"
+            << "MissionHealthFloor = " << defaultPlayerConfig.missionHealthFloor << "\n"
+            << "MissionStaminaFloor = " << defaultPlayerConfig.missionStaminaFloor << "\n"
+            << "MissionDeadEyeFloor = " << defaultPlayerConfig.missionDeadEyeFloor << "\n\n"
 
             << "[HorseBaseDecay]\n"
             << "; Points decay per in-game hour\n"
@@ -248,12 +256,11 @@ void BuildDefaultConfigFile() {
             << "HorseGallopStaminaMultiplier = " << defaultHorseConfig.gallopStaminaMultiplier << "\n\n"
 
             << "[HorseFloors]\n"
-            << "; minimum core levels in the event of a time skip (fast-travel, minigames, sleep).\n"
-            << "; is inactive for the corresponding gameplay type if EnableDuringMinigames is active. Always active for sleep and other events\n"
-            << "; in general gameplay these are ignored and you can drop to 0.0\n"
-            << "HorseHealthTimeSkipFloor = " << defaultHorseConfig.healthTimeSkipFloor << "\n"
+            << "HorseHealthTimeSkipFloor = " << defaultHorseConfig.healthTimeSkipFloor << "\n\n"
             << "CampedHorseHealthFloor = " << defaultHorseConfig.campedHealthFloor << "\n"
-            << "CampedHorseStaminaFloor = " << defaultHorseConfig.campedStaminaFloor << "\n";
+            << "CampedHorseStaminaFloor = " << defaultHorseConfig.campedStaminaFloor << "\n"
+            << "MissionHorseHealthFloor = " << defaultHorseConfig.missionHealthFloor << "\n"
+            << "MissionHorseStaminaFloor = " << defaultHorseConfig.missionStaminaFloor << "\n";
         outFile.close();
     }
 }
@@ -296,6 +303,9 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
         << "| Player: Health Camped Floor                 | " << std::setw(10) << playerConfig->campedHealthFloor << " |\n"
         << "| Player: Stamina Camped Floor                | " << std::setw(10) << playerConfig->campedStaminaFloor << " |\n"
         << "| Player: Dead Eye Camped Floor               | " << std::setw(10) << playerConfig->campedDeadEyeFloor << " |\n"
+        << "| Player: Health Mission Floor                | " << std::setw(10) << playerConfig->missionHealthFloor << " |\n"
+        << "| Player: Stamina Mission Floor               | " << std::setw(10) << playerConfig->missionStaminaFloor << " |\n"
+        << "| Player: Dead Eye Mission Floor              | " << std::setw(10) << playerConfig->missionDeadEyeFloor << " |\n"
         << "|                                             |            |\n"
         << "| Horse: Health Base Decay                    | " << std::setw(10) << horseConfig->baseHealthDecay << " |\n"
         << "| Horse: Stamina Base Decay                   | " << std::setw(10) << horseConfig->baseStaminaDecay << " |\n"
@@ -307,6 +317,8 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
         << "| Horse: Health Timeskip Floor                | " << std::setw(10) << horseConfig->healthTimeSkipFloor << " |\n"
         << "| Horse: Health Camped Floor                  | " << std::setw(10) << horseConfig->campedHealthFloor << " |\n"
         << "| Horse: Stamina Camped Floor                 | " << std::setw(10) << horseConfig->campedStaminaFloor << " |\n"
+        << "| Horse: Health Mission Floor                 | " << std::setw(10) << horseConfig->missionHealthFloor << " |\n"
+        << "| Horse: Stamina Mission Floor                | " << std::setw(10) << horseConfig->missionStaminaFloor << " |\n"
         << "+---------------------------------------------+------------+\n";
 
     LOG(LogLevel::ConfigOnly, "Internal Parameter Map Hydrated:\n{}", table.str());
@@ -365,6 +377,9 @@ void LoadConfiguration() {
     newPlayerConfig->campedHealthFloor = std::clamp(GetIniFloat("Floors", "CampedHealthFloor", defaultPlayerConfig.campedHealthFloor, g_IniPath.c_str()), 5.0f, 15.0f);
     newPlayerConfig->campedStaminaFloor = std::clamp(GetIniFloat("Floors", "CampedStaminaFloor", defaultPlayerConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 15.0f);
     newPlayerConfig->campedDeadEyeFloor = std::clamp(GetIniFloat("Floors", "CampedDeadEyeFloor", defaultPlayerConfig.campedDeadEyeFloor, g_IniPath.c_str()), 1.0f, 15.0f);
+    newPlayerConfig->missionHealthFloor = std::clamp(GetIniFloat("Floors", "MissionHealthFloor", defaultPlayerConfig.missionHealthFloor, g_IniPath.c_str()), 5.0f, 15.0f);
+    newPlayerConfig->missionStaminaFloor = std::clamp(GetIniFloat("Floors", "MissionStaminaFloor", defaultPlayerConfig.missionStaminaFloor, g_IniPath.c_str()), 1.0f, 15.0f);
+    newPlayerConfig->missionDeadEyeFloor = std::clamp(GetIniFloat("Floors", "MissionDeadEyeFloor", defaultPlayerConfig.missionDeadEyeFloor, g_IniPath.c_str()), 1.0f, 15.0f);
 
     newHorseConfig->baseHealthDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseHealthDecayBase", defaultHorseConfig.baseHealthDecay, g_IniPath.c_str()), 1.0f, 100.0f);
     newHorseConfig->baseStaminaDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", defaultHorseConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
@@ -376,6 +391,8 @@ void LoadConfiguration() {
     newHorseConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("HorseFloors", "HorseHealthTimeSkipFloor", defaultHorseConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 25.0f);
     newHorseConfig->campedHealthFloor = std::clamp(GetIniFloat("HorseFloors", "CampedHealthFloor", defaultHorseConfig.campedHealthFloor, g_IniPath.c_str()), 1.0f, 15.0f);
     newHorseConfig->campedStaminaFloor = std::clamp(GetIniFloat("HorseFloors", "CampedStaminaFloor", defaultHorseConfig.campedStaminaFloor, g_IniPath.c_str()), 1.0f, 15.0f);
+    newHorseConfig->missionHealthFloor = std::clamp(GetIniFloat("HorseFloors", "MissionHealthFloor", defaultHorseConfig.missionHealthFloor, g_IniPath.c_str()), 1.0f, 15.0f);
+    newHorseConfig->missionStaminaFloor = std::clamp(GetIniFloat("HorseFloors", "MissionStaminaFloor", defaultHorseConfig.missionStaminaFloor, g_IniPath.c_str()), 1.0f, 15.0f);
 
     switch (newCoreConfig->logLevelRaw) {
 	case 0:

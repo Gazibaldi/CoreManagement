@@ -27,7 +27,9 @@ struct DevLoggingCache {
     bool lastIsJailed = false;
     bool lastIsBathing = false;
     bool lastIsInMission = false;
-    bool lastIsInMinigame = false;
+    bool lastEnableStandardMissionDecay = false;
+    bool lastIsInMinigame = false;    
+    bool lastEnableStandardMinigameDecay = false;
     bool lastIsInTimeWarp = false;
 	bool lastIsInShop = false;
 };
@@ -133,7 +135,9 @@ bool HasDevLogCacheChanged(const GameplayContext& ctx) {
 		ctx.isJailed != g_LogCache.lastIsJailed ||
 		ctx.isBathing != g_LogCache.lastIsBathing ||
         ctx.isInMission != g_LogCache.lastIsInMission ||
+        ctx.EnableStandardMissionDecay != g_LogCache.lastEnableStandardMissionDecay ||
         ctx.isInMinigame != g_LogCache.lastIsInMinigame ||
+        ctx.EnableStandardMinigameDecay != g_LogCache.lastEnableStandardMinigameDecay ||
         ctx.isInTimeWarp != g_LogCache.lastIsInTimeWarp ||
         ctx.isInShop != g_LogCache.lastIsInShop);
 }
@@ -145,7 +149,9 @@ void UpdateDevLogCache(const GameplayContext& ctx) {
 	g_LogCache.lastIsJailed = ctx.isJailed;
 	g_LogCache.lastIsBathing = ctx.isBathing;
 	g_LogCache.lastIsInMission = ctx.isInMission;
-	g_LogCache.lastIsInMinigame = ctx.isInMinigame;
+    g_LogCache.lastEnableStandardMissionDecay = ctx.EnableStandardMissionDecay;
+	g_LogCache.lastIsInMinigame = ctx.isInMinigame;    
+    g_LogCache.lastEnableStandardMinigameDecay = ctx.EnableStandardMinigameDecay;
 	g_LogCache.lastIsInTimeWarp = ctx.isInTimeWarp;
 	g_LogCache.lastIsInShop = ctx.isInShop;
 }
@@ -157,7 +163,9 @@ void ClearDevLogCache() {
 	g_LogCache.lastIsJailed = false;
 	g_LogCache.lastIsBathing = false;
 	g_LogCache.lastIsInMission = false;
-	g_LogCache.lastIsInMinigame = false;
+    g_LogCache.lastEnableStandardMissionDecay = false;
+	g_LogCache.lastIsInMinigame = false;    
+    g_LogCache.lastEnableStandardMinigameDecay = false;
 	g_LogCache.lastIsInTimeWarp = false;
 	g_LogCache.lastIsInShop = false;
 }

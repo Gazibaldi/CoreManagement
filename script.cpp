@@ -284,7 +284,10 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 
     // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
     ctx.isInMission = isInMission && !generalConfig.enableDuringMissions;
+	ctx.EnableStandardMissionDecay = isInMission && generalConfig.enableDuringMissions; // special prop for tracking decay during missions/minigames if the config enables it
+
     ctx.isInMinigame = isInMinigame && !generalConfig.enableDuringMinigames;
+    ctx.EnableStandardMinigameDecay = isInMinigame && generalConfig.enableDuringMinigames; // special prop for tracking decay during missions/minigames if the config enables it
 
 	// If the player is in a mission or minigame, we don't allow hot-reload of the config to 
     // avoid potential issues with state changes during those events.
@@ -331,7 +334,9 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
         LOG_DEV(
             "Gameplay state changed: \n"
             "           isInMission={},\n"
+            "           EnableStandardMissionDecay={},\n"
             "           isInMinigame={},\n"
+            "           EnableStandardMinigameDecay={},\n"
             "           isFallingOrGoingToDie={},\n"
             "           isBathing={},\n"
             "           isSleeping={},\n"
@@ -340,7 +345,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
             "           isJailed={},\n"
             "           isInTimeWarp={},\n"
             "           isFreezeActive={}", 
-            ctx.isInMission, ctx.isInMinigame, isFallingOrGoingToDie, ctx.isBathing, ctx.isSleeping, ctx.isAtCamp, ctx.isInShop, ctx.isJailed, ctx.isInTimeWarp, ctx.freezeActive);
+            ctx.isInMission, ctx.EnableStandardMissionDecay, ctx.isInMinigame, ctx.EnableStandardMinigameDecay, isFallingOrGoingToDie, ctx.isBathing, ctx.isSleeping, ctx.isAtCamp, ctx.isInShop, ctx.isJailed, ctx.isInTimeWarp, ctx.freezeActive);
     }  
 
     return ctx;
@@ -1036,6 +1041,24 @@ bool IsDrainTickDue(int drainTickIntervalMs) {
 	return isCloseToNextTick;
 }
 
+int CalculatePostMissionThreshold(int msPerInGameMinute) {
+	// POST_MISSION_MIN_ELAPSED_MINUTES is based on a vanilla time of 2 seconds per in-game minute
+	// We need to adjust this based on the current msPerInGameMinute setting to ensure that the post-mission decay threshold is consistent with the player's configured time scale.
+	// e.g. If the player has set the time scale to 6 second per in-game minute, the post-mission decay threshold should be 3 times shorter to account for the slower time scale
+    // meaning the mission takes less in-game time to complete (30 min threshold becomes 10 min).
+	// minimum threshold is 10 minutes, maximum threshold is 60 minutes
+
+	if (msPerInGameMinute == VANILLA_GAME_TIME_SCALE) {
+		LOG_DEV("Post-mission decay threshold is based on the vanilla game time scale. No adjustment needed.");
+		return POST_MISSION_MIN_ELAPSED_MINUTES;
+	}
+
+	int adjustedThreshold = std::max(static_cast<int>(POST_MISSION_MIN_ELAPSED_MINUTES * (VANILLA_GAME_TIME_SCALE / msPerInGameMinute)), 10);
+	LOG_DEV("Post-mission decay threshold adjusted based on configured game time scale. Original threshold: {} minutes, Adjusted threshold: {} minutes (msPerInGameMinute: {}).", POST_MISSION_MIN_ELAPSED_MINUTES, adjustedThreshold, msPerInGameMinute);
+	
+    return adjustedThreshold;
+}
+
 void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int currentTotalMinutes, const ConfigSnapshot& config) {
     if (ctx.freezeActive && !g_State.isRestricted) {
         g_State.isRestricted = true;
@@ -1125,7 +1148,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             }
             else if (g_State.wasInMissionDuringRestriction)
             {
-                if (elapsedMinutes >= POST_MISSION_MIN_ELAPSED_MINUTES)
+                if (elapsedMinutes >= CalculatePostMissionThreshold(config.GeneralConfig.msPerInGameMinute))
                 {
                     g_State.PostMissionDecayHoursRemaining += POST_MISSION_DECAY_HOURS;
 
@@ -1153,11 +1176,11 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         g_State.wasSleepingDuringRestriction = false;
         g_State.restrictedSleepingState = SleepingState::NotSleeping;
         g_State.wasInMinigameDuringRestriction = false;
-		g_State.wasInMissionDuringRestriction = false;  
+		g_State.wasInMissionDuringRestriction = false;
         g_State.wasInTimeWarpDuringRestriction = false;
         
         // Reset the cached bathing state and money to prevent false positives on future bathing checks
-        g_State.restrictedBathingState = BathingState::NotBathing;        
+        g_State.restrictedBathingState = BathingState::NotBathing;
         g_State.cachedMoney = 0;
     }
 
@@ -1200,7 +1223,7 @@ float CalculateTimescaleDelta(int currentTotalMinutes) {
     return static_cast<float>(gameMinutesDelta) / 60.0f;
 }
 
-void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapshot& config) {
+void ProcessPlayerSimulation(GameplayContext& ctx, Ped playerPed, float hoursDelta, const ConfigSnapshot& config) {
     bool isHealthGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::Health));
 	bool isStaminaGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::Stamina));
 	bool isDeadEyeGold = ATTRIBUTE::_IS_ATTRIBUTE_CORE_OVERPOWERED(playerPed, static_cast<int>(CoreIndex::DeadEye));
@@ -1231,8 +1254,10 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
 
         float targetHealth = currentHealth - (activeHealthDecay * hoursDelta);
 
-        // The player is semi restrained (jail/camp), so we apply the player's restrained floor to prevent full depletion
-		float minHealthFloor = isAtCamp ? config.PlayerConfig.campedHealthFloor : 0.0f;          
+        // If the player is semi restrained (jail/camp), so we apply the player's restrained floor to prevent full depletion
+		// If the player is in a mission or minigame (this logic can only occur if EnableDuringMissions or EnableDuringMinigames is true), we apply the mission floor to prevent full depletion
+		// Otherwise, we apply the no floor to allow full depletion
+		float minHealthFloor = isAtCamp ? config.PlayerConfig.campedHealthFloor : (ctx.EnableStandardMissionDecay || ctx.EnableStandardMinigameDecay) ? config.PlayerConfig.missionHealthFloor : 0.0f;          
         
         int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
@@ -1255,7 +1280,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
         float activeStaminaDecay = config.PlayerConfig.baseStaminaDecay * CalculatePlayerStaminaDecayMultiplier(config.PlayerConfig, playerPed, passives.totalStaminaReduction, applyPostMissionDecay, isAtCamp);
 
         float targetStamina = currentStamina - (activeStaminaDecay * hoursDelta);
-        float minStaminaFloor = isAtCamp ? config.PlayerConfig.campedStaminaFloor : 0.0f;
+        float minStaminaFloor = isAtCamp ? config.PlayerConfig.campedStaminaFloor : (ctx.EnableStandardMissionDecay || ctx.EnableStandardMinigameDecay) ? config.PlayerConfig.missionStaminaFloor : 0.0f;
         
         int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, minStaminaFloor));
             
@@ -1281,7 +1306,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
         float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, playerPed, passives.totalDeadEyeReduction, applyPostMissionDecay, isAtCamp, isNighttime);
 
         float targetDeadEye = currentDeadEye - (activeDeadEyeDecay * hoursDelta);
-        float minDeadEyeFloor = isAtCamp ? config.PlayerConfig.campedDeadEyeFloor : 0.0f;
+        float minDeadEyeFloor = isAtCamp ? config.PlayerConfig.campedDeadEyeFloor : (ctx.EnableStandardMissionDecay || ctx.EnableStandardMinigameDecay) ? config.PlayerConfig.missionDeadEyeFloor : 0.0f;
 
         int finalDeadEye = BUILTIN::FLOOR(std::max(targetDeadEye, minDeadEyeFloor));
 
@@ -1301,7 +1326,7 @@ void ProcessPlayerSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsh
     }
 }
 
-void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const ConfigSnapshot& config) {
+void ProcessHorseSimulation(GameplayContext& ctx, Ped playerPed, float hoursDelta, const ConfigSnapshot& config) {
     auto [horsePed, hasHorse] = g_HorseManager.GetActivePlayerHorse(playerPed);
 
 	if (!hasHorse)
@@ -1326,7 +1351,11 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsho
         float activeHealthDecay = config.HorseConfig.baseHealthDecay * CalculateHorseHealthDecayMultiplier(config.PlayerConfig, horsePed, isAtCamp);
 
 		float targetHealth = currentHealth - (activeHealthDecay * hoursDelta);
-		float minHealthFloor = isAtCamp ? config.HorseConfig.campedHealthFloor : 0.0f; //the player is semi restrained (jail/camp/bath), so we apply the horse's restrained floor to prevent full depletion
+
+        // If the player is semi restrained (jail/camp), so we apply the horse's restrained floor to prevent full depletion
+        // If the player is in a mission or minigame (this logic can only occur if EnableDuringMissions or EnableDuringMinigames is true), we apply the mission floor to prevent full depletion
+        // Otherwise, we apply the no floor to allow full depletion
+		float minHealthFloor = isAtCamp ? config.HorseConfig.campedHealthFloor : (ctx.EnableStandardMissionDecay || ctx.EnableStandardMinigameDecay) ? config.HorseConfig.missionHealthFloor : 0.0f;
 
         int finalHealth = BUILTIN::FLOOR(std::max(targetHealth, minHealthFloor));
 
@@ -1386,7 +1415,7 @@ void ProcessHorseSimulation(Ped playerPed, float hoursDelta, const ConfigSnapsho
             float activeStaminaDecay = config.HorseConfig.baseStaminaDecay * CalculateHorseStaminaDecayMultiplier(config.PlayerConfig, config.HorseConfig, horsePed, isAtCamp);
             
             float targetStamina = currentStamina - (activeStaminaDecay * hoursDelta);
-            float minStaminaFloor = isAtCamp ? config.HorseConfig.campedStaminaFloor : 0.0f;
+            float minStaminaFloor = isAtCamp ? config.HorseConfig.campedStaminaFloor : (ctx.EnableStandardMissionDecay || ctx.EnableStandardMinigameDecay) ? config.HorseConfig.missionStaminaFloor : 0.0f;
 
             int finalStamina = BUILTIN::FLOOR(std::max(targetStamina, minStaminaFloor));
 
@@ -1635,8 +1664,8 @@ void UpdateCoreSimulation() {
             else if (hoursDelta > 0.0f && hoursDelta < 24.0f) {
                 LOG(LogLevel::Standard, "Processing normal core simulation for elapsed hours: {:.4f}", hoursDelta);
 
-                ProcessPlayerSimulation(playerPed, hoursDelta, config);
-                ProcessHorseSimulation(playerPed, hoursDelta, config);
+                ProcessPlayerSimulation(context, playerPed, hoursDelta, config);
+                ProcessHorseSimulation(context, playerPed, hoursDelta, config);
 
                 g_playerTracker.ResetSnapshot();
 
