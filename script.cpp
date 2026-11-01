@@ -670,8 +670,8 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
     if (!isDeadEyeGold) {
         // SPECIAL GOLDEN DEADEYE CORE REWARD (Bathing Deluxe Service (Maid))
         if (g_State.restrictedBathingState == BathingState::DeluxeBathing) {
-            LOG(LogLevel::Standard, "Player Bathing Deluxe Service: Dead Eye is now golden and fully fortified for {} in game hours.", CORE_OVERPOWER_LENGTH_MINS / 60.0f);
-            ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * CORE_OVERPOWER_LENGTH_MINS, true);
+            LOG(LogLevel::Standard, "Player Bathing Deluxe Service: Dead Eye is now golden and fully fortified for {} in game hours.", CORE_OVERPOWER_DEADEYE_BATH_LENGTH_MINS / 60.0f);
+            ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * CORE_OVERPOWER_DEADEYE_BATH_LENGTH_MINS, true);
         }
         else {
 			float targetDeadEye = startDeadEye;
