@@ -587,9 +587,6 @@ float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerCon
     else
         multiplier = GetHorseSpeedStaminaDecayMultiplier(horseConfig);
     
-    if (g_HorseManager.IsHorseDirty(horsePed))
-        multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
-
     return std::max(multiplier, 0.1f);
 }
 
