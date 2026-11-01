@@ -426,10 +426,13 @@ float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerCon
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
-    LOG(LogLevel::Verbose, "Active player passive modifiers: Health Reduction={:.4f}", totalPassiveHealthModifierReduction);
 	multiplier -= totalPassiveHealthModifierReduction;
+
+	float finalMultiplier = std::max(multiplier, 0.1f);
+
+    LOG(LogLevel::Verbose, "Active player passive modifiers: Health Reduction={:.4f}", finalMultiplier);
     
-    return std::max(multiplier, 0.1f);
+    return finalMultiplier;
 }
 
 float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, float totalPassiveStaminaModifierReduction, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false) {
@@ -457,10 +460,13 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
-    LOG(LogLevel::Verbose, "Active player passive modifiers: Stamina Reduction={}", totalPassiveStaminaModifierReduction);
     multiplier -= totalPassiveStaminaModifierReduction;
 
-    return std::max(multiplier, 0.1f);
+    float finalMultiplier = std::max(multiplier, 0.1f);
+
+    LOG(LogLevel::Verbose, "Active player passive modifiers: Stamina Reduction={:.4f}", finalMultiplier);
+
+    return finalMultiplier;
 }
 
 float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, float totalPassiveDeadEyeModifierReduction, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false, bool isNighttime = false) {
@@ -491,10 +497,13 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
-    LOG(LogLevel::Verbose, "Active player passive modifiers: Dead Eye Reduction={:.4f}", totalPassiveDeadEyeModifierReduction);
     multiplier -= totalPassiveDeadEyeModifierReduction;
 
-    return std::max(multiplier, 0.1f);
+    float finalMultiplier = std::max(multiplier, 0.1f);
+
+    LOG(LogLevel::Verbose, "Active player passive modifiers: Dead Eye Reduction={:.4f}", finalMultiplier);
+
+    return finalMultiplier;
 }
 
 float CalculatePlayerStaminaSleepReplenish(float currentStamina, float elapsedHours,bool isNighttime, bool isHotelRoom) {
@@ -576,7 +585,11 @@ float CalculateHorseHealthDecayMultiplier(const PlayerConfigSettings& playerConf
     if(g_HorseManager.IsHorseDirty(horsePed))
         multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
 
-    return std::max(multiplier, 0.1f);
+    float finalMultiplier = std::max(multiplier, 0.1f);
+
+    LOG(LogLevel::Verbose, "Active Horse passive modifiers: Health Reduction={:.4f}", finalMultiplier);
+
+    return finalMultiplier;
 }
 
 float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig, Ped horsePed, bool isPlayerSemiRestrained = false) {
@@ -587,7 +600,11 @@ float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerCon
     else
         multiplier = GetHorseSpeedStaminaDecayMultiplier(horseConfig);
     
-    return std::max(multiplier, 0.1f);
+    float finalMultiplier = std::max(multiplier, 0.1f);
+
+    LOG(LogLevel::Verbose, "Active Horse passive modifiers: Stamina Reduction={:.4f}", finalMultiplier);
+
+    return finalMultiplier;
 }
 
 float CalculateHorseStaminaSleepReplenish(float currentStamina, float elapsedHours, bool isNighttime, bool isHotelRoom) {
