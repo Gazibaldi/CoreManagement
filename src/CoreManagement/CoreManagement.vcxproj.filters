@@ -15,7 +15,6 @@
     <ClCompile Include="Functions.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\inc\natives.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ThreadManager.h" />
@@ -41,6 +40,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\inc\types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\natives.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
