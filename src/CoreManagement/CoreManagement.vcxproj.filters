@@ -15,12 +15,7 @@
     <ClCompile Include="Functions.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\inc\script.h" />
-    <ClInclude Include="keyboard.h" />
-    <ClInclude Include="..\..\inc\main.h" />
-    <ClInclude Include="..\..\inc\enums.h" />
     <ClInclude Include="..\..\inc\natives.h" />
-    <ClInclude Include="..\..\inc\types.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ThreadManager.h" />
@@ -30,7 +25,24 @@
     <ClInclude Include="PlayerTracker.h" />
     <ClInclude Include="HorseManager.h" />
     <ClInclude Include="InventoryManager.h" />
-    <ClInclude Include="..\..\inc\magic_enum.hpp" />
+    <ClInclude Include="..\..\inc\enums.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="keyboard.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\magic_enum.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\main.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\script.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\types.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">
