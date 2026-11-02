@@ -3,8 +3,8 @@
 */
 #include <tuple>
 #include <string>
-#include "..\CoreSDK\inc\natives.h"
-#include "..\CoreSDK\inc\types.h"
+#include "..\..\inc\natives.h"
+#include "..\..\inc\types.h"
 #include "HorseManager.h"
 #include "Logger.h"
 #include "CMTypes.h"

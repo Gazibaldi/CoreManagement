@@ -5,7 +5,7 @@
 #define NOMINMAX
 
 #include <algorithm>
-#include "..\CoreSDK\inc\natives.h"
+#include "..\..\inc\natives.h"
 #include "PlayerTracker.h"
 #include "Logger.h"
 #include "HorseManager.h"

@@ -4,8 +4,8 @@
 
 #include <span>
 #include <algorithm>
-#include "..\CoreSDK\inc\types.h"
-#include "..\CoreSDK\inc\natives.h"
+#include "..\..\inc\types.h"
+#include "..\..\inc\natives.h"
 #include "Functions.h"
 #include "Logger.h"
 

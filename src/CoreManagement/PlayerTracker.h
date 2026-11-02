@@ -4,7 +4,7 @@
 
 #pragma once
 #include <array>
-#include "..\CoreSDK\inc\types.h"
+#include "..\..\inc\types.h"
 #include "CMTypes.h"
 
 class PlayerTracker {

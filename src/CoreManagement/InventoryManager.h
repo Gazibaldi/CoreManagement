@@ -6,7 +6,7 @@
 #include <array>
 #include <string>
 #include <format>
-#include "..\CoreSDK\inc\types.h"
+#include "..\..\inc\types.h"
 #include "CMTypes.h"
 
 struct RDR_GUID

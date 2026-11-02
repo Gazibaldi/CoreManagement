@@ -4,7 +4,7 @@
 
 #pragma once
 #include <span>
-#include "..\CoreSDK\inc\types.h"
+#include "..\..\inc\types.h"
 
 [[nodiscard]] Hash GetKey(const char* key) noexcept;
 [[nodiscard]] bool IsInActiveScenario(Ped playerPed, std::span<const Hash> scenarioSet, const char* scenarioName) noexcept;

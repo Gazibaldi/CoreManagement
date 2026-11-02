@@ -11,9 +11,9 @@
 #include <cstdlib>
 #include <array>
 #include <cmath>
-#include "..\CoreSDK\inc\natives.h"
-#include "..\CoreSDK\inc\types.h"
-#include "script.h"
+#include "..\..\inc\natives.h"
+#include "..\..\inc\types.h"
+#include "..\..\inc\script.h"
 #include "Logger.h"
 #include "Config.h"
 #include "ThreadManager.h"

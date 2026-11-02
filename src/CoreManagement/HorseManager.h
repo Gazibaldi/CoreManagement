@@ -5,7 +5,7 @@
 #pragma once
 
 #include <tuple>
-#include "..\CoreSDK\inc\types.h"
+#include "..\..\inc\types.h"
 #include "CMTypes.h"
 
 enum class ActiveHorseType : int { Mounted, Active, Either };

@@ -4,7 +4,7 @@
 
 #pragma once
 #include <string_view>
-#include "..\CoreSDK\inc\types.h"
+#include "..\..\inc\types.h"
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
