@@ -413,7 +413,7 @@ float GetHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig
     }
 }
 
-float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerConfig, float totalPassiveHealthModifierReduction, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false) {
+float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, float totalPassiveHealthModifierReduction, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained) {
@@ -425,6 +425,8 @@ float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerCon
         LOG(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission health decay multiplier.");
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
+
+	multiplier += g_playerTracker.GetPlayerWeightModifier(playerPed, CoreIndex::Health);
 
 	multiplier -= totalPassiveHealthModifierReduction;
 
@@ -459,6 +461,9 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
         LOG(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission stamina decay multiplier.");
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
+
+    multiplier += g_playerTracker.GetPlayerWeightModifier(playerPed, CoreIndex::Stamina);
+	multiplier += g_playerTracker.GetPlayerDrunknessStaminaModifier(playerPed);
 
     multiplier -= totalPassiveStaminaModifierReduction;
 
@@ -496,6 +501,8 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
         LOG(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission dead eye decay multiplier.");
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
+
+    multiplier += g_playerTracker.GetPlayerWeightModifier(playerPed, CoreIndex::DeadEye);
 
     multiplier -= totalPassiveDeadEyeModifierReduction;
 
@@ -585,6 +592,8 @@ float CalculateHorseHealthDecayMultiplier(const PlayerConfigSettings& playerConf
     if(g_HorseManager.IsHorseDirty(horsePed))
         multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
 
+	multiplier += g_HorseManager.GetHorseWeightModifier(horsePed, CoreIndex::Health);
+
     float finalMultiplier = std::max(multiplier, 0.1f);
 
     LOG(LogLevel::Verbose, "Active Horse passive modifiers: Health Reduction={:.4f}", finalMultiplier);
@@ -592,13 +601,16 @@ float CalculateHorseHealthDecayMultiplier(const PlayerConfigSettings& playerConf
     return finalMultiplier;
 }
 
-float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig, Ped horsePed, bool isPlayerSemiRestrained = false) {
+float CalculateHorseStaminaDecayMultiplier(const PlayerConfigSettings& playerConfig, const HorseConfigSettings& horseConfig, Ped horsePed, Ped playerPed, bool isPlayerSemiRestrained = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained)
         multiplier = playerConfig.campedMultiplier;
     else
         multiplier = GetHorseSpeedStaminaDecayMultiplier(horseConfig);
+
+    multiplier += g_HorseManager.GetHorseWeightModifier(horsePed, CoreIndex::Stamina);
+	multiplier += g_HorseManager.GetMountedPlayerWeightStaminaModifier(horsePed, playerPed);
     
     float finalMultiplier = std::max(multiplier, 0.1f);
 
@@ -638,7 +650,7 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
     CombinedPlayerCoreModifiers passives = g_InventoryManager.GetActivePlayerPassiveModifiers();
 
     if (!isHealthGold) {
-        float activeHealthDecay = config.PlayerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(config.PlayerConfig, passives.totalHealthReduction);
+        float activeHealthDecay = config.PlayerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(config.PlayerConfig, playerPed, passives.totalHealthReduction);
         float targetHealth = startHealth - (elapsedHours * activeHealthDecay);
 
         int finalHealth = static_cast<int>(std::max(targetHealth, config.PlayerConfig.campedHealthFloor));
@@ -807,7 +819,7 @@ void ApplyBatchTimeSkipDecay(
 
 	// Health Core Decay Logic
     if (!isHealthGold) {
-        float activeHealthDecay = config.PlayerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(config.PlayerConfig, passives.totalHealthReduction, applyPostMissionDecay);
+        float activeHealthDecay = config.PlayerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(config.PlayerConfig, playerPed, passives.totalHealthReduction, applyPostMissionDecay);
         float targetHealth = startHealth - (elapsedHours * activeHealthDecay);
 
         float minHealthFloor = wasSleeping ? config.PlayerConfig.healthTimeSkipFloor : config.PlayerConfig.campedHealthFloor;
@@ -968,7 +980,7 @@ void ApplyBatchTimeSkipDecay(
             else if (!isStaminaGold) {
                 // Standard macro transit decay (Trains/Stagecoaches)
                 // Normal dynamic movement decay route
-                float activeStaminaDecay = config.HorseConfig.baseStaminaDecay * CalculateHorseStaminaDecayMultiplier(config.PlayerConfig, config.HorseConfig, activeHorse, passives.totalStaminaReduction);
+                float activeStaminaDecay = config.HorseConfig.baseStaminaDecay * CalculateHorseStaminaDecayMultiplier(config.PlayerConfig, config.HorseConfig, activeHorse, playerPed, passives.totalStaminaReduction);
 
                 float targetStamina = startHorseStamina - (elapsedHours * activeStaminaDecay);
                 
@@ -1277,7 +1289,7 @@ void ProcessPlayerSimulation(GameplayContext& ctx, Ped playerPed, float hoursDel
     bool isAtCamp = g_playerTracker.IsPlayerAtCamp(playerPed, false);
     
     if (!isHealthGold) {
-        float activeHealthDecay = config.PlayerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(config.PlayerConfig, passives.totalHealthReduction, applyPostMissionDecay, isAtCamp);
+        float activeHealthDecay = config.PlayerConfig.baseHealthDecay * CalculatePlayerHealthDecayMultiplier(config.PlayerConfig, playerPed, passives.totalHealthReduction, applyPostMissionDecay, isAtCamp);
 
         float targetHealth = currentHealth - (activeHealthDecay * hoursDelta);
 
@@ -1439,7 +1451,7 @@ void ProcessHorseSimulation(GameplayContext& ctx, Ped playerPed, float hoursDelt
 		}
         else {
             // Normal dynamic movement decay route
-            float activeStaminaDecay = config.HorseConfig.baseStaminaDecay * CalculateHorseStaminaDecayMultiplier(config.PlayerConfig, config.HorseConfig, horsePed, isAtCamp);
+            float activeStaminaDecay = config.HorseConfig.baseStaminaDecay * CalculateHorseStaminaDecayMultiplier(config.PlayerConfig, config.HorseConfig, horsePed, playerPed, isAtCamp);
             
             float targetStamina = currentStamina - (activeStaminaDecay * hoursDelta);
             float minStaminaFloor = isAtCamp ? config.HorseConfig.campedStaminaFloor : (ctx.EnableStandardMissionDecay || ctx.EnableStandardMinigameDecay) ? config.HorseConfig.missionStaminaFloor : 0.0f;

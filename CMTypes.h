@@ -13,6 +13,33 @@ enum class BathingState : int { NotBathing = 0, StandardBathing = 1, DeluxeBathi
 enum class SleepingState : int { NotSleeping = 0, Wilderness = 1, Hotel = 2 };
 enum class StateChangeIntervalType : int { NotSet, Standard, Restricted };
 
+enum ePedAttribute
+{
+    PA_HEALTH,
+    PA_STAMINA,
+    PA_SPECIALABILITY,
+    PA_COURAGE,
+    PA_AGILITY,
+    PA_SPEED,
+    PA_ACCELERATION,
+    PA_BONDING,
+    SA_HUNGER,
+    SA_FATIGUED,
+    SA_INEBRIATED,
+    SA_POISONED,
+    SA_BODYHEAT,
+    SA_BODYWEIGHT,
+    SA_OVERFED,
+    SA_SICKNESS,
+    SA_DIRTINESS,
+    SA_DIRTINESSHAT,
+    MTR_STRENGTH,
+    MTR_GRIT,
+    MTR_INSTINCT,
+    PA_UNRULINESS,
+    SA_DIRTINESSSKIN
+};
+
 struct SimulationState {
     bool isRestricted = false;
 	bool MonitorTransientVariablesDuringRestriction = false;

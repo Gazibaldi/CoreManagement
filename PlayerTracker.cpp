@@ -10,9 +10,13 @@
 #include "Logger.h"
 #include "HorseManager.h"
 #include "Functions.h"
+#include "CMTypes.h"
 
 const float PLAYER_DIRT_THRESHOLD = 0.5f;
 const float PLAYER_CAMP_THRESHOLD = 0.66f;
+
+const float WEIGHT_PLAYER_OVERWEIGHT_THRESHOLD = 83.0f;
+const float WEIGHT_PLAYER_UNDERWEIGHT_THRESHOLD = 17.0f;
 
 void PlayerTracker::ComputeHashes() noexcept {
     m_CampScenarios = { {
@@ -82,7 +86,9 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
         m_PlayerFootSum += playerSpeed;
         m_PlayerFootSamples++;
-    }  
+    }
+
+	m_PlayerDrunknessSum += ATTRIBUTE::GET_ATTRIBUTE_POINTS(playerPed, ePedAttribute::SA_INEBRIATED);
 
     if (m_LastSleptSeconds == -1) {
         // Give the player the benefit of the doubt if we don't have a record of their last sleep. We assume they are not tired.
@@ -198,6 +204,73 @@ void PlayerTracker::RecordLastSleptDetails(int secondsSinceBaseYear, bool sleptA
     return 0.0f;
 }
 
+[[nodiscard]] float PlayerTracker::GetPlayerWeightModifier(Ped playerPed, CoreIndex core) noexcept {
+	// weight is a simple tracker as it only updates every 12 in-game hours so we just return the current weight modifier from the player ped
+
+    int weightIndex = ATTRIBUTE::GET_ATTRIBUTE_POINTS(playerPed, ePedAttribute::SA_BODYWEIGHT);
+
+    bool isOverweight = weightIndex >= WEIGHT_PLAYER_OVERWEIGHT_THRESHOLD;
+    bool isUnderweight = weightIndex <= WEIGHT_PLAYER_UNDERWEIGHT_THRESHOLD;
+
+    LOG_DEV("GetPlayerWeightModifier: Weight index={}, Overweight={}, Underweight={}", weightIndex, isOverweight, isUnderweight);
+
+    float modifier = 0.0f;
+
+	switch (core) {
+	    case CoreIndex::Health:
+        case CoreIndex::Stamina:
+		    // If the player is overweight or underweight, we apply a 25% penalty to health and stamina decay.
+			modifier = isOverweight || isUnderweight ? 0.25f : 0.0f;
+
+			if (modifier > 0.0f)
+				LOG(LogLevel::Verbose, "Player weight modifier applied for {} core: {:.2f}, Player Weight={}", (core == CoreIndex::Health ? "Health" : "Stamina"), modifier, isOverweight ? "Overweight" : "Underweight");
+			else
+				LOG(LogLevel::Verbose, "No player weight modifier applied for {} core., Player Weight is Perfect/Average", (core == CoreIndex::Health ? "Health" : "Stamina"), modifier);
+
+            break;
+	    case CoreIndex::DeadEye:
+		    // If the player is overweight or underweight, we apply a 10% penalty to dead eye decay. 
+			modifier = isOverweight || isUnderweight ? 0.10f : 0.0f;
+
+            if (modifier > 0.0f)
+                LOG(LogLevel::Verbose, "Player weight modifier applied for {} core: {:.2f}, Player Weight={}", (core == CoreIndex::Health ? "Health" : "Stamina"), modifier, isOverweight ? "Overweight" : "Underweight");
+            else
+                LOG(LogLevel::Verbose, "No player weight modifier applied for {} core., Player Weight is Perfect/Average", (core == CoreIndex::Health ? "Health" : "Stamina"), modifier);
+
+            break;
+	    default:
+            break;
+	}
+    
+    return modifier;
+}
+
+[[nodiscard]] float PlayerTracker::GetPlayerDrunknessStaminaModifier(Ped playerPed) noexcept {
+    int drunkness = 0;
+
+    if (m_PlayerDrunknessSum == 0.0f || m_PlayerSamples == 0) {
+        LOG_DEV("No drunkness samples recorded. returning 0.0f.");
+        drunkness = 50;
+    }
+    else {
+        // average drunkness level over the samples taken during the drain tick
+        drunkness = static_cast<int>(m_PlayerDrunknessSum / m_PlayerSamples);
+    }
+
+	// 50 is the baseline for drunkness. Below or equal to 50 is considered not drunk, 
+    // and above 50 is considered drunk. The penalty scales with the level of drunkness.
+    if (drunkness <= 50) {
+		LOG(LogLevel::Verbose, "Player is not drunk. No penalty applied to stamina decay.");
+        return 0.0f;
+    }
+
+	// We apply a growing penalty to stamina decay based on the drunkness level. The penalty is 0.1% for every point above 50, capped at a maximum of 5% (0.05).
+	float modifier = std::min((drunkness - 50) * 0.001f, 0.05f);
+	LOG(LogLevel::Verbose, "Player is drunk. Average Drunkness level: {}, Stamina decay penalty applied: {:.4f}", drunkness, modifier);
+
+	return modifier;
+}
+
 void PlayerTracker::ResetSnapshot(bool includeSleepDetails) noexcept {
 	LOG_DEV("Resetting PlayerTracker state.");
 
@@ -209,6 +282,8 @@ void PlayerTracker::ResetSnapshot(bool includeSleepDetails) noexcept {
 
 	m_HorseSum = 0.0f;
 	m_HorseSamples = 0;
+
+    m_PlayerDrunknessSum = 0.0f;
 	
     if (includeSleepDetails) {
 		m_LastSleptSeconds = -1;

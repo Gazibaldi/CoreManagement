@@ -23,7 +23,7 @@ const bool ALLOW_DEV_LOGGING = true;
 const bool ALLOW_DEV_LOGGING = false;
 #endif
 
-const std::string VERSION = "v0.12-ALPHA";
+const std::string VERSION = "v0.13-ALPHA";
 
 std::atomic<std::shared_ptr<CoreConfigSettings>> g_CoreConfig{ std::make_shared<CoreConfigSettings>() };
 std::atomic<std::shared_ptr<GeneralConfigSettings>> g_GeneralConfig{ std::make_shared<GeneralConfigSettings>() };

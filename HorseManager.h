@@ -6,6 +6,7 @@
 
 #include <tuple>
 #include "..\CoreSDK\inc\types.h"
+#include "CMTypes.h"
 
 enum class ActiveHorseType : int { Mounted, Active, Either };
 
@@ -42,6 +43,9 @@ public:
     [[nodiscard]] float GetHorseLeadReward(float hoursDelta) noexcept;
 
     [[nodiscard]] bool IsHorseDirty(Ped horsePed) noexcept;
+
+    [[nodiscard]] float GetHorseWeightModifier(Ped horsePed, CoreIndex core) noexcept;
+	[[nodiscard]] float GetMountedPlayerWeightStaminaModifier(Ped horsePed, Ped playerPed) noexcept;
     
     void ResetSnapshot() noexcept;
 };

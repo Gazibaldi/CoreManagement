@@ -5,6 +5,7 @@
 #pragma once
 #include <array>
 #include "..\CoreSDK\inc\types.h"
+#include "CMTypes.h"
 
 class PlayerTracker {
     int m_PlayerSamples = 0;
@@ -20,6 +21,8 @@ class PlayerTracker {
 	float m_PlayerAccumulatedDirt = 0.0f;
 	int m_PlayerCampSamples = 0;
 
+	int m_PlayerDrunknessSum = 0;
+
     std::array<Hash, 33> m_CampScenarios{};
 
 	// sleep tracking
@@ -33,8 +36,15 @@ public:
 
     [[nodiscard]] float GetPlayerOnFootSpeed() noexcept;
     [[nodiscard]] float GetHorseAverageSpeed() noexcept;
+
     [[nodiscard]] bool IsPlayerDirty(Ped playerPed) noexcept;
+
     [[nodiscard]] bool IsPlayerAtCamp(Ped playerPed, bool rightNow, bool logOutcome = true) noexcept;
+
 	[[nodiscard]] float GetPlayerTiredness(Ped playerPed, int currentHour) noexcept;
+
+    [[nodiscard]] float GetPlayerWeightModifier(Ped playerPed, CoreIndex core) noexcept;
+    [[nodiscard]] float GetPlayerDrunknessStaminaModifier(Ped playerPed) noexcept;
+
     void ResetSnapshot(bool includeSleepDetails = false) noexcept;
 };

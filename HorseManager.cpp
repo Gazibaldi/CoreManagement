@@ -7,6 +7,7 @@
 #include "..\CoreSDK\inc\types.h"
 #include "HorseManager.h"
 #include "Logger.h"
+#include "CMTypes.h"
 
 HorseManager g_HorseManager;
 
@@ -16,6 +17,12 @@ const float HORSE_HITCHED_REWARD_PER_GAME_HOUR = 5.0f;
 const float HORSE_LEAD_REWARD_PER_GAME_HOUR = 10.0f;
 
 const float HORSE_DIRT_THRESHOLD = 0.5f; // Arbitrary threshold for determining if a horse is considered dirty
+
+const float WEIGHT_PLAYER_OVERWEIGHT_THRESHOLD = 83.0f;
+
+const float WEIGHT_HORSE_OVERWEIGHT_THRESHOLD = 70.0f;
+const float WEIGHT_HORSE_MALNOURISHED_THRESHOLD = 9.0f;
+const float WEIGHT_HORSE_THIN_THRESHOLD = 29.0f;
 
 std::tuple<Ped, bool> HorseManager::GetPlayerMountedHorse(Ped playerPed) noexcept {
     Ped activeHorse = PED::GET_MOUNT(playerPed);
@@ -271,6 +278,73 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
         LOG_DEV("Player does not have an active unmounted horse.");
         ResetSnapshot();
     }
+}
+
+[[nodiscard]] float HorseManager::GetHorseWeightModifier(Ped horsePed, CoreIndex core) noexcept {
+    // weight is a simple tracker as it only updates every 12 in-game hours so we just return the current weight modifier from the horse ped
+
+    int weightIndex = ATTRIBUTE::GET_ATTRIBUTE_POINTS(horsePed, ePedAttribute::SA_BODYWEIGHT);
+
+    bool isOverweight = weightIndex >= WEIGHT_HORSE_OVERWEIGHT_THRESHOLD;
+    bool isMalnourished = weightIndex <= WEIGHT_HORSE_MALNOURISHED_THRESHOLD;
+    bool isThin = weightIndex <= WEIGHT_HORSE_THIN_THRESHOLD && !isMalnourished;
+
+    LOG_DEV("GetHorseWeightModifier: Weight index={}, Overweight={}, Malnourished={}, Thin={}", weightIndex, isOverweight, isMalnourished, isThin);
+
+    float modifier = 0.0f;
+
+    switch (core) {
+    case CoreIndex::Health:
+        // If the horse is overweight or malnourished, we apply a 25% penalty to health decay. If the horse is thin, we apply a 15% penalty.
+        modifier = isOverweight || isMalnourished ? 0.25f : isThin ? 0.15f : 0.0f;
+
+        if (modifier > 0.0f)
+            LOG(LogLevel::Verbose, "Horse weight modifier applied for Health core: {:.2f}, Horse Weight={}", modifier, isOverweight ? "Overweight" : isMalnourished ? "Malnourished" : "Thin");
+        else
+            LOG(LogLevel::Verbose, "No horse weight modifier applied for Health core., Horse Weight is Fit");
+        break;
+
+    case CoreIndex::Stamina:
+		// If the horse is overweight, we apply a 35% penalty to stamina decay. If the horse is malnourished, we apply a 25% penalty. If the horse is thin, we apply a 10% penalty.
+        modifier = isOverweight ? 0.35f : isMalnourished ? 0.25f : isThin ? 0.10f : 0.0f;
+
+        if (modifier > 0.0f)
+            LOG(LogLevel::Verbose, "Horse weight modifier applied for Stamina core: {:.2f}, Horse Weight={}", modifier, isOverweight ? "Overweight" : isMalnourished ? "Malnourished" : "Thin");
+        else
+            LOG(LogLevel::Verbose, "No horse weight modifier applied for Stamina core., Horse Weight is Fit");
+
+        break;
+
+    default:
+        break;
+    }
+
+    return modifier;
+}
+
+[[nodiscard]] float HorseManager::GetMountedPlayerWeightStaminaModifier(Ped horsePed, Ped playerPed) noexcept {
+    auto [mountedHorse, isMounted] = GetPlayerMountedHorse(playerPed);
+    
+    if (isMounted && mountedHorse == horsePed) {
+        int weightIndex = ATTRIBUTE::GET_ATTRIBUTE_POINTS(playerPed, ePedAttribute::SA_BODYWEIGHT);
+
+        bool isOverweight = weightIndex >= WEIGHT_PLAYER_OVERWEIGHT_THRESHOLD;
+
+		LOG_DEV("GetMountedPlayerWeightModifier: Weight index={}, Overweight={}", weightIndex, isOverweight);
+
+        if(isOverweight) {
+			LOG(LogLevel::Verbose, "Player is overweight while mounted on the horse. Applying a 3% penalty to horse stamina decay.");
+			return 0.03f; // Apply a 3% penalty to stamina decay if the player is overweight while mounted on the horse
+        }
+
+        LOG(LogLevel::Verbose, "Player is not overweight while mounted on the horse. No penalty applied to horse stamina decay.");
+
+		return 0.0f;
+    }
+
+    LOG(LogLevel::Verbose, "Player is not mounted on the horse. No penalty applied to horse stamina decay.");
+
+    return 0.0f;
 }
 
 void HorseManager::ResetSnapshot() noexcept {
