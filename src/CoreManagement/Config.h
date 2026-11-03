@@ -22,7 +22,8 @@ struct CoreConfigSettings {
 };
 
 struct GeneralConfigSettings {
-    int msPerInGameMinute = 2000;
+    int msPerInGameMinuteDay = 2000;
+    int msPerInGameMinuteNight = 2000;
     int nightStartHour = 20;
     int nightEndHour = 6;
 

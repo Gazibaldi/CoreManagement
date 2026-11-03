@@ -164,7 +164,7 @@ void BuildDefaultConfigFile() {
             << "[Performance]\n"
             << "; How often the main drain game simulation thread ticks (in milliseconds)\n"
             << "; Minimum interval is 5 seconds (5000 ms). Maximum is 5 mins (300000 ms)\n"
-            << "; Recommendation: keep this as a multiple of the msPerInGameMinute to ensure clean hour based decay delta\n"
+            << "; Recommendation: keep this as a multiple of the msPerInGameMinuteDay/Night to ensure clean hour based decay delta\n"
             << "; Personal recommendation : set to 30 mins in game (vanilla: 2000ms per in game minute = 2000 * 30 = 60000)\n"
             << "; If you set the msPerInGameMinute close to real-time, reduce accordingly (15 mins in - game or even 10 mins)\n"
             << "coreDrainTickIntervalMs = " << defaultCoreConfig.coreDrainTickIntervalMs << "\n"
@@ -187,7 +187,11 @@ void BuildDefaultConfigFile() {
             << "[General]\n"
             << "; length of in-game minute in real-time milliseconds (vanilla: 2000ms - 2 seconds)\n"
             << "; Minimum interval is 2 seconds (2000 ms). Maximum is 60 seconds (60000 ms)\n"
-            << "msPerInGameMinute = " << defaultGeneralConfig.msPerInGameMinute << "\n"
+			<< "; msPerInGameMinuteDay is the length of an in-game minute during the day (from NightEndHour to NightStartHour)\n"
+            << "; msPerInGameMinuteNight is the length of an in-game minute during the night (from NightStartHour to NightEndHour)\n"
+            << "; Recommendation: don't set these to be wildly different as it will directly affect your drain tick times as note above\n"
+            << "msPerInGameMinuteDay = " << defaultGeneralConfig.msPerInGameMinuteDay << "\n"            
+            << "msPerInGameMinuteNight = " << defaultGeneralConfig.msPerInGameMinuteNight << "\n"
             << "; in-game hour in which night officially begins\n"
             << "; valid range : 18 - 22 (6pm - 10pm)\n"
             << "NightStartHour = " << defaultGeneralConfig.nightStartHour << "\n"
@@ -277,7 +281,8 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
         << "| Performance: State Tick Interval (ms)       | " << std::setw(10) << coreConfig->stateChangeTickIntervalMs << " |\n"
         << "| Performance: State Tick Interval Multiplier | " << std::setw(10) << coreConfig->restrictedStateChangeTickIntervalMultiplier << " |\n"
         << "|                                             |            |\n"
-        << "| General: In-Game Minute (ms)                | " << std::setw(10) << generalConfig->msPerInGameMinute << " |\n"
+        << "| General: In-Game Minute Day (ms)            | " << std::setw(10) << generalConfig->msPerInGameMinuteDay << " |\n"
+        << "| General: In-Game Minute Night (ms)          | " << std::setw(10) << generalConfig->msPerInGameMinuteNight << " |\n"
         << "| General: Night Start Hour                   | " << std::setw(10) << generalConfig->nightStartHour << " |\n"
         << "| General: Night End Hour                     | " << std::setw(10) << generalConfig->nightEndHour << " |\n"
         << "| General: Drain Enabled for Missions         | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringMissions) << " |\n"
@@ -351,7 +356,8 @@ void LoadConfiguration() {
 	newCoreConfig->logLevelRaw = ValidateLogLevel(GetIniInt("Logging", "LogLevel", defaultCoreConfig.logLevelRaw, g_IniPath.c_str()), defaultCoreConfig.logLevelRaw); // minimum log level is 0 (disabled) max is a hardcoded 2105 (dev- very verbose not for gameplay, will effect fps). 
                                                                                                                                                                     // Range is 0-2 for normal gameplay. 0=disabled, 1=standard, 2=verbose
 
-    newGeneralConfig->msPerInGameMinute = std::clamp(GetIniInt("General", "MsPerInGameMinute", defaultGeneralConfig.msPerInGameMinute, g_IniPath.c_str()), 2000, 60000); // clamp between 2000ms (2 seconds) and 60000ms (60 seconds)
+    newGeneralConfig->msPerInGameMinuteDay = std::clamp(GetIniInt("General", "MsPerInGameMinuteDay", defaultGeneralConfig.msPerInGameMinuteDay, g_IniPath.c_str()), 2000, 60000); // clamp between 2000ms (2 seconds) and 60000ms (60 seconds)
+    newGeneralConfig->msPerInGameMinuteNight = std::clamp(GetIniInt("General", "MsPerInGameMinuteNight", defaultGeneralConfig.msPerInGameMinuteNight, g_IniPath.c_str()), 2000, 60000); // clamp between 2000ms (2 seconds) and 60000ms (60 seconds)
     newGeneralConfig->nightStartHour = std::clamp(GetIniInt("General", "NightStartHour", defaultGeneralConfig.nightStartHour, g_IniPath.c_str()), 18, 22); // clamp between 18 and 22 (6pm - 10pm)
     newGeneralConfig->nightEndHour = std::clamp(GetIniInt("General", "NightEndHour", defaultGeneralConfig.nightEndHour, g_IniPath.c_str()), 4, 8); // clamp between 4 and 8 (4am - 8am)
     newGeneralConfig->enableDuringMissions = GetIniBool("General", "EnableDuringMissions", defaultGeneralConfig.enableDuringMissions, g_IniPath.c_str());

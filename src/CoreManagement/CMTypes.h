@@ -47,6 +47,7 @@ struct SimulationState {
     int cachedInGameTimeMinutes = 0;
     int accumulatedTimeMs = 0;
 
+	bool isNightTime = false;
 	int cachedGameTimescaleMs = 0;
 
     float cachedHealth = 100.0f;

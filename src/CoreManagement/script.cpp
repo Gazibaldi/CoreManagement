@@ -275,6 +275,18 @@ void EvaluatePlayerHorseState(Ped playerPed) {
 	}
 }
 
+int GetCurrentConfiguredTimeScale(const GeneralConfigSettings& generalConfig) {
+    int currenHour = CLOCK::GET_CLOCK_HOURS();
+	bool isNightTime = currenHour >= generalConfig.nightStartHour || currenHour < generalConfig.nightEndHour;
+
+	if (isNightTime != g_State.isNightTime) {
+        LOG(LogLevel::Standard, "Day/Night cycle change: Transitioning to {}.", isNightTime ? "night" : "day");		
+		g_State.isNightTime = isNightTime;
+	}
+
+	return (isNightTime ? generalConfig.msPerInGameMinuteNight : generalConfig.msPerInGameMinuteDay);
+}
+
 GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings& generalConfig) {
     GameplayContext ctx;
 
@@ -308,7 +320,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     }
     
     int timeScale = GetCurrentGameTimeScale();
-	int configuredTimeScale = generalConfig.msPerInGameMinute;
+	int configuredTimeScale = GetCurrentConfiguredTimeScale(generalConfig);
 
 	ctx.isInTimeWarp = (timeScale < VANILLA_GAME_TIME_SCALE);
 
@@ -697,7 +709,7 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
         // SPECIAL GOLDEN DEADEYE CORE REWARD (Bathing Deluxe Service (Maid))
         if (g_State.restrictedBathingState == BathingState::DeluxeBathing) {
             LOG(LogLevel::Standard, "Player Bathing Deluxe Service: Dead Eye is now golden and fully fortified for {} in game hours.", CORE_OVERPOWER_DEADEYE_BATH_LENGTH_MINS / 60.0f);
-            ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * CORE_OVERPOWER_DEADEYE_BATH_LENGTH_MINS, true);
+            ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::DeadEye), (GetCurrentGameTimeScale() / 1000.0f) * CORE_OVERPOWER_DEADEYE_BATH_LENGTH_MINS, true);
         }
         else {
 			float targetDeadEye = startDeadEye;
@@ -856,7 +868,7 @@ void ApplyBatchTimeSkipDecay(
             if (isHotelRoom && sleptAtNight && elapsedHours >= MIN_SLEEP_HOURS && elapsedHours <= OVERSLEEP_THRESHOLD_HOURS) {
 				
 				LOG(LogLevel::Standard, "Player slept {:.2f} hours in a hotel room/own bed at night. Stamina core is now golden and fully fortified for {} in game hours.", elapsedHours, CORE_OVERPOWER_LENGTH_MINS / 60.0f);
-				ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * CORE_OVERPOWER_LENGTH_MINS, true);
+				ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(playerPed, static_cast<int>(CoreIndex::Stamina), (GetCurrentGameTimeScale() / 1000.0f) * CORE_OVERPOWER_LENGTH_MINS, true);
             }
 			// REGULAR SLEEP REPLENISHMENT ROUTE (< Minimum Sleep Hours or > OverSleep Threshold Hours and NOT in a Hotel Room at Night)
             else {
@@ -965,7 +977,7 @@ void ApplyBatchTimeSkipDecay(
                     if (isHotelRoom && sleptAtNight) {
 
                         LOG(LogLevel::Standard, "Horse slept in a stable (hotel) at night. Stamina core is now golden and fully fortified for {} in game hours.", CORE_OVERPOWER_LENGTH_MINS / 60.0f);
-                        ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), (config.GeneralConfig.msPerInGameMinute / 1000.0f) * CORE_OVERPOWER_LENGTH_MINS, true);
+                        ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), (GetCurrentGameTimeScale() / 1000.0f) * CORE_OVERPOWER_LENGTH_MINS, true);
                     }
                     // REGULAR SLEEP REPLENISHMENT ROUTE
                     else {
@@ -1187,7 +1199,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
             }
             else if (g_State.wasInMissionDuringRestriction)
             {
-                if (elapsedMinutes >= CalculatePostMissionThreshold(config.GeneralConfig.msPerInGameMinute))
+                if (elapsedMinutes >= CalculatePostMissionThreshold(GetCurrentGameTimeScale()))
                 {
                     g_State.PostMissionDecayHoursRemaining += POST_MISSION_DECAY_HOURS;
 
@@ -1340,9 +1352,7 @@ void ProcessPlayerSimulation(GameplayContext& ctx, Ped playerPed, float hoursDel
 
     if (!isDeadEyeGold) {
         // Normal Open-World, Nighttime, or Semi-Restrained Decay Route
-        int currentHour = CLOCK::GET_CLOCK_HOURS();
-        bool isNighttime = (currentHour >= config.GeneralConfig.nightStartHour || currentHour < config.GeneralConfig.nightEndHour);
-        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, playerPed, passives.totalDeadEyeReduction, applyPostMissionDecay, isAtCamp, isNighttime);
+        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, playerPed, passives.totalDeadEyeReduction, applyPostMissionDecay, isAtCamp, g_State.isNightTime);
 
         float targetDeadEye = currentDeadEye - (activeDeadEyeDecay * hoursDelta);
         float minDeadEyeFloor = isAtCamp ? config.PlayerConfig.campedDeadEyeFloor : (ctx.EnableStandardMissionDecay || ctx.EnableStandardMinigameDecay) ? config.PlayerConfig.missionDeadEyeFloor : 0.0f;
@@ -1515,9 +1525,11 @@ void ResetSimulationState() {
 
     g_State.cachedInGameTimeMinutes = GetTotalInGameMinutes();
     g_State.lastTickInGameMinutes = 0;
+    
     g_State.timescaleDeltaInitialised = false;
     g_State.stateChangeTickIntervalMsType = StateChangeIntervalType::NotSet;
 
+    g_State.isNightTime = false;
     g_State.cachedGameTimescaleMs = 0;
 
     g_State.accumulatedTimeMs = 0;
