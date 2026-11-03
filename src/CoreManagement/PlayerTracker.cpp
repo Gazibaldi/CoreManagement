@@ -167,12 +167,12 @@ void PlayerTracker::RecordLastSleptDetails(bool sleptAtNight) noexcept {
             LOG_DEV("No camp samples recorded. Assuming not at camp.");
             isAtCamp = false;
         }
+        else {
+            float averageCampTime = static_cast<float>(m_PlayerCampSamples / m_PlayerSamples);
 
-        float averageCampTime = static_cast<float>(m_PlayerCampSamples / m_PlayerSamples);
-
-        isAtCamp = averageCampTime >= PLAYER_CAMP_THRESHOLD;
-
-        LOG_DEV("Checking if player is at camp. Average camp time: {:.4f}, Threshold: {}, IsAtCamp: {}", averageCampTime, PLAYER_CAMP_THRESHOLD, isAtCamp);
+            isAtCamp = averageCampTime >= PLAYER_CAMP_THRESHOLD;
+            LOG_DEV("Checking if player is at camp. Average camp time: {:.4f}, Threshold: {}, IsAtCamp: {}", averageCampTime, PLAYER_CAMP_THRESHOLD, isAtCamp);
+        }        
     }
 
     if (logOutcome) {
