@@ -18,6 +18,8 @@ const float PLAYER_CAMP_THRESHOLD = 0.66f;
 const float WEIGHT_PLAYER_OVERWEIGHT_THRESHOLD = 83.0f;
 const float WEIGHT_PLAYER_UNDERWEIGHT_THRESHOLD = 17.0f;
 
+const int SECONDS_PER_HOUR = 3600;
+
 void PlayerTracker::ComputeHashes() noexcept {
     m_CampScenarios = { {
         { GetKey("WORLD_PLAYER_CAMP_FIRE_KNEEL1") },
@@ -90,31 +92,31 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
 	m_PlayerDrunknessSum += ATTRIBUTE::GET_ATTRIBUTE_POINTS(playerPed, ePedAttribute::SA_INEBRIATED);
 
-    if (m_LastSleptSeconds == -1) {
+    if (m_LastSleptHours == -1) {
         // Give the player the benefit of the doubt if we don't have a record of their last sleep. We assume they are not tired.
         // But we set the last slept time to 6am (or now if prior to 6am) this morning to start the tiredness clock ticking for future checks.
-		int secondsSinceBaseYear = CLOCK::_GET_SECONDS_SINCE_BASE_YEAR();
+		int hoursSinceBaseYear = CLOCK::_GET_SECONDS_SINCE_BASE_YEAR() / SECONDS_PER_HOUR;
 
         int currentHour = CLOCK::GET_CLOCK_HOURS();
         if (currentHour < 6) {
-            m_LastSleptSeconds = secondsSinceBaseYear;
+            m_LastSleptHours = hoursSinceBaseYear;
         }
         else {
-            int daysSinceBaseYear = (secondsSinceBaseYear / 3600) / 24;
-            m_LastSleptSeconds = ((daysSinceBaseYear * 24) + 6) * 3600;
+            // Get the number of full days since the base year (truncate to integer day then back to full day hours, then add 6)
+			m_LastSleptHours = (static_cast<int>(hoursSinceBaseYear / 24) * 24) + 6;
         }
 
         m_LastSleptAtNight = true;
 
-        LOG_DEV("No record of last sleep. Setting last slept time to {} seconds since base year (based on current seconds since base year {}).", m_LastSleptSeconds, secondsSinceBaseYear);
+        LOG_DEV("No record of last sleep. Setting last slept time to {} hours since base year (based on current hours since base year {}).", m_LastSleptHours, hoursSinceBaseYear);
     }
 }
 
-void PlayerTracker::RecordLastSleptDetails(int secondsSinceBaseYear, bool sleptAtNight) noexcept {
-	LOG_DEV("Recording last slept details: secondsSinceBaseYear={}, sleptAtNight={}", secondsSinceBaseYear, sleptAtNight);
-
-    m_LastSleptSeconds = secondsSinceBaseYear;
+void PlayerTracker::RecordLastSleptDetails(bool sleptAtNight) noexcept {
+    m_LastSleptHours = CLOCK::_GET_SECONDS_SINCE_BASE_YEAR() / SECONDS_PER_HOUR;
     m_LastSleptAtNight = sleptAtNight;
+
+	LOG_DEV("Recording last slept details: hoursSinceBaseYear={}, sleptAtNight={}", m_LastSleptHours, sleptAtNight);
 }
 
 [[nodiscard]] float PlayerTracker::GetPlayerOnFootSpeed() noexcept {
@@ -183,20 +185,22 @@ void PlayerTracker::RecordLastSleptDetails(int secondsSinceBaseYear, bool sleptA
     return isAtCamp;
 }
 
-[[nodiscard]] float PlayerTracker::GetPlayerTiredness(Ped playerPed, int secondsSinceBaseYear) noexcept {
+[[nodiscard]] float PlayerTracker::GetPlayerTiredness(Ped playerPed) noexcept {
 	// non-night sleep is tiredness starting at 16 hours after last sleep
 	// night sleep is tiredness starting at 24 hours after last sleep
 	// each hour of tiredness adds a 0.1 multiplier to dead eye decay, up to a maximum of 1.0 (10 hours of tiredness)
 
 	// sanity check: if the player has never slept, we return 0 tiredness
 	// should never happen as we initialize the last slept time to 6am today (or as close as possible) on first snapshot if we have no record of last sleep, but just in case
-    if (m_LastSleptSeconds < 0)
+    if (m_LastSleptHours < 0)
 		return 0.0f;
 
-	float hoursSinceLastSleep = static_cast<float>(secondsSinceBaseYear - m_LastSleptSeconds) / 3600.0f;
+	int hoursSinceBaseYear = CLOCK::_GET_SECONDS_SINCE_BASE_YEAR() / SECONDS_PER_HOUR;
+
+	float hoursSinceLastSleep = static_cast<float>(hoursSinceBaseYear - m_LastSleptHours);
 	float tirednessThreshold = m_LastSleptAtNight ? 24.0f : 16.0f;
 
-	LOG_DEV("Calculating player tiredness. Last slept at: {} seconds since base year, Current time: {} seconds since base year, Hours since last sleep: {:.4f}, Tiredness threshold: {:.4f}", m_LastSleptSeconds, secondsSinceBaseYear, hoursSinceLastSleep, tirednessThreshold);
+	LOG_DEV("Calculating player tiredness. Last slept at: {} hours since base year, Current time: {} hours since base year, Hours since last sleep: {:.4f}, Tiredness threshold: {:.4f}", m_LastSleptHours, hoursSinceBaseYear, hoursSinceLastSleep, tirednessThreshold);
 
     if (hoursSinceLastSleep > tirednessThreshold)
 		return std::min((hoursSinceLastSleep - tirednessThreshold) * 0.1f, 1.0f);
@@ -286,7 +290,7 @@ void PlayerTracker::ResetSnapshot(bool includeSleepDetails) noexcept {
     m_PlayerDrunknessSum = 0.0f;
 	
     if (includeSleepDetails) {
-		m_LastSleptSeconds = -1;
+		m_LastSleptHours = -1;
 		m_LastSleptAtNight = false;
 	}
 }

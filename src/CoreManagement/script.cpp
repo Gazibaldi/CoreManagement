@@ -503,7 +503,7 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
 		multiplier += std::max(playerConfig.deadEyeDirtyMultiplier - 1.0f, 0.0f);
     }  
 
-	float tiredness = g_playerTracker.GetPlayerTiredness(playerPed, CLOCK::_GET_SECONDS_SINCE_BASE_YEAR());
+	float tiredness = g_playerTracker.GetPlayerTiredness(playerPed);
     if (tiredness > 0.0f) {
         LOG(LogLevel::Verbose, "Player is tired. Applying tired dead eye decay multiplier.");
         multiplier += tiredness;
@@ -1015,7 +1015,7 @@ void ApplyBatchTimeSkipDecay(
     }
 
     if (wasSleeping)
-        g_playerTracker.RecordLastSleptDetails(CLOCK::_GET_SECONDS_SINCE_BASE_YEAR(), sleptAtNight);
+        g_playerTracker.RecordLastSleptDetails(sleptAtNight);
 
     // Reset the tracker after applying the batch decay to ensure accurate tracking for the next period
     g_playerTracker.ResetSnapshot();
