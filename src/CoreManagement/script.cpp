@@ -299,7 +299,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
 
 	// Only check the following states if the player is not already in a mission or minigame
 	// they can't be happening/change if we are in mission or minigame or falling/dying
-    if (!ctx.isInMission && !ctx.isInMinigame && !isFallingOrGoingToDie) {
+    if (!(isInMission || isInMinigame || isFallingOrGoingToDie)) {
         ctx.isBathing = IsPlayerBathing(playerPed);
         ctx.isSleeping = IsInSleepScenario(playerPed);
         ctx.isJailed = IsPlayerArrested();        
