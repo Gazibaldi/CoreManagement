@@ -7,7 +7,7 @@
 #include "..\..\inc\types.h"
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
-enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
+enum class HorseSpeed : int { Trot = 3, Gallop = 10 };
 enum class PlayerSpeed : int { Jog = 3, Sprint = 5 };
 enum class BathingState : int { NotBathing = 0, StandardBathing = 1, DeluxeBathing = 2 };
 enum class SleepingState : int { NotSleeping = 0, Wilderness = 1, Hotel = 2 };
