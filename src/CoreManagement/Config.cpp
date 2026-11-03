@@ -166,6 +166,8 @@ void BuildDefaultConfigFile() {
             << "; Minimum interval is 5 seconds (5000 ms). Maximum is 5 mins (300000 ms)\n"
             << "; Recommendation: keep this as a multiple of the msPerInGameMinuteDay/Night to ensure clean hour based decay delta\n"
             << "; Personal recommendation : set to 30 mins in game (vanilla: 2000ms per in game minute = 2000 * 30 = 60000)\n"
+            << "; then set msPerInGameMinuteNight to be either the same as msPerInGameMinuteDay or also a clean multiple of coreDrainTickIntervalMs \n"
+            << "; e.g. 120000 CDI = 4000 DAY / 2000 NIGHT = 30 min drain in day / 60 min drain at night\n"
             << "; If you set the msPerInGameMinute close to real-time, reduce accordingly (15 mins in - game or even 10 mins)\n"
             << "coreDrainTickIntervalMs = " << defaultCoreConfig.coreDrainTickIntervalMs << "\n"
             << "; How often the main state simulation should run (in milliseconds)\n"
