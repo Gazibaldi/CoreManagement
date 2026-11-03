@@ -287,10 +287,17 @@ int GetCurrentConfiguredTimeScale(const GeneralConfigSettings& generalConfig) {
 	return (isNightTime ? generalConfig.msPerInGameMinuteNight : generalConfig.msPerInGameMinuteDay);
 }
 
-GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings& generalConfig) {
+bool IsDrainTickDue(int drainTickIntervalMs) {
+    // Reset the accumulated time after processing the post-mission decay
+    // if the accumulated time is greater than 70% of the drain tick interval, we keep it, as we are close enough to the next tick to process it
+    // otherwise we reset it to 0
+    return g_State.accumulatedTimeMs > (drainTickIntervalMs * 0.7);
+}
+
+GameplayContext EvaluateGameplayState(Ped playerPed, const ConfigSnapshot& config) {
     GameplayContext ctx;
 
-    int configuredTimeScale = GetCurrentConfiguredTimeScale(generalConfig);
+    int configuredTimeScale = GetCurrentConfiguredTimeScale(config.GeneralConfig);
 
     EvaluatePlayerHorseState(playerPed);
 
@@ -298,14 +305,14 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     bool isInMinigame = IsPlayerPlayingTableMinigame();
 	bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
 
-    LOG_DEV("Gameplay state evaluated: allowDrainInMissions={}, allowDrainInMinigames={}", generalConfig.enableDuringMissions, generalConfig.enableDuringMinigames);
+    LOG_DEV("Gameplay state evaluated: allowDrainInMissions={}, allowDrainInMinigames={}", config.GeneralConfig.enableDuringMissions, config.GeneralConfig.enableDuringMinigames);
 
     // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
-    ctx.isInMission = isInMission && !generalConfig.enableDuringMissions;
-	ctx.EnableStandardMissionDecay = isInMission && generalConfig.enableDuringMissions; // special prop for tracking decay during missions/minigames if the config enables it
+    ctx.isInMission = isInMission && !config.GeneralConfig.enableDuringMissions;
+	ctx.EnableStandardMissionDecay = isInMission && config.GeneralConfig.enableDuringMissions; // special prop for tracking decay during missions/minigames if the config enables it
 
-    ctx.isInMinigame = isInMinigame && !generalConfig.enableDuringMinigames;
-    ctx.EnableStandardMinigameDecay = isInMinigame && generalConfig.enableDuringMinigames; // special prop for tracking decay during missions/minigames if the config enables it
+    ctx.isInMinigame = isInMinigame && !config.GeneralConfig.enableDuringMinigames;
+    ctx.EnableStandardMinigameDecay = isInMinigame && config.GeneralConfig.enableDuringMinigames; // special prop for tracking decay during missions/minigames if the config enables it
 
 	// If the player is in a mission or minigame, we don't allow hot-reload of the config to 
     // avoid potential issues with state changes during those events.
@@ -341,12 +348,13 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     ctx.freezeActive = (ctx.isInMission || ctx.isInMinigame || isFallingOrGoingToDie || ctx.isSleeping || ctx.isBathing || ctx.isJailed || ctx.isInTimeWarp || ctx.isInShop);
 	ctx.monitorTransientVarsDuringFreeze = ctx.isBathing; // We want to monitor bathing state even when freeze is active, as it can change during the freeze period. (Deluxe bathing cutscene issue)
 
-    if (!ctx.freezeActive)
+	// Record the tracking snapshots if we are not in a freeze state or if the drain tick is due when we are in a freeze state. 
+	// This ensures we capture accurate averages for decay calculations when the freeze is lifted if we are close to the next drain tick.
+	if (!ctx.freezeActive || IsDrainTickDue(config.CoreConfig.coreDrainTickIntervalMs))
 		RecordTrackingSnapshots(playerPed);
 
 	if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev) && HasDevLogCacheChanged(ctx)) {
-        // Update tracking baselines immediately
-        UpdateDevLogCache(ctx);
+       UpdateDevLogCache(ctx);
 
         LOG_DEV(
             "Gameplay state changed: \n"
@@ -414,7 +422,6 @@ float GetHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig
     
 	LOG_DEV("Evaluating horse speed for stamina decay multiplier: currentSpeed={:.2f}", currentSpeed);
 
-    // The logic automatically scales down to a base flat rate if the horse is hitched or stabled!
     if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {
         LOG(LogLevel::Verbose, "Active Horse: Running/Galloping. Applying high stamina multiplier.");
         return horseConfig.gallopStaminaMultiplier;
@@ -494,7 +501,7 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
     return finalMultiplier;
 }
 
-float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, float totalPassiveDeadEyeModifierReduction, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false, bool isNighttime = false) {
+float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, float totalPassiveDeadEyeModifierReduction, bool isPlayerSemiRestrained = false, bool isNighttime = false) {
     float multiplier = 1.0f;
 
     if (isPlayerSemiRestrained) {
@@ -516,13 +523,6 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
         LOG(LogLevel::Verbose, "Player is tired. Applying tired dead eye decay multiplier.");
         multiplier += tiredness;
     }
-
-    if (applyPostMissionDecay) {
-        LOG(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission dead eye decay multiplier.");
-        multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
-    }
-
-    multiplier += g_playerTracker.GetPlayerWeightModifier(playerPed, CoreIndex::DeadEye);
 
     multiplier -= totalPassiveDeadEyeModifierReduction;
 
@@ -560,7 +560,7 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
     float focusCap = 60.0f;   // Maximum normal sleep reward boundary
     float fatigueCap = 50.0f; // Maximum over-sleep unfocused boundary
 
-    // Luxury Hotel Quality Adjustment (+20/+10 points to caps)
+    // Luxury Hotel Quality Adjustment
     if (isHotelRoom) {
         if (isNighttime) {
 			LOG(LogLevel::Standard, "Luxury hotel room/own bed detected at night. Dead Eye caps increased by +20 points.");
@@ -574,7 +574,7 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
         }
     }
 
-	// Daytime Wilderness Penalty (-5 points to caps)
+	// Daytime Wilderness Penalty
     if (!isNighttime && !isHotelRoom) {
 		LOG(LogLevel::Standard, "Daytime wilderness sleep detected. Dead Eye caps decreased by -5 points.");
         focusCap -= 5.0f;
@@ -593,7 +593,6 @@ float CalculatePlayerDeadEyeSleepReplenish(float currentDeadEye, float elapsedHo
     }
 
     // THE REGULAR SLEEP ROUTE (Less than OverSleep Threshold Hours)
-    // If your starting Dead Eye is already higher than the focus cap, leave it completely untouched!
     if (currentDeadEye >= focusCap)
         return currentDeadEye;
 
@@ -610,7 +609,7 @@ float CalculateHorseHealthDecayMultiplier(const PlayerConfigSettings& playerConf
         multiplier = playerConfig.campedMultiplier;
     
     if(g_HorseManager.IsHorseDirty(horsePed))
-        multiplier += 0.25f; // Apply a 25% penalty if the horse is dirty
+        multiplier += 0.25f;
 
 	multiplier += g_HorseManager.GetHorseWeightModifier(horsePed, CoreIndex::Health);
 
@@ -644,7 +643,7 @@ float CalculateHorseStaminaSleepReplenish(float currentStamina, float elapsedHou
     float uplift = elapsedHours * 10.0f;
 
     // DAYTIME WILDERNESS SLEEP PENALTY (not in a stable (hotel) room at that)
-    // If you sleep for the minimum or more hours but it's daytime and you're not in a hotel room, the horse's maximum reward capacity is capped hard at 50 points.
+    // If you sleep for the minimum or more hours but it's daytime and you're not in a hotel room
     if (!isNighttime && !isHotelRoom) {
         uplift = std::min(uplift, 50.0f);
         LOG(LogLevel::Standard, "Daytime wilderness sleep detected. Horse Stamina uplift capped at 50 points.");
@@ -684,12 +683,13 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
             "           MinHealthFloor={}", 
             startHealth, elapsedHours, activeHealthDecay, finalHealth, config.PlayerConfig.campedHealthFloor);
         LOG(LogLevel::Standard, "Player time-skipped due to bathing. Health decayed to: {}", finalHealth);
+
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
 
     // Freeze standard drain and apply custom uplift reward
     if (!isStaminaGold) {
-        float staminaUplift = 15.0f; // Flat 15 point bonus
+        float staminaUplift = 15.0f;
 
         if (g_State.restrictedBathingState == BathingState::DeluxeBathing) {
             LOG(LogLevel::Standard, "Player Bathing Deluxe Service: Stamina bonus doubled!!");
@@ -709,6 +709,7 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
             "           TargetStamina={}", 
             startStamina, elapsedHours, staminaUplift, finalStamina);
         LOG(LogLevel::Standard, "Bathing Stamina Uplift Reward Applied: {}", finalStamina);
+
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
 
@@ -745,6 +746,7 @@ void ApplyBathingUpdate(Ped playerPed, int elapsedMinutes, float startHealth, fl
                 "           TargetDeadEye={}", 
                 startDeadEye, elapsedHours, deadEyeUplift, finalDeadEye);
             LOG(LogLevel::Standard, "Player DeadEye Sync Tick: DeadEye={}", finalDeadEye);
+
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
         }
     }
@@ -759,7 +761,7 @@ bool IsSleepDuringTheNight(int elapsedHours, int nightStartHour, int nightEndHou
 
 	int currentHour = CLOCK::GET_CLOCK_HOURS();
     int sleepStartHour = currentHour - elapsedHours;
-	if (sleepStartHour < 0) sleepStartHour += 24; // Wrap around if negative
+	if (sleepStartHour < 0) sleepStartHour += 24;
 
 	bool wasNightStart = (sleepStartHour >= nightStartHour || sleepStartHour <= nightEndHour);
 	bool wasNightEnd = (currentHour >= nightStartHour || currentHour <= nightEndHour);
@@ -822,8 +824,6 @@ void ApplyBatchTimeSkipDecay(
 
     if (applyPostMissionDecay) {
         g_State.PostMissionDecayHoursRemaining -= elapsedHours;
-        
-        // Ensure that the remaining hours do not go below zero
         g_State.PostMissionDecayHoursRemaining = std::max(g_State.PostMissionDecayHoursRemaining, 0.0f);
 
         LOG(LogLevel::Verbose, "Post-mission decay is active. Remaining hours: {:.4f}", g_State.PostMissionDecayHoursRemaining);
@@ -854,6 +854,7 @@ void ApplyBatchTimeSkipDecay(
             "           TargetHealth={},\n"
             "           MinHealthFloor={}", startHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
         LOG(LogLevel::Standard, "Player time-skipped. Current Health: {} New Health: {}", static_cast<int>(startHealth), finalHealth);
+
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Health), finalHealth);
     }
     else {
@@ -884,6 +885,7 @@ void ApplyBatchTimeSkipDecay(
                 int finalStamina = BUILTIN::FLOOR(CalculatePlayerStaminaSleepReplenish(startStamina, elapsedHours, sleptAtNight, isHotelRoom));
 
                 LOG(LogLevel::Standard, "Player slept. Stamina replenished to: {}", finalStamina);
+
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
             }
         }
@@ -904,6 +906,7 @@ void ApplyBatchTimeSkipDecay(
             "           TargetStamina={},\n"
             "           MinStaminaFloor={}", startStamina, elapsedHours, activeStaminaDecay, finalStamina, config.PlayerConfig.campedStaminaFloor);
         LOG(LogLevel::Standard, "Player time-skipped. Current Stamina: {} New Stamina: {}", static_cast<int>(startStamina), finalStamina);
+
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::Stamina), finalStamina);
     }
     else {
@@ -917,13 +920,15 @@ void ApplyBatchTimeSkipDecay(
             int finalDeadEye = BUILTIN::FLOOR(CalculatePlayerDeadEyeSleepReplenish(startDeadEye, elapsedHours, sleptAtNight, isHotelRoom));
             
             LOG(LogLevel::Standard, "Player slept. Dead Eye adjusted to: {}", finalDeadEye);
+
             ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
         }
     }
     else if (!isDeadEyeGold) {
         // Standard macro transit decay (Trains/Stagecoaches/Jail/Barber)
 		// Don't apply nighttime multiplier here, as the player may have moved across the day/night boundary during the time skip, and we want to avoid over-penalizing them for that.
-        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, playerPed, passives.totalDeadEyeReduction, applyPostMissionDecay);
+		// post-mission decay is also not applied here, as Dead Eye decay is not affected by post-mission decay in the same way as Health and Stamina.
+        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, playerPed, passives.totalDeadEyeReduction);
 
         float targetDeadEye = startDeadEye - (elapsedHours * activeDeadEyeDecay);        
         
@@ -937,6 +942,7 @@ void ApplyBatchTimeSkipDecay(
             "           TargetDeadEye={},\n"
             "           MinDeadEyeFloor={}", startDeadEye, elapsedHours, activeDeadEyeDecay, finalDeadEye, config.PlayerConfig.campedDeadEyeFloor);
         LOG(LogLevel::Standard, "Player time-skipped. Current Dead Eye: {} New Dead Eye: {}", static_cast<int>(startDeadEye), finalDeadEye);
+
         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(playerPed, static_cast<int>(CoreIndex::DeadEye), finalDeadEye);
     }
     else {
@@ -969,6 +975,7 @@ void ApplyBatchTimeSkipDecay(
                     "           TargetHealth={},\n"
                     "           MinHealthFloor={}", startHorseHealth, elapsedHours, activeHealthDecay, finalHealth, minHealthFloor);
                 LOG(LogLevel::Standard, "Player time-skipped. Current Horse Health: {} New Horse Health: {}", static_cast<int>(startHorseHealth), finalHealth);
+
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Health), finalHealth);
             }
             else {
@@ -985,6 +992,7 @@ void ApplyBatchTimeSkipDecay(
                     if (isHotelRoom && sleptAtNight) {
 
                         LOG(LogLevel::Standard, "Horse slept in a stable (hotel) at night. Stamina core is now golden and fully fortified for {} in game hours.", CORE_OVERPOWER_LENGTH_MINS / 60.0f);
+
                         ATTRIBUTE::_ENABLE_ATTRIBUTE_CORE_OVERPOWER(activeHorse, static_cast<int>(CoreIndex::Stamina), (GetCurrentGameTimeScale() / 1000.0f) * CORE_OVERPOWER_LENGTH_MINS, true);
                     }
                     // REGULAR SLEEP REPLENISHMENT ROUTE
@@ -993,6 +1001,7 @@ void ApplyBatchTimeSkipDecay(
                         int finalHorseStamina = BUILTIN::FLOOR(CalculateHorseStaminaSleepReplenish(startStamina, elapsedHours, sleptAtNight, isHotelRoom));
 
                         LOG(LogLevel::Standard, "Player slept. Horse Stamina replenished to: {}", finalHorseStamina);
+
                         ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalHorseStamina);
                     }
                 }
@@ -1014,6 +1023,7 @@ void ApplyBatchTimeSkipDecay(
                     "           TargetStamina={},\n"
                     "           MinStaminaFloor={}", startHorseStamina, elapsedHours, activeStaminaDecay, finalStamina, config.HorseConfig.campedStaminaFloor);
                 LOG(LogLevel::Standard, "Player time-skipped. Current Horse Stamina: {} New Horse Stamina: {}", static_cast<int>(startHorseStamina), finalStamina);
+
                 ATTRIBUTE::_SET_ATTRIBUTE_CORE_VALUE(activeHorse, static_cast<int>(CoreIndex::Stamina), finalStamina);
             }
             else {
@@ -1030,12 +1040,12 @@ void ApplyBatchTimeSkipDecay(
     g_HorseManager.ResetSnapshot();
 }
 
-void UpdateTransientFreezeStateVariables() {
+void UpdateTransientStateVariables() {
     if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev)) {
-        LOG_DEV("Updating frozen state variables based on cached values.");
+        LOG_DEV("Updating transient state variables based on cached values.");
 
         LOG_DEV(
-            "Frozen state variables updated:\n"
+            "Transient state variables updated:\n"
             "           isRestricted                   = {}\n"
             "           isRestrictedVariable           = {}\n"
             "           cachedInGameTimeMinutes        = {}\n"
@@ -1054,7 +1064,7 @@ void UpdateTransientFreezeStateVariables() {
             "           cachedHorseHealth              = {}\n"
             "           cachedHorseStamina             = {}",
             g_State.isRestricted,
-            g_State.MonitorTransientVariablesDuringRestriction,
+            g_State.monitorTransientVariablesDuringRestriction,
             g_State.cachedInGameTimeMinutes,
             g_State.lastTickInGameMinutes,
             g_State.wasSleepingDuringRestriction,
@@ -1086,20 +1096,6 @@ void UpdateTransientFreezeStateVariables() {
 	// Add more frozen state variable updates here as needed in the future
 }
 
-bool IsDrainTickDue(int drainTickIntervalMs) {
-    // Reset the accumulated time after processing the post-mission decay
-    // if the accumulated time is greater than 70% of the drain tick interval, we keep it, as we are close enough to the next tick to process it
-    // otherwise we reset it to 0
-    bool isCloseToNextTick = g_State.accumulatedTimeMs > (drainTickIntervalMs * 0.7);
-
-    if (isCloseToNextTick)
-        LOG(LogLevel::Verbose, "Player exited a mission. Accumulated time before reset: {} ms. Is close to next tick: true. Keeping accumulated time for next drain tick.", g_State.accumulatedTimeMs);
-    else
-        LOG(LogLevel::Verbose, "Player exited a mission. Accumulated time before reset: {} ms. Is close to next tick: false. Resetting accumulated time to 0.", g_State.accumulatedTimeMs);
-
-	return isCloseToNextTick;
-}
-
 int CalculatePostMissionThreshold(int msPerInGameMinute) {
 	// POST_MISSION_MIN_ELAPSED_MINUTES is based on a vanilla time of 2 seconds per in-game minute
 	// We need to adjust this based on the current msPerInGameMinute setting to ensure that the post-mission decay threshold is consistent with the player's configured time scale.
@@ -1121,9 +1117,8 @@ int CalculatePostMissionThreshold(int msPerInGameMinute) {
 void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int currentTotalMinutes, const ConfigSnapshot& config) {
     if (ctx.freezeActive && !g_State.isRestricted) {
         g_State.isRestricted = true;
-		g_State.MonitorTransientVariablesDuringRestriction = ctx.monitorTransientVarsDuringFreeze;
+		g_State.monitorTransientVariablesDuringRestriction = ctx.monitorTransientVarsDuringFreeze;
 
-        // Lock the context down safely right here!
         g_State.wasSleepingDuringRestriction = ctx.isSleeping;
         g_State.restrictedSleepingState = ctx.isSleeping ? (ctx.isAtCamp ? SleepingState::Wilderness : SleepingState::Hotel) : SleepingState::NotSleeping;
 		g_State.wasInMissionDuringRestriction = ctx.isInMission;
@@ -1172,7 +1167,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         // (MAX 3 MISSIONS ACCUMULATED) to prevent excessive decay if multiple missions are completed in a short period of time.
 		// Minigames/jail exempt the horse from decay as the player is not in control of the horse during those scenarios.
         g_State.isRestricted = false;
-		g_State.MonitorTransientVariablesDuringRestriction = false;
+		g_State.monitorTransientVariablesDuringRestriction = false;
 
         int elapsedMinutes = currentTotalMinutes - g_State.cachedInGameTimeMinutes;
 
@@ -1220,13 +1215,19 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                     LOG(LogLevel::Verbose, "Player exited a mission but elapsed time was less than the minimum threshold. No post-mission decay applied.");
                 }
 
-                if (!IsDrainTickDue(config.CoreConfig.coreDrainTickIntervalMs))
+                bool isDrainDue = IsDrainTickDue(config.CoreConfig.coreDrainTickIntervalMs);
+                LOG(LogLevel::Verbose, "Player exited a mission. Accumulated time before reset: {} ms. Is close to next tick: {}", g_State.accumulatedTimeMs, isDrainDue ? "true. Keeping accumulated time for next drain tick." : "false. Resetting accumulated time to 0.");
+                
+                if(!isDrainDue)
                     g_State.accumulatedTimeMs = 0;
             }
             else {
                 LOG_DEV("Player was not sleeping, in a minigame, or in a mission during restriction. No batch decay applied.");
 
-                if (!IsDrainTickDue(config.CoreConfig.coreDrainTickIntervalMs))
+                bool isDrainDue = IsDrainTickDue(config.CoreConfig.coreDrainTickIntervalMs);
+                LOG(LogLevel::Verbose, "Player exited a mission. Accumulated time before reset: {} ms. Is close to next tick: {}", g_State.accumulatedTimeMs, isDrainDue ? "true. Keeping accumulated time for next drain tick." : "false. Resetting accumulated time to 0.");
+
+                if (!isDrainDue)
                     g_State.accumulatedTimeMs = 0;
             }
         }
@@ -1249,7 +1250,6 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
 }
 
 float CalculateTimescaleDelta(int currentTotalMinutes) {
-    // Safe Initialisation (Fails fast on frame 1 using the unified structure state)
     if (!g_State.timescaleDeltaInitialised) {
         g_State.lastTickInGameMinutes = currentTotalMinutes;
         g_State.timescaleDeltaInitialised = true;
@@ -1258,7 +1258,6 @@ float CalculateTimescaleDelta(int currentTotalMinutes) {
         return 0.0f;
     }
 
-    // Fail Fast Optimization
     if (currentTotalMinutes == g_State.lastTickInGameMinutes) return 0.0f;
 
     int gameMinutesDelta = currentTotalMinutes - g_State.lastTickInGameMinutes;
@@ -1360,7 +1359,8 @@ void ProcessPlayerSimulation(GameplayContext& ctx, Ped playerPed, float hoursDel
 
     if (!isDeadEyeGold) {
         // Normal Open-World, Nighttime, or Semi-Restrained Decay Route
-        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, playerPed, passives.totalDeadEyeReduction, applyPostMissionDecay, isAtCamp, g_State.isNightTime);
+		// no post-mission decay is applied to Dead Eye, as it is not affected by post-mission decay in the same way as Health and Stamina.
+        float activeDeadEyeDecay = config.PlayerConfig.baseDeadEyeDecay * CalculatePlayerDeadEyeDecayMultiplier(config.PlayerConfig, playerPed, passives.totalDeadEyeReduction, isAtCamp, g_State.isNightTime);
 
         float targetDeadEye = currentDeadEye - (activeDeadEyeDecay * hoursDelta);
         float minDeadEyeFloor = isAtCamp ? config.PlayerConfig.campedDeadEyeFloor : (ctx.EnableStandardMissionDecay || ctx.EnableStandardMinigameDecay) ? config.PlayerConfig.missionDeadEyeFloor : 0.0f;
@@ -1516,7 +1516,6 @@ void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const Conf
 
 	LOG(LogLevel::Verbose, "Horse Live Core Values: Health={}, Stamina={}, HasHorse={}", liveHorseHealth, liveHorseStamina, hasHorse);
 
-    // Route directly into the shared engine (Never sleeping during open-world transits)
     ApplyBatchTimeSkipDecay(playerPed, elapsedMinutes,
         liveHealth, liveStamina, liveDeadEye,
         liveHorseHealth, liveHorseStamina, hasHorse,
@@ -1529,7 +1528,7 @@ void ProcessOpenWorldTimeSkip(Ped playerPed, int currentTotalMinutes, const Conf
 
 void ResetSimulationState() {
     g_State.isRestricted = false;
-    g_State.MonitorTransientVariablesDuringRestriction = false;
+    g_State.monitorTransientVariablesDuringRestriction = false;
 
     g_State.cachedInGameTimeMinutes = GetTotalInGameMinutes();
     g_State.lastTickInGameMinutes = 0;
@@ -1584,7 +1583,6 @@ ConfigSnapshot CheckForConfigChange() {
 	// If the config has changed OR the config structures have not been initialised, 
     // we need to refresh the cache and update the transient systems.
     if (g_HasConfigChanged.load(std::memory_order_acquire) || !g_State.configStructuresInitialised) {
-        // Log an accurate message based on WHY we are filling the cache
         if (!g_State.configStructuresInitialised)
             LOG(LogLevel::ConfigOnly, "Initialising local simulation configuration cache for the first time...");
         else
@@ -1626,7 +1624,6 @@ int CalculateStateChangeTickIntervalMs() {
         LOG(LogLevel::Verbose, "State Change Interval Change: Restricted state inactive. Using standard tick interval of {} ms", normalTickInterval);
     }
 
-    // If we are in the same state as before, we just return the current tick interval without logging
     if (g_State.stateChangeTickIntervalMsType == StateChangeIntervalType::Standard)
         return normalTickInterval;
 
@@ -1677,7 +1674,7 @@ void UpdateCoreSimulation() {
 
     ConfigSnapshot config = CheckForConfigChange();
 
-    GameplayContext context = EvaluateGameplayState(playerPed, config.GeneralConfig);
+    GameplayContext context = EvaluateGameplayState(playerPed, config);
     int currentTotalMinutes = GetTotalInGameMinutes();
 
     // FAST-PATH BOUNDARY TRANSITIONS (Forcing immediate responses to missions or travel updates)
@@ -1699,8 +1696,8 @@ void UpdateCoreSimulation() {
         g_State.wasRestrictedLastTick = context.freezeActive;
     }
     // If we are in a restricted state and monitoring transient variables, we need to update the frozen state variables based on the cached values.
-    else if (g_State.isRestricted && g_State.MonitorTransientVariablesDuringRestriction) {
-        UpdateTransientFreezeStateVariables();
+    else if (g_State.isRestricted && g_State.monitorTransientVariablesDuringRestriction) {
+        UpdateTransientStateVariables();
 
         // Update the last tick time to the current total minutes after processing
         LOG_DEV("Updating last tick in-game minutes from {} to {}", g_State.lastTickInGameMinutes, currentTotalMinutes);

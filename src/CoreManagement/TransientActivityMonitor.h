@@ -8,6 +8,7 @@
 #include <utility>
 #include <array>
 #include <optional>
+#include <type_traits>
 #include "..\..\inc\magic_enum.hpp"
 
 enum class TransientActivityType {
@@ -38,8 +39,7 @@ public:
         : m_Activity(activity)
         , m_StateEvaluator(std::forward<F>(evaluator))
     {
-        // Internal tick math based on your global interval configuration
-		m_ThresholdSeconds = thresholdSeconds;
+        m_ThresholdSeconds = thresholdSeconds;
 		RefreshThreshold(false); // default to unrestricted threshold until the first tick cycle
     }
 
@@ -48,7 +48,6 @@ public:
     void Reset() noexcept;
     void RefreshThreshold(bool isRestricted) noexcept;
 
-    // Read-only Getters (Fully encapsulated)
     [[nodiscard]] bool IsActive() const noexcept { return m_IsActive; }
     [[nodiscard]] bool IsExpired() const noexcept { return m_IsExpired; }
     [[nodiscard]] TransientActivityType GetActivityType() const noexcept { return m_Activity; }

@@ -9,9 +9,9 @@
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
 enum class HorseSpeed : int { Trot = 4, Canter = 6, Gallop = 10 };
 enum class PlayerSpeed : int { Jog = 3, Sprint = 5 };
-enum class BathingState : int { NotBathing = 0, StandardBathing = 1, DeluxeBathing = 2 };
-enum class SleepingState : int { NotSleeping = 0, Wilderness = 1, Hotel = 2 };
-enum class StateChangeIntervalType : int { NotSet, Standard, Restricted };
+enum class BathingState { NotBathing = 0, StandardBathing = 1, DeluxeBathing = 2 };
+enum class SleepingState { NotSleeping, Wilderness, Hotel };
+enum class StateChangeIntervalType { NotSet, Standard, Restricted };
 
 enum ePedAttribute
 {
@@ -42,7 +42,7 @@ enum ePedAttribute
 
 struct SimulationState {
     bool isRestricted = false;
-	bool MonitorTransientVariablesDuringRestriction = false;
+	bool monitorTransientVariablesDuringRestriction = false;
 	
     int cachedInGameTimeMinutes = 0;
     int accumulatedTimeMs = 0;

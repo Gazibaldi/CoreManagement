@@ -11,12 +11,12 @@
 
 HorseManager g_HorseManager;
 
-const float HORSE_MAX_DISTANCE_FROM_PLAYER = 400.0f; // metres
-const float HORSE_SAMPLING_THRESHOLD = 0.75f; // 75% of samples must tracked to consider the horse hitched/led
+const float HORSE_MAX_METRES_FROM_PLAYER = 400.0f;
+const float HORSE_SAMPLING_THRESHOLD = 0.75f;
 const float HORSE_HITCHED_REWARD_PER_GAME_HOUR = 5.0f;
 const float HORSE_LEAD_REWARD_PER_GAME_HOUR = 10.0f;
 
-const float HORSE_DIRT_THRESHOLD = 0.5f; // Arbitrary threshold for determining if a horse is considered dirty
+const float HORSE_DIRT_THRESHOLD = 0.5f;
 
 const float WEIGHT_PLAYER_OVERWEIGHT_THRESHOLD = 83.0f;
 
@@ -127,9 +127,9 @@ bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) 
                 LOG_DEV("Active horse detected. Distance from player: {:.4f} metres.", distance);
 
                 // If the horse is too far away, we consider it "lost" and reset the state.
-                // HORSE_MAX_DISTANCE_FROM_PLAYER (400) metres is a generous distance, 350m is the Bonding Level 4 max whistle distance.
+                // HORSE_MAX_METRES_FROM_PLAYER (400) metres is a generous distance, 350m is the Bonding Level 4 max whistle distance.
                 // Deters exploiting the drain mechanics for the horse by leaving it in a distant location while the player is elsewhere.
-                if (distance > HORSE_MAX_DISTANCE_FROM_PLAYER) {
+                if (distance > HORSE_MAX_METRES_FROM_PLAYER) {
                     LOG(LogLevel::Verbose, "Active horse is too far away ({:.4f} metres). Assuming it is lost.", distance);
                     hasHorse = false;
                     activeHorse = 0;
@@ -171,7 +171,7 @@ bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) 
 
 	float reward = HORSE_HITCHED_REWARD_PER_GAME_HOUR * hoursDelta;
 
-	m_HorseHitchedReward += reward; // Accumulate the reward
+	m_HorseHitchedReward += reward;
 
     LOG_DEV("Current accumulated horse hitched reward: {}", m_HorseHitchedReward);
 
@@ -182,7 +182,7 @@ bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) 
 	}
 
 	float rewardToApply = m_HorseHitchedReward;
-	m_HorseHitchedReward = 0.0f; // Reset the accumulated reward after applying
+	m_HorseHitchedReward = 0.0f;
 
 	return rewardToApply;
 }
@@ -190,14 +190,14 @@ bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) 
 [[nodiscard]] float HorseManager::GetHorseLeadReward(float hoursDelta) noexcept {
     if (!TestSampleThreshold(m_HorseLeadSamples, HorseSampleType::Lead) && m_HorseLeadReward < 1.0f) {
         LOG_DEV("Horse is not considered led. No reward to apply.");
-        m_HorseLeadReward = 0.0f; // Reset the accumulated reward if the horse is not led
+        m_HorseLeadReward = 0.0f;
 
         return 0.0f;
     }
 
     float reward = HORSE_LEAD_REWARD_PER_GAME_HOUR * hoursDelta;
 
-    m_HorseLeadReward += reward; // Accumulate the reward
+    m_HorseLeadReward += reward;
 
 	LOG_DEV("Current accumulated horse lead reward: {}", m_HorseLeadReward);
 
@@ -208,7 +208,7 @@ bool HorseManager::TestSampleThreshold(int samples, HorseSampleType sampleType) 
     }
 
     float rewardToApply = m_HorseLeadReward;
-    m_HorseLeadReward = 0.0f; // Reset the accumulated reward after applying
+    m_HorseLeadReward = 0.0f;
 
     return rewardToApply;
 }
@@ -287,7 +287,7 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
 
     bool isOverweight = weightIndex >= WEIGHT_HORSE_OVERWEIGHT_THRESHOLD;
     bool isMalnourished = weightIndex <= WEIGHT_HORSE_MALNOURISHED_THRESHOLD;
-    bool isThin = weightIndex <= WEIGHT_HORSE_THIN_THRESHOLD && !isMalnourished;
+    bool isThin = !isMalnourished && weightIndex <= WEIGHT_HORSE_THIN_THRESHOLD;
 
     LOG_DEV("GetHorseWeightModifier: Weight index={}, Overweight={}, Malnourished={}, Thin={}", weightIndex, isOverweight, isMalnourished, isThin);
 
@@ -326,15 +326,27 @@ void HorseManager::RecordSnapshot(Ped playerPed) noexcept {
     auto [mountedHorse, isMounted] = GetPlayerMountedHorse(playerPed);
     
     if (isMounted && mountedHorse == horsePed) {
-        int weightIndex = ATTRIBUTE::GET_ATTRIBUTE_POINTS(playerPed, ePedAttribute::SA_BODYWEIGHT);
+        int weightIndex = ATTRIBUTE::GET_ATTRIBUTE_POINTS(horsePed, ePedAttribute::SA_BODYWEIGHT);
 
-        bool isOverweight = weightIndex >= WEIGHT_PLAYER_OVERWEIGHT_THRESHOLD;
+        bool isOverweight = weightIndex >= WEIGHT_HORSE_OVERWEIGHT_THRESHOLD;
+        bool isMalnourished = weightIndex <= WEIGHT_HORSE_MALNOURISHED_THRESHOLD;
+        bool isThin = !isMalnourished && weightIndex <= WEIGHT_HORSE_THIN_THRESHOLD;
 
-		LOG_DEV("GetMountedPlayerWeightModifier: Weight index={}, Overweight={}", weightIndex, isOverweight);
+		// If the horse is fit, it's strong enough to carry the player without any additional stamina decay penalty
+		if (!(isOverweight || isMalnourished || isThin)) {
+			LOG(LogLevel::Verbose, "Mounted horse is fit. No penalty applied to horse stamina decay.");
+			return 0.0f;
+		}
 
-        if(isOverweight) {
+        int playerWeightIndex = ATTRIBUTE::GET_ATTRIBUTE_POINTS(playerPed, ePedAttribute::SA_BODYWEIGHT);
+
+        bool isPlayerOverweight = playerWeightIndex >= WEIGHT_PLAYER_OVERWEIGHT_THRESHOLD;
+
+		LOG_DEV("GetMountedPlayerWeightModifier: Weight index={}, Overweight={}", playerWeightIndex, isPlayerOverweight);
+
+        if(isPlayerOverweight) {
 			LOG(LogLevel::Verbose, "Player is overweight while mounted on the horse. Applying a 3% penalty to horse stamina decay.");
-			return 0.03f; // Apply a 3% penalty to stamina decay if the player is overweight while mounted on the horse
+			return 0.03f;
         }
 
         LOG(LogLevel::Verbose, "Player is not overweight while mounted on the horse. No penalty applied to horse stamina decay.");

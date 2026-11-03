@@ -10,7 +10,6 @@
 #include "CMTypes.h"
 
 #ifdef DEVTEST
-// __VA_OPT__(,) safely deletes the comma if you pass 0 formatting variables!
 #define LOG_DEV(fmt_str, ...) \
         do { \
             if (g_CurrentLogLevel.load(std::memory_order_acquire) == static_cast<int>(LogLevel::Dev)) { \

@@ -45,10 +45,10 @@ std::condition_variable g_ConfigThreadCV;
 
 std::mutex g_ConfigMutex;
 std::atomic<bool> g_HasConfigChanged(false);
-std::atomic<bool> g_ShouldHotReload(true);
+std::atomic<bool> g_EnableHotReload(true);
 
 void EnableConfigHotReload(bool enableHotReload) {
-	bool currentState = g_ShouldHotReload.load(std::memory_order_acquire);
+	bool currentState = g_EnableHotReload.load(std::memory_order_acquire);
 
 	if (currentState != enableHotReload) {
         if(!enableHotReload)
@@ -56,7 +56,7 @@ void EnableConfigHotReload(bool enableHotReload) {
         else
             LOG(LogLevel::ConfigOnly, "Config hot-reload is enabled.");
 
-        g_ShouldHotReload.store(enableHotReload, std::memory_order_release);
+        g_EnableHotReload.store(enableHotReload, std::memory_order_release);
 	}
 }
 
@@ -125,7 +125,7 @@ void ConfigWatcherWorker() {
         if (!g_RunConfigThread) break;
 
         if (GetFileAttributesExA(g_IniPath.c_str(), GetFileExInfoStandard, &fileData)) {
-            if (CompareFileTime(&fileData.ftLastWriteTime, &lastWriteTime) > 0 && g_ShouldHotReload.load(std::memory_order_acquire)) {
+            if (CompareFileTime(&fileData.ftLastWriteTime, &lastWriteTime) > 0 && g_EnableHotReload.load(std::memory_order_acquire)) {
                 lastWriteTime = fileData.ftLastWriteTime;
 
                 // Give the OS text editor 100ms to finish flushing its buffer to disk cleanly

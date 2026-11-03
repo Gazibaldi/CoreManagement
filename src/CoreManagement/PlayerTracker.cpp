@@ -68,7 +68,6 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
     if (IsPlayerAtCamp(playerPed, true, false))
         m_PlayerCampSamples++;
 
-    // track the player's dirt level to determine if they are dirty
     m_PlayerAccumulatedDirt += PED::_GET_PED_DIRT_LEVEL(playerPed, true);
 
     // Check if the player is mounted on a horse
@@ -80,6 +79,8 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
         m_HorseSum += horseSpeed;
         m_HorseSamples++;
+
+		LOG_DEV("Player is mounted on a horse. Current horse speed: {:.4f} m/s.", horseSpeed);
     }
     else {
         float playerSpeed = ENTITY::GET_ENTITY_SPEED(playerPed);
@@ -88,6 +89,8 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
         m_PlayerFootSum += playerSpeed;
         m_PlayerFootSamples++;
+
+        LOG_DEV("Player is on foot. Current on-foot speed: {:.4f} m/s.", playerSpeed);
     }
 
 	m_PlayerDrunknessSum += ATTRIBUTE::GET_ATTRIBUTE_POINTS(playerPed, ePedAttribute::SA_INEBRIATED);
@@ -232,17 +235,10 @@ void PlayerTracker::RecordLastSleptDetails(bool sleptAtNight) noexcept {
 				LOG(LogLevel::Verbose, "No player weight modifier applied for {} core., Player Weight is Perfect/Average", (core == CoreIndex::Health ? "Health" : "Stamina"), modifier);
 
             break;
-	    case CoreIndex::DeadEye:
-		    // If the player is overweight or underweight, we apply a 10% penalty to dead eye decay. 
-			modifier = isOverweight || isUnderweight ? 0.10f : 0.0f;
-
-            if (modifier > 0.0f)
-                LOG(LogLevel::Verbose, "Player weight modifier applied for {} core: {:.2f}, Player Weight={}", (core == CoreIndex::Health ? "Health" : "Stamina"), modifier, isOverweight ? "Overweight" : "Underweight");
-            else
-                LOG(LogLevel::Verbose, "No player weight modifier applied for {} core., Player Weight is Perfect/Average", (core == CoreIndex::Health ? "Health" : "Stamina"), modifier);
-
-            break;
-	    default:
+			// For Dead Eye, we do not apply any weight modifier as it is not affected by the player's weight.
+			// this is a design choice as Dead Eye is more about the player's focus and skill rather than their physical condition.
+            // non-vanilla but meh!
+	    default: 
             break;
 	}
     
@@ -275,7 +271,7 @@ void PlayerTracker::RecordLastSleptDetails(bool sleptAtNight) noexcept {
 	return modifier;
 }
 
-void PlayerTracker::ResetSnapshot(bool includeSleepDetails) noexcept {
+void PlayerTracker::ResetSnapshot(bool includeSleep) noexcept {
 	LOG_DEV("Resetting PlayerTracker state.");
 
 	m_PlayerSamples = 0;
@@ -289,7 +285,7 @@ void PlayerTracker::ResetSnapshot(bool includeSleepDetails) noexcept {
 
     m_PlayerDrunknessSum = 0.0f;
 	
-    if (includeSleepDetails) {
+    if (includeSleep) {
 		m_LastSleptHours = -1;
 		m_LastSleptAtNight = false;
 	}

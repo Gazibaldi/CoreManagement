@@ -17,7 +17,7 @@ const float POST_MISSION_DECAY_HOURS = 1.0f;
 
 const float OVERSLEEP_THRESHOLD_HOURS = 12.0f;
 const float MIN_SLEEP_HOURS = 8.0f;
-const float SLEEP_NIGHT_PERCENTAGE_THRESHOLD = 0.6f; // Percentage of sleep that must occur during the night to be considered a "nighttime sleep"
+const float SLEEP_NIGHT_PERCENTAGE_THRESHOLD = 0.6f;
 
 const float TIMESKIP_MAX_HOURS = 12.0f;
 const float MINIGAME_TIMESKIP_MAX_HOURS = 3.0f;

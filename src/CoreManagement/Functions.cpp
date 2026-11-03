@@ -20,7 +20,6 @@
     Hash activeScenario = TASK::_GET_SCENARIO_POINT_TYPE_PED_IS_USING(playerPed);
     LOG_DEV("Active scenario hash: {}", activeScenario);
 
-    // Fall back to transient dynamic actions if the primary structural anchor returns empty
     if (activeScenario == 0) {
         activeScenario = PED::_GET_ACTIVE_DYNAMIC_SCENARIO(playerPed);
         LOG_DEV("Fallback to dynamic scenario hash: {}", activeScenario);

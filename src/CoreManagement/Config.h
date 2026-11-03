@@ -15,7 +15,7 @@ extern const std::string VERSION;
 struct CoreConfigSettings {
     int coreDrainTickIntervalMs = 60000;
     int stateChangeTickIntervalMs = 1000;
-    float restrictedStateChangeTickIntervalMultiplier = 1.0f;
+    float restrictedStateChangeTickIntervalMultiplier = 2.0f;
     int logLevelRaw = 1;
 
     LogLevel currentLogLevel = LogLevel::Standard;

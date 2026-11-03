@@ -46,5 +46,5 @@ public:
     [[nodiscard]] float GetPlayerWeightModifier(Ped playerPed, CoreIndex core) noexcept;
     [[nodiscard]] float GetPlayerDrunknessStaminaModifier(Ped playerPed) noexcept;
 
-    void ResetSnapshot(bool includeSleepDetails = false) noexcept;
+    void ResetSnapshot(bool includeSleep = false) noexcept;
 };
