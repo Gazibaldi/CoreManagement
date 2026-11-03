@@ -410,6 +410,8 @@ float GetPlayerRunningStaminaMultiplier(const PlayerConfigSettings& playerConfig
 
 float GetHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig) {
     float currentSpeed = g_playerTracker.GetHorseAverageSpeed();
+    
+	LOG_DEV("Evaluating horse speed for stamina decay multiplier: currentSpeed={:.2f}", currentSpeed);
 
     // The logic automatically scales down to a base flat rate if the horse is hitched or stabled!
     if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {

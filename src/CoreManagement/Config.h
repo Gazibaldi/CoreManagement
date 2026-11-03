@@ -65,7 +65,7 @@ struct HorseConfigSettings {
 
     float grazeStaminaMultiplier = 0.7f;
     float trotStaminaMultiplier = 1.3f;
-    float gallopStaminaMultiplier = 4.5f;
+    float gallopStaminaMultiplier = 3.5f;
 
     float healthTimeSkipFloor = 25.0f;
 
