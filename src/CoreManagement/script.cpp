@@ -290,6 +290,8 @@ int GetCurrentConfiguredTimeScale(const GeneralConfigSettings& generalConfig) {
 GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings& generalConfig) {
     GameplayContext ctx;
 
+    int configuredTimeScale = GetCurrentConfiguredTimeScale(generalConfig);
+
     EvaluatePlayerHorseState(playerPed);
 
     bool isInMission = MISC::GET_MISSION_FLAG();
@@ -320,8 +322,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const GeneralConfigSettings
     }
     
     int timeScale = GetCurrentGameTimeScale();
-	int configuredTimeScale = GetCurrentConfiguredTimeScale(generalConfig);
-
+	
 	ctx.isInTimeWarp = (timeScale < VANILLA_GAME_TIME_SCALE);
 
 	// If the player is in a mission/minigame/timewarp/shop, we don't reset the time scale as it may be intended to be changed during those events.
