@@ -378,15 +378,15 @@ float GetPlayerMountedStaminaMultiplier(const PlayerConfigSettings& playerConfig
     float currentSpeed = g_playerTracker.GetHorseAverageSpeed();
 
     if (currentSpeed > static_cast<float>(HorseSpeed::Gallop)) {
-        LOG(LogLevel::Verbose, "Active horse is galloping. Applying high Player stamina decay multiplier");
+        LOG(LogLevel::Verbose, "Active horse is Running/Galloping. Applying high Player stamina decay multiplier");
         return playerConfig.mountGallopStaminaMultiplier;
     }
     else if (currentSpeed > static_cast<float>(HorseSpeed::Trot)) {
-        LOG(LogLevel::Verbose, "Active horse is trotting. Applying base Player stamina decay multiplier");
-        return playerConfig.mountTrotStaminaMultiplier;
+        LOG(LogLevel::Verbose, "Active horse is Trotting/Cantering. Applying base Player stamina decay multiplier");
+        return playerConfig.mountTrotCanterStaminaMultiplier;
     }
     else {
-        LOG(LogLevel::Verbose, "Active horse is walking or stationary. Applying low Player stamina decay multiplier");
+        LOG(LogLevel::Verbose, "Active horse is Walking/Grazing. Applying low Player stamina decay multiplier");
         return playerConfig.mountWalkStaminaMultiplier;
     }
 }
@@ -419,8 +419,8 @@ float GetHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig
         return horseConfig.gallopStaminaMultiplier;
     }
     else if (currentSpeed > static_cast<float>(HorseSpeed::Trot)) {
-        LOG(LogLevel::Verbose, "Active Horse: Trotting. Applying medium stamina multiplier.");
-        return horseConfig.trotStaminaMultiplier;
+        LOG(LogLevel::Verbose, "Active Horse: Trotting/Cantering. Applying medium stamina multiplier.");
+        return horseConfig.trotCanterStaminaMultiplier;
     }
     else {
 		LOG(LogLevel::Verbose, "Active Horse: Walking/Grazing. Applying base decay.");

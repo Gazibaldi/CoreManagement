@@ -228,7 +228,7 @@ void BuildDefaultConfigFile() {
             << "JogStaminaMultiplier = " << defaultPlayerConfig.jogStaminaMultiplier << "\n"
             << "SprintStaminaMultiplier = " << defaultPlayerConfig.sprintStaminaMultiplier << "\n"
             << "MountedWalkStaminaMultiplier = " << defaultPlayerConfig.mountWalkStaminaMultiplier << "\n"
-            << "MountedTrotStaminaMultiplier = " << defaultPlayerConfig.mountTrotStaminaMultiplier << "\n"
+            << "MountedTrotCanterStaminaMultiplier = " << defaultPlayerConfig.mountTrotCanterStaminaMultiplier << "\n"
             << "MountedGallopStaminaMultiplier = " << defaultPlayerConfig.mountGallopStaminaMultiplier << "\n\n"
 
             << "[Floors]\n"
@@ -258,7 +258,7 @@ void BuildDefaultConfigFile() {
             << "[HorseMovementModifiers]\n"
             << "; percentage based modifiers for decay points above (0.5 = 50% drain [5 decay becomes 2.5 decay]) depending movement speed of mount\n"
             << "HorseGrazeStaminaMultiplier = " << defaultHorseConfig.grazeStaminaMultiplier << "\n"
-            << "HorseTrotStaminaMultiplier = " << defaultHorseConfig.trotStaminaMultiplier << "\n"
+            << "HorseTrotCanterStaminaMultiplier = " << defaultHorseConfig.trotCanterStaminaMultiplier << "\n"
             << "HorseGallopStaminaMultiplier = " << defaultHorseConfig.gallopStaminaMultiplier << "\n\n"
 
             << "[HorseFloors]\n"
@@ -274,59 +274,59 @@ void BuildDefaultConfigFile() {
 void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigSettings* generalConfig, const PlayerConfigSettings* playerConfig, const HorseConfigSettings* horseConfig) {
     std::ostringstream table;
     table << std::fixed << std::setprecision(2)
-        << "+---------------------------------------------+------------+\n"
-        << "| Configuration Parameter                     |      Value |\n"
-        << "+---------------------------------------------+------------+\n"
-        << "| Logging: Log Level                          | " << std::setw(10) << coreConfig->logLevelRaw << " |\n"
-        << "|                                             |            |\n"
-        << "| Performance: Drain Tick Interval (ms)       | " << std::setw(10) << coreConfig->coreDrainTickIntervalMs << " |\n"
-        << "| Performance: State Tick Interval (ms)       | " << std::setw(10) << coreConfig->stateChangeTickIntervalMs << " |\n"
-        << "| Performance: State Tick Interval Multiplier | " << std::setw(10) << coreConfig->restrictedStateChangeTickIntervalMultiplier << " |\n"
-        << "|                                             |            |\n"
-        << "| General: In-Game Minute Day (ms)            | " << std::setw(10) << generalConfig->msPerInGameMinuteDay << " |\n"
-        << "| General: In-Game Minute Night (ms)          | " << std::setw(10) << generalConfig->msPerInGameMinuteNight << " |\n"
-        << "| General: Night Start Hour                   | " << std::setw(10) << generalConfig->nightStartHour << " |\n"
-        << "| General: Night End Hour                     | " << std::setw(10) << generalConfig->nightEndHour << " |\n"
-        << "| General: Drain Enabled for Missions         | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringMissions) << " |\n"
-        << "| General: Drain Enabled for Mini-games       | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringMinigames) << " |\n"
-        << "|                                             |            |\n"
-        << "| Player: Health Base Awake Decay             | " << std::setw(10) << playerConfig->baseHealthDecay << " |\n"
-        << "| Player: Stamina Base Awake Decay            | " << std::setw(10) << playerConfig->baseStaminaDecay << " |\n"
-        << "| Player: Dead Eye Base Awake Decay           | " << std::setw(10) << playerConfig->baseDeadEyeDecay << " |\n"
-        << "|                                             |            |\n"
-        << "| Player: Sleep Health Multiplier             | " << std::setw(10) << playerConfig->healthTimeSkipMultiplier << " |\n"
-        << "| Player: Night Dead Eye Multiplier           | " << std::setw(10) << playerConfig->nightDeadEyeMultiplier << " |\n"
-        << "| Player: Dead Eye Dirty Multiplier           | " << std::setw(10) << playerConfig->deadEyeDirtyMultiplier << " |\n"
-        << "| Player: Camped/Restrained Multiplier        | " << std::setw(10) << playerConfig->campedMultiplier << " |\n"
-        << "|                                             |            |\n"
-        << "| Player: Jog Stamina Multiplier              | " << std::setw(10) << playerConfig->jogStaminaMultiplier << " |\n"
-        << "| Player: Sprint Stamina Multiplier           | " << std::setw(10) << playerConfig->sprintStaminaMultiplier << " |\n"
-        << "|                                             |            |\n"
-		<< "| Player: Mounted Walk Stamina Multiplier     | " << std::setw(10) << playerConfig->mountWalkStaminaMultiplier << " |\n"
-        << "| Player: Mounted Trot Stamina Multiplier     | " << std::setw(10) << playerConfig->mountTrotStaminaMultiplier << " |\n"
-        << "| Player: Mounted Gallop Stamina Multiplier   | " << std::setw(10) << playerConfig->mountGallopStaminaMultiplier << " |\n"
-        << "|                                             |            |\n"
-        << "| Player: Health Timeskip Floor               | " << std::setw(10) << playerConfig->healthTimeSkipFloor << " |\n"
-        << "| Player: Health Camped Floor                 | " << std::setw(10) << playerConfig->campedHealthFloor << " |\n"
-        << "| Player: Stamina Camped Floor                | " << std::setw(10) << playerConfig->campedStaminaFloor << " |\n"
-        << "| Player: Dead Eye Camped Floor               | " << std::setw(10) << playerConfig->campedDeadEyeFloor << " |\n"
-        << "| Player: Health Mission Floor                | " << std::setw(10) << playerConfig->missionHealthFloor << " |\n"
-        << "| Player: Stamina Mission Floor               | " << std::setw(10) << playerConfig->missionStaminaFloor << " |\n"
-        << "| Player: Dead Eye Mission Floor              | " << std::setw(10) << playerConfig->missionDeadEyeFloor << " |\n"
-        << "|                                             |            |\n"
-        << "| Horse: Health Base Decay                    | " << std::setw(10) << horseConfig->baseHealthDecay << " |\n"
-        << "| Horse: Stamina Base Decay                   | " << std::setw(10) << horseConfig->baseStaminaDecay << " |\n"
-        << "|                                             |            |\n"
-		<< "| Horse: Stamina Graze Multiplier             | " << std::setw(10) << horseConfig->grazeStaminaMultiplier << " |\n"
-        << "| Horse: Stamina Trot Multiplier              | " << std::setw(10) << horseConfig->trotStaminaMultiplier << " |\n"
-        << "| Horse: Stamina Gallop Multiplier            | " << std::setw(10) << horseConfig->gallopStaminaMultiplier << " |\n"
-        << "|                                             |            |\n"
-        << "| Horse: Health Timeskip Floor                | " << std::setw(10) << horseConfig->healthTimeSkipFloor << " |\n"
-        << "| Horse: Health Camped Floor                  | " << std::setw(10) << horseConfig->campedHealthFloor << " |\n"
-        << "| Horse: Stamina Camped Floor                 | " << std::setw(10) << horseConfig->campedStaminaFloor << " |\n"
-        << "| Horse: Health Mission Floor                 | " << std::setw(10) << horseConfig->missionHealthFloor << " |\n"
-        << "| Horse: Stamina Mission Floor                | " << std::setw(10) << horseConfig->missionStaminaFloor << " |\n"
-        << "+---------------------------------------------+------------+\n";
+        << "+------------------------------------------------+------------+\n"
+        << "| Configuration Parameter                        |      Value |\n"
+        << "+------------------------------------------------+------------+\n"
+        << "| Logging: Log Level                             | " << std::setw(10) << coreConfig->logLevelRaw << " |\n"
+        << "|                                                |            |\n"
+        << "| Performance: Drain Tick Interval (ms)          | " << std::setw(10) << coreConfig->coreDrainTickIntervalMs << " |\n"
+        << "| Performance: State Tick Interval (ms)          | " << std::setw(10) << coreConfig->stateChangeTickIntervalMs << " |\n"
+        << "| Performance: State Tick Interval Multiplier    | " << std::setw(10) << coreConfig->restrictedStateChangeTickIntervalMultiplier << " |\n"
+        << "|                                                |            |\n"
+        << "| General: In-Game Minute Day (ms)               | " << std::setw(10) << generalConfig->msPerInGameMinuteDay << " |\n"
+        << "| General: In-Game Minute Night (ms)             | " << std::setw(10) << generalConfig->msPerInGameMinuteNight << " |\n"
+        << "| General: Night Start Hour                      | " << std::setw(10) << generalConfig->nightStartHour << " |\n"
+        << "| General: Night End Hour                        | " << std::setw(10) << generalConfig->nightEndHour << " |\n"
+        << "| General: Drain Enabled for Missions            | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringMissions) << " |\n"
+        << "| General: Drain Enabled for Mini-games          | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringMinigames) << " |\n"
+        << "|                                                |            |\n"
+        << "| Player: Health Base Awake Decay                | " << std::setw(10) << playerConfig->baseHealthDecay << " |\n"
+        << "| Player: Stamina Base Awake Decay               | " << std::setw(10) << playerConfig->baseStaminaDecay << " |\n"
+        << "| Player: Dead Eye Base Awake Decay              | " << std::setw(10) << playerConfig->baseDeadEyeDecay << " |\n"
+        << "|                                                |            |\n"
+        << "| Player: Sleep Health Multiplier                | " << std::setw(10) << playerConfig->healthTimeSkipMultiplier << " |\n"
+        << "| Player: Night Dead Eye Multiplier              | " << std::setw(10) << playerConfig->nightDeadEyeMultiplier << " |\n"
+        << "| Player: Dead Eye Dirty Multiplier              | " << std::setw(10) << playerConfig->deadEyeDirtyMultiplier << " |\n"
+        << "| Player: Camped/Restrained Multiplier           | " << std::setw(10) << playerConfig->campedMultiplier << " |\n"
+        << "|                                                |            |\n"
+        << "| Player: Jog Stamina Multiplier                 | " << std::setw(10) << playerConfig->jogStaminaMultiplier << " |\n"
+        << "| Player: Sprint Stamina Multiplier              | " << std::setw(10) << playerConfig->sprintStaminaMultiplier << " |\n"
+        << "|                                                |            |\n"
+		<< "| Player: Mounted Walk Stamina Multiplier        | " << std::setw(10) << playerConfig->mountWalkStaminaMultiplier << " |\n"
+        << "| Player: Mounted Trot/Canter Stamina Multiplier | " << std::setw(10) << playerConfig->mountTrotCanterStaminaMultiplier << " |\n"
+        << "| Player: Mounted Gallop Stamina Multiplier      | " << std::setw(10) << playerConfig->mountGallopStaminaMultiplier << " |\n"
+        << "|                                                |            |\n"
+        << "| Player: Health Timeskip Floor                  | " << std::setw(10) << playerConfig->healthTimeSkipFloor << " |\n"
+        << "| Player: Health Camped Floor                    | " << std::setw(10) << playerConfig->campedHealthFloor << " |\n"
+        << "| Player: Stamina Camped Floor                   | " << std::setw(10) << playerConfig->campedStaminaFloor << " |\n"
+        << "| Player: Dead Eye Camped Floor                  | " << std::setw(10) << playerConfig->campedDeadEyeFloor << " |\n"
+        << "| Player: Health Mission Floor                   | " << std::setw(10) << playerConfig->missionHealthFloor << " |\n"
+        << "| Player: Stamina Mission Floor                  | " << std::setw(10) << playerConfig->missionStaminaFloor << " |\n"
+        << "| Player: Dead Eye Mission Floor                 | " << std::setw(10) << playerConfig->missionDeadEyeFloor << " |\n"
+        << "|                                                |            |\n"
+        << "| Horse: Health Base Decay                       | " << std::setw(10) << horseConfig->baseHealthDecay << " |\n"
+        << "| Horse: Stamina Base Decay                      | " << std::setw(10) << horseConfig->baseStaminaDecay << " |\n"
+        << "|                                                |            |\n"
+		<< "| Horse: Stamina Graze Multiplier                | " << std::setw(10) << horseConfig->grazeStaminaMultiplier << " |\n"
+        << "| Horse: Stamina Trot/Canter Multiplier          | " << std::setw(10) << horseConfig->trotCanterStaminaMultiplier << " |\n"
+        << "| Horse: Stamina Gallop Multiplier               | " << std::setw(10) << horseConfig->gallopStaminaMultiplier << " |\n"
+        << "|                                                |            |\n"
+        << "| Horse: Health Timeskip Floor                   | " << std::setw(10) << horseConfig->healthTimeSkipFloor << " |\n"
+        << "| Horse: Health Camped Floor                     | " << std::setw(10) << horseConfig->campedHealthFloor << " |\n"
+        << "| Horse: Stamina Camped Floor                    | " << std::setw(10) << horseConfig->campedStaminaFloor << " |\n"
+        << "| Horse: Health Mission Floor                    | " << std::setw(10) << horseConfig->missionHealthFloor << " |\n"
+        << "| Horse: Stamina Mission Floor                   | " << std::setw(10) << horseConfig->missionStaminaFloor << " |\n"
+        << "+------------------------------------------------+------------+\n";
 
     LOG(LogLevel::ConfigOnly, "Internal Parameter Map Hydrated:\n{}", table.str());
 }
@@ -378,7 +378,7 @@ void LoadConfiguration() {
     newPlayerConfig->sprintStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "SprintStaminaMultiplier", defaultPlayerConfig.sprintStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
 
 	newPlayerConfig->mountWalkStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedWalkStaminaMultiplier", defaultPlayerConfig.mountWalkStaminaMultiplier, g_IniPath.c_str()), 0.5f, 1.0f);
-    newPlayerConfig->mountTrotStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedTrotStaminaMultiplier", defaultPlayerConfig.mountTrotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 3.0f);
+    newPlayerConfig->mountTrotCanterStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedTrotCanterStaminaMultiplier", defaultPlayerConfig.mountTrotCanterStaminaMultiplier, g_IniPath.c_str()), 1.0f, 3.0f);
     newPlayerConfig->mountGallopStaminaMultiplier = std::clamp(GetIniFloat("PlayerMovementModifiers", "MountedGallopStaminaMultiplier", defaultPlayerConfig.mountGallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
 
     newPlayerConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("Floors", "HealthTimeSkipFloor", defaultPlayerConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 25.0f);
@@ -393,7 +393,7 @@ void LoadConfiguration() {
     newHorseConfig->baseStaminaDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", defaultHorseConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
 
 	newHorseConfig->grazeStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGrazeStaminaMultiplier", defaultHorseConfig.grazeStaminaMultiplier, g_IniPath.c_str()), 0.5f, 1.0f);
-    newHorseConfig->trotStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", defaultHorseConfig.trotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
+    newHorseConfig->trotCanterStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotCanterStaminaMultiplier", defaultHorseConfig.trotCanterStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
     newHorseConfig->gallopStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", defaultHorseConfig.gallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 8.0f);
 
     newHorseConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("HorseFloors", "HorseHealthTimeSkipFloor", defaultHorseConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 25.0f);
