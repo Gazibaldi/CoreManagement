@@ -258,7 +258,8 @@ void BuildDefaultConfigFile() {
             << "[HorseMovementModifiers]\n"
             << "; percentage based modifiers for decay points above (0.5 = 50% drain [5 decay becomes 2.5 decay]) depending movement speed of mount\n"
             << "HorseGrazeStaminaMultiplier = " << defaultHorseConfig.grazeStaminaMultiplier << "\n"
-            << "HorseTrotCanterStaminaMultiplier = " << defaultHorseConfig.trotCanterStaminaMultiplier << "\n"
+            << "HorseTrotStaminaMultiplier = " << defaultHorseConfig.trotStaminaMultiplier << "\n"
+            << "HorseCanterStaminaMultiplier = " << defaultHorseConfig.canterStaminaMultiplier << "\n"
             << "HorseGallopStaminaMultiplier = " << defaultHorseConfig.gallopStaminaMultiplier << "\n\n"
 
             << "[HorseFloors]\n"
@@ -318,7 +319,8 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
         << "| Horse: Stamina Base Decay                      | " << std::setw(10) << horseConfig->baseStaminaDecay << " |\n"
         << "|                                                |            |\n"
 		<< "| Horse: Stamina Graze Multiplier                | " << std::setw(10) << horseConfig->grazeStaminaMultiplier << " |\n"
-        << "| Horse: Stamina Trot/Canter Multiplier          | " << std::setw(10) << horseConfig->trotCanterStaminaMultiplier << " |\n"
+        << "| Horse: Stamina Trot Stamina Multiplier         | " << std::setw(10) << horseConfig->trotStaminaMultiplier << " |\n"
+        << "| Horse: Stamina Canter Stamina Multiplier       | " << std::setw(10) << horseConfig->canterStaminaMultiplier << " |\n"
         << "| Horse: Stamina Gallop Multiplier               | " << std::setw(10) << horseConfig->gallopStaminaMultiplier << " |\n"
         << "|                                                |            |\n"
         << "| Horse: Health Timeskip Floor                   | " << std::setw(10) << horseConfig->healthTimeSkipFloor << " |\n"
@@ -393,7 +395,8 @@ void LoadConfiguration() {
     newHorseConfig->baseStaminaDecay = std::clamp(GetIniFloat("HorseBaseDecay", "HorseStaminaDecayBase", defaultHorseConfig.baseStaminaDecay, g_IniPath.c_str()), 1.0f, 100.0f);
 
 	newHorseConfig->grazeStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGrazeStaminaMultiplier", defaultHorseConfig.grazeStaminaMultiplier, g_IniPath.c_str()), 0.5f, 1.0f);
-    newHorseConfig->trotCanterStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotCanterStaminaMultiplier", defaultHorseConfig.trotCanterStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
+    newHorseConfig->trotStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseTrotStaminaMultiplier", defaultHorseConfig.trotStaminaMultiplier, g_IniPath.c_str()), 1.0f, 2.0f);
+    newHorseConfig->canterStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseCanterStaminaMultiplier", defaultHorseConfig.canterStaminaMultiplier, g_IniPath.c_str()), 1.0f, 5.0f);
     newHorseConfig->gallopStaminaMultiplier = std::clamp(GetIniFloat("HorseMovementModifiers", "HorseGallopStaminaMultiplier", defaultHorseConfig.gallopStaminaMultiplier, g_IniPath.c_str()), 1.0f, 8.0f);
 
     newHorseConfig->healthTimeSkipFloor = std::clamp(GetIniFloat("HorseFloors", "HorseHealthTimeSkipFloor", defaultHorseConfig.healthTimeSkipFloor, g_IniPath.c_str()), 1.0f, 25.0f);

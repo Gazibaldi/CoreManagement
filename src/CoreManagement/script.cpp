@@ -381,6 +381,7 @@ float GetPlayerMountedStaminaMultiplier(const PlayerConfigSettings& playerConfig
         LOG(LogLevel::Verbose, "Active horse is Running/Galloping. Applying high Player stamina decay multiplier");
         return playerConfig.mountGallopStaminaMultiplier;
     }
+	// this includes both canter and trot as the canter speed is higher than the trot speed, so if the horse is cantering, it will be caught by this condition first.
     else if (currentSpeed > static_cast<float>(HorseSpeed::Trot)) {
         LOG(LogLevel::Verbose, "Active horse is Trotting/Cantering. Applying base Player stamina decay multiplier");
         return playerConfig.mountTrotCanterStaminaMultiplier;
@@ -418,12 +419,16 @@ float GetHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig
         LOG(LogLevel::Verbose, "Active Horse: Running/Galloping. Applying high stamina multiplier.");
         return horseConfig.gallopStaminaMultiplier;
     }
+    if (currentSpeed > static_cast<float>(HorseSpeed::Canter)) {
+        LOG(LogLevel::Verbose, "Active Horse: Cantering. Applying medium stamina multiplier.");
+        return horseConfig.canterStaminaMultiplier;
+    }
     else if (currentSpeed > static_cast<float>(HorseSpeed::Trot)) {
-        LOG(LogLevel::Verbose, "Active Horse: Trotting/Cantering. Applying medium stamina multiplier.");
-        return horseConfig.trotCanterStaminaMultiplier;
+        LOG(LogLevel::Verbose, "Active Horse: Trotting. Applying base stamina multiplier.");
+        return horseConfig.trotStaminaMultiplier;
     }
     else {
-		LOG(LogLevel::Verbose, "Active Horse: Walking/Grazing. Applying base decay.");
+		LOG(LogLevel::Verbose, "Active Horse: Walking/Grazing. Applying low stamina decay.");
         return horseConfig.grazeStaminaMultiplier;
     }
 }

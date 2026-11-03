@@ -46,7 +46,7 @@ struct PlayerConfigSettings {
 
     float mountWalkStaminaMultiplier = 0.8f;
     float mountTrotCanterStaminaMultiplier = 1.0f;
-    float mountGallopStaminaMultiplier = 1.2f;
+    float mountGallopStaminaMultiplier = 1.25f;
 
     float healthTimeSkipFloor = 25.0f;
 
@@ -64,7 +64,8 @@ struct HorseConfigSettings {
     float baseStaminaDecay = 5.5f;
 
     float grazeStaminaMultiplier = 0.7f;
-    float trotCanterStaminaMultiplier = 1.3f;
+    float trotStaminaMultiplier = 1.0f;
+    float canterStaminaMultiplier = 1.25f;
     float gallopStaminaMultiplier = 3.5f;
 
     float healthTimeSkipFloor = 25.0f;
