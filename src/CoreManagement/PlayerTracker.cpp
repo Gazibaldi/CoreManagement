@@ -276,6 +276,7 @@ void PlayerTracker::ResetSnapshot(bool includeSleep) noexcept {
 
 	m_PlayerSamples = 0;
 	m_PlayerAccumulatedDirt = 0.0f;
+	m_PlayerCampSamples = 0;
 
 	m_PlayerFootSum = 0.0f;
 	m_PlayerFootSamples = 0;
