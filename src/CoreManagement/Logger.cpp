@@ -46,17 +46,17 @@ std::atomic<bool> g_RunLogThread(false);
 std::condition_variable g_LogCV;
 std::mutex g_LogQueueMutex;
 
-void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
-    while (runFlag || !s_LogQueue.empty()) {
+void AsyncLogWriterWorker() {
+    while (g_RunLogThread || !s_LogQueue.empty()) {
         std::unique_lock<std::mutex> lock(g_LogQueueMutex);
 
         g_LogCV.wait_for(lock, std::chrono::milliseconds(2000), [&] {
-            return !s_LogQueue.empty() || !runFlag.load(std::memory_order_acquire);
+            return !s_LogQueue.empty() || !g_RunLogThread.load(std::memory_order_acquire);
             });
 
         // If we were woken up to shut down and the queue is completely empty, 
         // break instantly to skip the slow disk I/O operations entirely.
-        if (!runFlag.load(std::memory_order_acquire) && s_LogQueue.empty()) {
+        if (!g_RunLogThread.load(std::memory_order_acquire) && s_LogQueue.empty()) {
             break;
         }
 
@@ -74,7 +74,7 @@ void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
 
 [[nodiscard]] std::thread InitialiseLoggerThread() {
     g_RunLogThread.store(true, std::memory_order_release);
-    return std::thread(AsyncLogWriterWorker, std::ref(g_RunLogThread));
+    return std::thread(AsyncLogWriterWorker);
 }
 
 void ShutdownLogger() {

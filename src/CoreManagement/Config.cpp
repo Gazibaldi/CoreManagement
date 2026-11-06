@@ -200,8 +200,10 @@ void BuildDefaultConfigFile() {
             << "; in-game hour in which day officially begins\n"
             << "; valid range 4 - 8 (4am - 8am)"
             << "NightEndHour = " << defaultGeneralConfig.nightEndHour << "\n"
-            << "; If 1 (true), core drain ticks continuously during story/world missions. \n"
+            << "; If 1 (true), core drain ticks continuously during story missions. \n"
             << "EnableDuringMissions = " << static_cast<int>(defaultGeneralConfig.enableDuringMissions) << "\n"
+			<< "; If 1 (true), core drain ticks continuously during random events. \n"
+            << "EnableDuringRandomEvents = " << static_cast<int>(defaultGeneralConfig.enableDuringRandomEvents) << "\n"
             << "; If 1 (true), core drain ticks continuously while sitting at poker, blackjack, etc.\n"
             << "EnableDuringMinigames = " << static_cast<int>(defaultGeneralConfig.enableDuringMinigames) << "\n\n"
 
@@ -268,6 +270,7 @@ void BuildDefaultConfigFile() {
             << "CampedHorseStaminaFloor = " << defaultHorseConfig.campedStaminaFloor << "\n"
             << "MissionHorseHealthFloor = " << defaultHorseConfig.missionHealthFloor << "\n"
             << "MissionHorseStaminaFloor = " << defaultHorseConfig.missionStaminaFloor << "\n";
+        outFile.flush();
         outFile.close();
     }
 }
@@ -289,6 +292,7 @@ void LogConfiguration(const CoreConfigSettings* coreConfig, const GeneralConfigS
         << "| General: Night Start Hour                      | " << std::setw(10) << generalConfig->nightStartHour << " |\n"
         << "| General: Night End Hour                        | " << std::setw(10) << generalConfig->nightEndHour << " |\n"
         << "| General: Drain Enabled for Missions            | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringMissions) << " |\n"
+		<< "| General: Drain Enabled for Random Events       | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringRandomEvents) << " |\n"
         << "| General: Drain Enabled for Mini-games          | " << std::setw(10) << static_cast<int>(generalConfig->enableDuringMinigames) << " |\n"
         << "|                                                |            |\n"
         << "| Player: Health Base Awake Decay                | " << std::setw(10) << playerConfig->baseHealthDecay << " |\n"
@@ -365,6 +369,7 @@ void LoadConfiguration() {
     newGeneralConfig->nightStartHour = std::clamp(GetIniInt("General", "NightStartHour", defaultGeneralConfig.nightStartHour, g_IniPath.c_str()), 18, 22); // clamp between 18 and 22 (6pm - 10pm)
     newGeneralConfig->nightEndHour = std::clamp(GetIniInt("General", "NightEndHour", defaultGeneralConfig.nightEndHour, g_IniPath.c_str()), 4, 8); // clamp between 4 and 8 (4am - 8am)
     newGeneralConfig->enableDuringMissions = GetIniBool("General", "EnableDuringMissions", defaultGeneralConfig.enableDuringMissions, g_IniPath.c_str());
+    newGeneralConfig->enableDuringRandomEvents = GetIniBool("General", "EnableDuringRandomEvents", defaultGeneralConfig.enableDuringRandomEvents, g_IniPath.c_str());    
     newGeneralConfig->enableDuringMinigames = GetIniBool("General", "EnableDuringMinigames", defaultGeneralConfig.enableDuringMinigames, g_IniPath.c_str());
 
     newPlayerConfig->baseHealthDecay = std::clamp(GetIniFloat("BaseDecayAwake", "HealthDecayBase", defaultPlayerConfig.baseHealthDecay, g_IniPath.c_str()), 1.0f, 100.0f);

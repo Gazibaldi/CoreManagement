@@ -8,6 +8,7 @@
 #include <string>
 
 const int VANILLA_GAME_TIME_SCALE = 2000;
+const float SPECIAL_EDITION_CORE_STATS_BONUS_REDUCTION = 0.2f;
 
 const float HORSE_HITCHED_HEALTH_REQ = 60.0f;
 

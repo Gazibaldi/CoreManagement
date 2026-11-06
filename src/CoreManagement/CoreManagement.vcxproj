@@ -12,14 +12,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Config.cpp" />
-    <ClCompile Include="Functions.cpp" />
-    <ClCompile Include="Functions.h" />
+    <ClCompile Include="Common.cpp" />
+    <ClCompile Include="Common.h" />
     <ClCompile Include="HorseManager.cpp" />
     <ClCompile Include="InventoryManager.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PlayerTracker.cpp" />
+    <ClCompile Include="SaveManager.cpp" />
     <ClCompile Include="script.cpp" />
     <ClCompile Include="ThreadManager.cpp" />
     <ClCompile Include="TransientActivityMonitor.cpp" />
@@ -39,6 +40,7 @@
     <ClInclude Include="..\..\magic_enum.hpp" />
     <ClInclude Include="PlayerTracker.h" />
     <ClInclude Include="..\..\script.h" />
+    <ClInclude Include="SaveManager.h" />
     <ClInclude Include="ThreadManager.h" />
     <ClInclude Include="TransientActivityMonitor.h" />
   </ItemGroup>

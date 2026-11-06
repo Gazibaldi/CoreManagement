@@ -20,15 +20,9 @@
 #include "CMTypes.h"
 #include "Constants.h"
 #include "TransientActivityMonitor.h"
-#include "PlayerTracker.h"
 #include "HorseManager.h"
-#include "InventoryManager.h"
-#include "Functions.h"
-
-SimulationState g_State;
-PlayerTracker g_playerTracker;
-InventoryManager g_InventoryManager;
-TransientActivityRegistry g_activeMonitors;
+#include "Common.h"
+#include "SaveManager.h"
 
 std::array<Hash, 18> g_SleepScenarios{};
 std::array<Hash, 4> g_TableMinigames{};
@@ -302,25 +296,32 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const ConfigSnapshot& confi
     EvaluatePlayerHorseState(playerPed);
 
     bool isInMission = MISC::GET_MISSION_FLAG();
+	bool isInRandomEvent = MISC::GET_RANDOM_EVENT_FLAG();
     bool isInMinigame = IsPlayerPlayingTableMinigame();
+	bool isSMcGPartyActive = SCRIPT::HAS_SCRIPT_WITH_NAME_HASH_LOADED(GetKey("CSTAG_EVENT_HSO_PARTY_NIGHT")) > 0;
 	bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
 
-    LOG_DEV("Gameplay state evaluated: allowDrainInMissions={}, allowDrainInMinigames={}", config.GeneralConfig.enableDuringMissions, config.GeneralConfig.enableDuringMinigames);
+	LOG_DEV("IsSMcGPartyActive check: isSMcGPartyActive={}", isSMcGPartyActive ? "true" : "false");
 
-    // If the player is in a mission or minigame and the config disallows drain, we freeze the decay.
+    LOG_DEV("Gameplay state evaluated: allowDrainInMissions={}, allowDrainInMinigames={}, allowDrainInRandomEvents={}", config.GeneralConfig.enableDuringMissions, config.GeneralConfig.enableDuringMinigames, config.GeneralConfig.enableDuringRandomEvents);
+
+    // If the player is in a mission/random event or minigame and the config disallows drain, we freeze the decay.
     ctx.isInMission = isInMission && !config.GeneralConfig.enableDuringMissions;
 	ctx.EnableStandardMissionDecay = isInMission && config.GeneralConfig.enableDuringMissions; // special prop for tracking decay during missions/minigames if the config enables it
+
+    ctx.isInRandomEvent = isInRandomEvent && !config.GeneralConfig.enableDuringRandomEvents;
+    ctx.EnableStandardRandomEventDecay = isInRandomEvent && config.GeneralConfig.enableDuringRandomEvents; // special prop for tracking decay during random events if the config enables it
 
     ctx.isInMinigame = isInMinigame && !config.GeneralConfig.enableDuringMinigames;
     ctx.EnableStandardMinigameDecay = isInMinigame && config.GeneralConfig.enableDuringMinigames; // special prop for tracking decay during missions/minigames if the config enables it
 
-	// If the player is in a mission or minigame, we don't allow hot-reload of the config to 
+	// If the player is in a mission/random event or minigame, we don't allow hot-reload of the config to 
     // avoid potential issues with state changes during those events.
-    EnableConfigHotReload(!(ctx.isInMission || ctx.isInMinigame));
+    EnableConfigHotReload(!(ctx.isInMission || ctx.isInRandomEvent || ctx.isInMinigame));
 
-	// Only check the following states if the player is not already in a mission or minigame
+	// Only check the following states if the player is not already in a mission/random event or minigame
 	// they can't be happening/change if we are in mission or minigame or falling/dying
-    if (!(isInMission || isInMinigame || isFallingOrGoingToDie)) {
+    if (!(isInMission || isInRandomEvent || isInMinigame || isFallingOrGoingToDie)) {
         ctx.isBathing = IsPlayerBathing(playerPed);
         ctx.isSleeping = IsInSleepScenario(playerPed);
         ctx.isJailed = IsPlayerArrested();        
@@ -332,9 +333,9 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const ConfigSnapshot& confi
 	
 	ctx.isInTimeWarp = (timeScale < VANILLA_GAME_TIME_SCALE);
 
-	// If the player is in a mission/minigame/timewarp/shop, we don't reset the time scale as it may be intended to be changed during those events.
+	// If the player is in a mission/random event/minigame/timewarp/shop, we don't reset the time scale as it may be intended to be changed during those events.
 	// otherwise, we reset it back to the configured value to ensure the drain mechanics are consistent with the player's configuration.
-    if (timeScale != configuredTimeScale && !(isInMission || isInMinigame || ctx.isInTimeWarp || ctx.isInShop)) {
+    if (timeScale != configuredTimeScale && !(isInMission || isInRandomEvent || isInMinigame || ctx.isInTimeWarp || ctx.isInShop)) {
         LOG(LogLevel::Standard, "Game time scale has changed to {} due to state change. Resetting to configured value: {}.", timeScale, configuredTimeScale);
 		SetGameTimeScale(configuredTimeScale);
     }
@@ -345,7 +346,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const ConfigSnapshot& confi
     }
 
     // camp stays out as we want a customized slowed decay in those cases
-    ctx.freezeActive = (ctx.isInMission || ctx.isInMinigame || isFallingOrGoingToDie || ctx.isSleeping || ctx.isBathing || ctx.isJailed || ctx.isInTimeWarp || ctx.isInShop);
+    ctx.freezeActive = (ctx.isInMission || ctx.isInRandomEvent || ctx.isInMinigame || isFallingOrGoingToDie || ctx.isSleeping || ctx.isBathing || ctx.isJailed || ctx.isInTimeWarp || ctx.isInShop);
 	ctx.monitorTransientVarsDuringFreeze = ctx.isBathing; // We want to monitor bathing state even when freeze is active, as it can change during the freeze period. (Deluxe bathing cutscene issue)
 
 	// Record the tracking snapshots if we are not in a freeze state or if the drain tick is due when we are in a freeze state. 
@@ -360,6 +361,8 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const ConfigSnapshot& confi
             "Gameplay state changed: \n"
             "           isInMission={},\n"
             "           EnableStandardMissionDecay={},\n"
+            "           isInRandomEvent={},\n"
+            "           EnableStandardRandomEventDecay={},\n"
             "           isInMinigame={},\n"
             "           EnableStandardMinigameDecay={},\n"
             "           isFallingOrGoingToDie={},\n"
@@ -370,7 +373,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const ConfigSnapshot& confi
             "           isJailed={},\n"
             "           isInTimeWarp={},\n"
             "           isFreezeActive={}", 
-            ctx.isInMission, ctx.EnableStandardMissionDecay, ctx.isInMinigame, ctx.EnableStandardMinigameDecay, isFallingOrGoingToDie, ctx.isBathing, ctx.isSleeping, ctx.isAtCamp, ctx.isInShop, ctx.isJailed, ctx.isInTimeWarp, ctx.freezeActive);
+            ctx.isInMission, ctx.EnableStandardMissionDecay, ctx.isInRandomEvent, ctx.EnableStandardRandomEventDecay, ctx.isInMinigame, ctx.EnableStandardMinigameDecay, isFallingOrGoingToDie, ctx.isBathing, ctx.isSleeping, ctx.isAtCamp, ctx.isInShop, ctx.isJailed, ctx.isInTimeWarp, ctx.freezeActive);
     }  
 
     return ctx;
@@ -440,6 +443,10 @@ float GetHorseSpeedStaminaDecayMultiplier(const HorseConfigSettings& horseConfig
     }
 }
 
+bool IsSECoreBonusesEnabled() {
+	return DLC::_GET_SPECIAL_EDITION_CORE_STATS_BONUS_ENABLED();
+}
+
 float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerConfig, Ped playerPed, float totalPassiveHealthModifierReduction, bool applyPostMissionDecay = false, bool isPlayerSemiRestrained = false) {
     float multiplier = 1.0f;
 
@@ -452,6 +459,11 @@ float CalculatePlayerHealthDecayMultiplier(const PlayerConfigSettings& playerCon
         LOG(LogLevel::Verbose, "Player is exiting a mission. Applying post-mission health decay multiplier.");
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
+
+	if (IsSECoreBonusesEnabled() && !isPlayerSemiRestrained) {
+		LOG(LogLevel::Verbose, "Special Edition Core Bonus is enabled. Applying health decay reduction.");
+		multiplier -= SPECIAL_EDITION_CORE_STATS_BONUS_REDUCTION;
+	}
 
 	multiplier += g_playerTracker.GetPlayerWeightModifier(playerPed, CoreIndex::Health);
 
@@ -489,6 +501,11 @@ float CalculatePlayerStaminaDecayMultiplier(const PlayerConfigSettings& playerCo
         multiplier += POST_MISSION_DECAY_ADDITIVE_MULTIPLIER;
     }
 
+    if (IsSECoreBonusesEnabled() && !isPlayerSemiRestrained) {
+        LOG(LogLevel::Verbose, "Special Edition Core Bonus is enabled. Applying stamina decay reduction.");
+        multiplier -= SPECIAL_EDITION_CORE_STATS_BONUS_REDUCTION;
+    }
+
     multiplier += g_playerTracker.GetPlayerWeightModifier(playerPed, CoreIndex::Stamina);
 	multiplier += g_playerTracker.GetPlayerDrunknessStaminaModifier(playerPed);
 
@@ -511,6 +528,11 @@ float CalculatePlayerDeadEyeDecayMultiplier(const PlayerConfigSettings& playerCo
     else if (isNighttime) {
         LOG(LogLevel::Verbose, "Player is active at night. Applying night dead eye decay multiplier.");
         multiplier = playerConfig.nightDeadEyeMultiplier;
+    }
+
+    if (IsSECoreBonusesEnabled() && !isPlayerSemiRestrained) {
+        LOG(LogLevel::Verbose, "Special Edition Core Bonus is enabled. Applying stamina decay reduction.");
+        multiplier -= SPECIAL_EDITION_CORE_STATS_BONUS_REDUCTION;
     }
 
     if(g_playerTracker.IsPlayerDirty(playerPed)) {
@@ -804,12 +826,12 @@ bool IsSleepDuringTheNight(int elapsedHours, int nightStartHour, int nightEndHou
 void ApplyBatchTimeSkipDecay(
 	Ped playerPed, int elapsedMinutes, float startHealth, float startStamina, float startDeadEye, 
     float startHorseHealth, float startHorseStamina, bool processHorse,
-	const ConfigSnapshot& config, bool wasSleeping = false, bool wasInMinigame = false) {
+	const ConfigSnapshot& config, bool wasSleeping = false, bool wasInMinigame = false, bool wasInRandomEvent = false) {
 
     float elapsedHours = static_cast<float>(elapsedMinutes) / 60.0f;
 
-    if (wasInMinigame) {
-		LOG(LogLevel::Verbose, "Player is in a minigame. Capping time skip to {} hours for core decay calculations.", MINIGAME_TIMESKIP_MAX_HOURS);
+    if (wasInMinigame || wasInRandomEvent) {
+		LOG(LogLevel::Verbose, "Player is in a {}. Capping time skip to {} hours for core decay calculations.", wasInMinigame ? "minigame" : "random event", MINIGAME_TIMESKIP_MAX_HOURS);
 		elapsedHours = std::min(elapsedHours, MINIGAME_TIMESKIP_MAX_HOURS);
     }
     else if (elapsedHours > TIMESKIP_MAX_HOURS) {
@@ -1122,6 +1144,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         g_State.wasSleepingDuringRestriction = ctx.isSleeping;
         g_State.restrictedSleepingState = ctx.isSleeping ? (ctx.isAtCamp ? SleepingState::Wilderness : SleepingState::Hotel) : SleepingState::NotSleeping;
 		g_State.wasInMissionDuringRestriction = ctx.isInMission;
+		g_State.wasInRandomEventDuringRestriction = ctx.isInRandomEvent;
 		g_State.wasInMinigameDuringRestriction = ctx.isInMinigame || ctx.isJailed || ctx.isInShop;
 		g_State.wasInTimeWarpDuringRestriction = ctx.isInTimeWarp;
 		g_State.restrictedBathingState = ctx.isBathing ? BathingState::StandardBathing : BathingState::NotBathing; // Default to standard bathing state if we're in a bathing scenario, otherwise 0 (not bathing)
@@ -1186,7 +1209,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                     g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
                     g_State.cachedHorseHealth, g_State.cachedHorseStamina, (g_State.hadHorse && !g_State.wasInMinigameDuringRestriction),
                     config,
-                    g_State.wasSleepingDuringRestriction, g_State.wasInMinigameDuringRestriction);
+                    g_State.wasSleepingDuringRestriction, g_State.wasInMinigameDuringRestriction, g_State.wasInRandomEventDuringRestriction);
 
 				g_State.accumulatedTimeMs = 0;
             }
@@ -1555,6 +1578,7 @@ void ResetSimulationState() {
 
     g_State.wasSleepingDuringRestriction = false;
 	g_State.wasInMissionDuringRestriction = false;
+	g_State.wasInRandomEventDuringRestriction = false;
 	g_State.wasInMinigameDuringRestriction = false;
 	g_State.wasInTimeWarpDuringRestriction = false;
 
@@ -1643,6 +1667,7 @@ bool IsInSaveLoadState(Ped playerPed) {
     if (isLoading || isDead || isFreshSaveLoad) {
         if (g_State.timescaleDeltaInitialised) {
             LOG(LogLevel::Standard, "Hard Reset Event Verified (Save Load/Death). Purging cache cleanly...");
+            EnableSaving(false);
             ResetSimulationState();
         }
 
@@ -1658,7 +1683,10 @@ bool IsInSaveLoadState(Ped playerPed) {
 
 		g_State.timescaleDeltaInitialised = true;
 
-        CalculateStateChangeTickIntervalMs();
+        TryLoadSaveState();
+		EnableSaving(true);
+
+        CalculateStateChangeTickIntervalMs();        
     }
 
     g_State.lastKnownPlayerPed = playerPed;
@@ -1681,12 +1709,12 @@ void UpdateCoreSimulation() {
     if (context.freezeActive != g_State.wasRestrictedLastTick) {
         LOG(LogLevel::Standard, "Fundamental state boundary flipped! Forcing immediate cache transition process.");
 
-		// Entering a mission or minigame event
-        if (context.freezeActive && (context.isInMission || context.isInMinigame))
-            LOG(LogLevel::Standard, "Player is starting a mission or minigame event. Freezing core decay.");
-		// Exiting a mission or minigame event
-        else if (!context.freezeActive && (g_State.wasInMissionDuringRestriction || g_State.wasInMinigameDuringRestriction))
-            LOG(LogLevel::Standard, "Player is exiting a mission or minigame event. Renabling core decay.");
+		// Entering a mission, random event, or minigame event
+        if (context.freezeActive && (context.isInMission || context.isInRandomEvent || context.isInMinigame))
+            LOG(LogLevel::Standard, "Player is starting a mission, random event, or minigame event. Freezing core decay.");
+		// Exiting a mission, random event, or minigame event
+        else if (!context.freezeActive && (g_State.wasInMissionDuringRestriction || g_State.wasInRandomEventDuringRestriction || g_State.wasInMinigameDuringRestriction))
+            LOG(LogLevel::Standard, "Player is exiting a mission, random event, or minigame event. Renabling core decay.");
 		// Entering a sleep event
         else if (context.isSleeping && context.freezeActive)
             LOG(LogLevel::Standard, "Player is sleeping. Freezing core decay.");		

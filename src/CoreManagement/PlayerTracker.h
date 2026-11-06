@@ -7,6 +7,15 @@
 #include "..\..\inc\types.h"
 #include "CMTypes.h"
 
+struct PlayerSaveState {
+    int LastSleptHours = -1;
+    bool LastSleptAtNight = false;
+
+    bool IsValid() const noexcept {
+        return LastSleptHours >= 0;
+    }
+};
+
 class PlayerTracker {
     int m_PlayerSamples = 0;
 
@@ -45,6 +54,9 @@ public:
 
     [[nodiscard]] float GetPlayerWeightModifier(Ped playerPed, CoreIndex core) noexcept;
     [[nodiscard]] float GetPlayerDrunknessStaminaModifier(Ped playerPed) noexcept;
+
+    [[nodiscard]] PlayerSaveState GetPlayerSaveState() const noexcept;
+	void SetPlayerSaveState(const PlayerSaveState& state) noexcept;
 
     void ResetSnapshot(bool includeSleep = false) noexcept;
 };

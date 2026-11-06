@@ -6,8 +6,17 @@
 #include <algorithm>
 #include "..\..\inc\types.h"
 #include "..\..\inc\natives.h"
-#include "Functions.h"
+#include "Common.h"
 #include "Logger.h"
+#include "CMTypes.h"
+#include "PlayerTracker.h"
+#include "InventoryManager.h"
+#include "TransientActivityMonitor.h"
+
+SimulationState g_State;
+PlayerTracker g_playerTracker;
+InventoryManager g_InventoryManager;
+TransientActivityRegistry g_activeMonitors;
 
 [[nodiscard]] Hash GetKey(const char* key) noexcept {
     Hash hash = MISC::GET_HASH_KEY(key);

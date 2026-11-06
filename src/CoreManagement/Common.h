@@ -5,6 +5,16 @@
 #pragma once
 #include <span>
 #include "..\..\inc\types.h"
+#include "CMTypes.h"
+#include "PlayerTracker.h"
+#include "InventoryManager.h"
+#include "TransientActivityMonitor.h"
+
+
+extern SimulationState g_State;
+extern PlayerTracker g_playerTracker;
+extern InventoryManager g_InventoryManager;
+extern TransientActivityRegistry g_activeMonitors;
 
 [[nodiscard]] Hash GetKey(const char* key) noexcept;
 [[nodiscard]] bool IsInActiveScenario(Ped playerPed, std::span<const Hash> scenarioSet, const char* scenarioName) noexcept;

@@ -61,6 +61,7 @@ struct SimulationState {
     bool wasSleepingDuringRestriction = false;
     bool wasInMinigameDuringRestriction = false;
     bool wasInMissionDuringRestriction = false;
+	bool wasInRandomEventDuringRestriction = false;
     bool wasInTimeWarpDuringRestriction = false;
     bool wasRestrictedLastTick = false;
 	
@@ -85,6 +86,8 @@ struct GameplayContext {
     bool monitorTransientVarsDuringFreeze = false;
     bool isInMission = false;
     bool EnableStandardMissionDecay = false;
+    bool isInRandomEvent = false;
+    bool EnableStandardRandomEventDecay = false;
     bool isInMinigame = false;
     bool EnableStandardMinigameDecay = false;
     bool isInShop = false;

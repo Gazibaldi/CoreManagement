@@ -11,8 +11,9 @@
     <ClCompile Include="PlayerTracker.cpp" />
     <ClCompile Include="HorseManager.cpp" />
     <ClCompile Include="InventoryManager.cpp" />
-    <ClCompile Include="Functions.h" />
-    <ClCompile Include="Functions.cpp" />
+    <ClCompile Include="Common.h" />
+    <ClCompile Include="Common.cpp" />
+    <ClCompile Include="SaveManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Logger.h" />
@@ -45,6 +46,7 @@
     <ClInclude Include="..\..\inc\natives.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="SaveManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">

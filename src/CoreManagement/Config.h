@@ -7,8 +7,8 @@
 #include <string>
 #include <memory>
 #include <utility>
-#include "Logger.h"
 #include <thread>
+#include "Logger.h"
 
 extern const std::string VERSION;
 
@@ -28,6 +28,7 @@ struct GeneralConfigSettings {
     int nightEndHour = 6;
 
     bool enableDuringMissions = false;
+    bool enableDuringRandomEvents = false;
     bool enableDuringMinigames = false;
 };
 

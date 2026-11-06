@@ -8,6 +8,7 @@
 class ScriptThreadManager {
     std::thread configThread;
     std::thread loggerThread;
+	std::thread saveManagerThread;
 public:
     ScriptThreadManager() = default;
     ~ScriptThreadManager() = default;

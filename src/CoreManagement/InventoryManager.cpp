@@ -7,7 +7,7 @@
 #include "InventoryManager.h"
 #include "Logger.h"
 #include "CMTypes.h"
-#include "Functions.h"
+#include "Common.h"
 
 void InventoryManager::ComputeHashes() noexcept {
     m_NullSlotHash = GetKey("SLOTID_NONE");

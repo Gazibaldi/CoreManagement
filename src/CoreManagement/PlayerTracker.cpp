@@ -9,7 +9,7 @@
 #include "PlayerTracker.h"
 #include "Logger.h"
 #include "HorseManager.h"
-#include "Functions.h"
+#include "Common.h"
 #include "CMTypes.h"
 
 const float PLAYER_DIRT_THRESHOLD = 0.5f;
@@ -269,6 +269,19 @@ void PlayerTracker::RecordLastSleptDetails(bool sleptAtNight) noexcept {
 	LOG(LogLevel::Verbose, "Player is drunk. Average Drunkness level: {}, Stamina decay penalty applied: {:.4f}", drunkness, modifier);
 
 	return modifier;
+}
+
+[[nodiscard]] PlayerSaveState PlayerTracker::GetPlayerSaveState() const noexcept {
+	PlayerSaveState state;
+	state.LastSleptHours = m_LastSleptHours;
+	state.LastSleptAtNight = m_LastSleptAtNight;
+	LOG_DEV("Getting player save state: LastSleptHours={}, LastSleptAtNight={}", state.LastSleptHours, state.LastSleptAtNight);
+	return state;
+}
+void PlayerTracker::SetPlayerSaveState(const PlayerSaveState& state) noexcept {
+	m_LastSleptHours = state.LastSleptHours;
+	m_LastSleptAtNight = state.LastSleptAtNight;
+	LOG_DEV("Setting player save state: LastSleptHours={}, LastSleptAtNight={}", m_LastSleptHours, m_LastSleptAtNight);
 }
 
 void PlayerTracker::ResetSnapshot(bool includeSleep) noexcept {
