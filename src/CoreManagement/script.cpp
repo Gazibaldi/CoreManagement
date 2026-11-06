@@ -298,10 +298,7 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const ConfigSnapshot& confi
     bool isInMission = MISC::GET_MISSION_FLAG();
 	bool isInRandomEvent = MISC::GET_RANDOM_EVENT_FLAG();
     bool isInMinigame = IsPlayerPlayingTableMinigame();
-	bool isSMcGPartyActive = SCRIPT::HAS_SCRIPT_WITH_NAME_HASH_LOADED(GetKey("CSTAG_EVENT_HSO_PARTY_NIGHT")) > 0;
 	bool isFallingOrGoingToDie = PED::IS_PED_FALLING(playerPed) || GRAPHICS::ANIMPOSTFX_IS_RUNNING("MissionFail01");
-
-	LOG_DEV("IsSMcGPartyActive check: isSMcGPartyActive={}", isSMcGPartyActive ? "true" : "false");
 
     LOG_DEV("Gameplay state evaluated: allowDrainInMissions={}, allowDrainInMinigames={}, allowDrainInRandomEvents={}", config.GeneralConfig.enableDuringMissions, config.GeneralConfig.enableDuringMinigames, config.GeneralConfig.enableDuringRandomEvents);
 
