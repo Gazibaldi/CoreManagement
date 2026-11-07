@@ -5,10 +5,9 @@
 #pragma once
 #include <array>
 #include <string>
-#include "..\CoreSDK\inc\types.h"
+#include <format>
+#include "..\..\inc\types.h"
 #include "CMTypes.h"
-
-Hash GetKey(const char* key);
 
 struct RDR_GUID
 {
@@ -24,7 +23,7 @@ struct RDR_GUID
     }
 
 	std::string ToString() const {
-		return std::to_string(data1) + "-" + std::to_string(data2) + "-" + std::to_string(data3) + "-" + std::to_string(data4);
+		return std::format("{}-{}-{}-{}", data1, data2, data3, data4);
 	}
 };
 

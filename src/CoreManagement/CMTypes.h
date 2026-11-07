@@ -4,20 +4,51 @@
 
 #pragma once
 #include <string_view>
-#include "..\CoreSDK\inc\types.h"
+#include "..\..\inc\types.h"
 
 enum class CoreIndex : int { Health = 0, Stamina = 1, DeadEye = 2 };
-enum class HorseSpeed : int { Trot = 2, Gallop = 5 };
-enum class PlayerSpeed : int { Jog = 3, Sprint = 5 };
-enum class BathingState : int { NotBathing = 0, StandardBathing = 1, DeluxeBathing = 2 };
-enum class StateChangeIntervalType : int { NotSet, Standard, Restricted };
+enum class HorseSpeed : int { Trot = 4, Canter = 6, Gallop = 10 };
+enum class PlayerSpeed : int { Jog = 4, Sprint = 6 };
+enum class BathingState { NotBathing = 0, StandardBathing = 1, DeluxeBathing = 2 };
+enum class SleepingState { NotSleeping, Wilderness, Hotel };
+enum class StateChangeIntervalType { NotSet, Standard, Restricted };
+
+enum ePedAttribute
+{
+    PA_HEALTH,
+    PA_STAMINA,
+    PA_SPECIALABILITY,
+    PA_COURAGE,
+    PA_AGILITY,
+    PA_SPEED,
+    PA_ACCELERATION,
+    PA_BONDING,
+    SA_HUNGER,
+    SA_FATIGUED,
+    SA_INEBRIATED,
+    SA_POISONED,
+    SA_BODYHEAT,
+    SA_BODYWEIGHT,
+    SA_OVERFED,
+    SA_SICKNESS,
+    SA_DIRTINESS,
+    SA_DIRTINESSHAT,
+    MTR_STRENGTH,
+    MTR_GRIT,
+    MTR_INSTINCT,
+    PA_UNRULINESS,
+    SA_DIRTINESSSKIN
+};
 
 struct SimulationState {
     bool isRestricted = false;
-	bool MonitorTransientVariablesDuringRestriction = false;
+	bool monitorTransientVariablesDuringRestriction = false;
 	
     int cachedInGameTimeMinutes = 0;
     int accumulatedTimeMs = 0;
+
+	bool isNightTime = false;
+	int cachedGameTimescaleMs = 0;
 
     float cachedHealth = 100.0f;
     float cachedStamina = 100.0f;
@@ -25,11 +56,12 @@ struct SimulationState {
     int cachedMoney = 0;
 
     BathingState restrictedBathingState = BathingState::NotBathing;
+    SleepingState restrictedSleepingState = SleepingState::NotSleeping;
 
     bool wasSleepingDuringRestriction = false;
-    bool wasAtCampDuringRestriction = false;
     bool wasInMinigameDuringRestriction = false;
     bool wasInMissionDuringRestriction = false;
+	bool wasInRandomEventDuringRestriction = false;
     bool wasInTimeWarpDuringRestriction = false;
     bool wasRestrictedLastTick = false;
 	
@@ -53,7 +85,11 @@ struct GameplayContext {
     bool freezeActive = false;
     bool monitorTransientVarsDuringFreeze = false;
     bool isInMission = false;
+    bool EnableStandardMissionDecay = false;
+    bool isInRandomEvent = false;
+    bool EnableStandardRandomEventDecay = false;
     bool isInMinigame = false;
+    bool EnableStandardMinigameDecay = false;
     bool isInShop = false;
     bool isSleeping = false;
     bool isAtCamp = false;

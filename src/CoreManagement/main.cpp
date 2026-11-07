@@ -4,8 +4,8 @@
 			(C) Alexander Blade 2019
 */
 
-#include "..\CoreSDK\inc\main.h"
-#include "script.h"
+#include "..\..\inc\main.h"
+#include "..\..\inc\script.h"
 #include "keyboard.h"
 #include "Logger.h"
 

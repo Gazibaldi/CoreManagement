@@ -1,3 +1,7 @@
+/*
+        Copyright © 2026 Gary Tweddle / Gazibaldi.This program is free software : you can redistribute it and /or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+*/
+
 #include "TransientActivityMonitor.h"
 #include "Config.h"
 
@@ -7,7 +11,6 @@ bool TransientActivityMonitor::ActivateMonitor() noexcept {
 	return m_IsActive;
 }
 
-// Core Tick Cycle Engine
 void TransientActivityMonitor::MonitorCheck() noexcept {    
 	// If the state evaluator returns false and the monitor is active, increment the tick counter
 	// If the tick counter exceeds the threshold, mark the monitor as expired and inactive

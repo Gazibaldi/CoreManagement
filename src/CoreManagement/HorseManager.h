@@ -4,21 +4,21 @@
 
 #pragma once
 
-#include <mutex>
 #include <tuple>
-#include "..\CoreSDK\inc\types.h"
+#include "..\..\inc\types.h"
+#include "CMTypes.h"
 
 enum class ActiveHorseType : int { Mounted, Active, Either };
 
 class HorseManager {
     int m_HorseImmobileSamples = 0;
     int m_HorseLeadSamples = 0;
-	int m_HorseSamples = 0;
+    int m_HorseSamples = 0;
 
 	float m_HorseHitchedReward = 0.0f;
 	float m_HorseLeadReward = 0.0f;
 
-    std::mutex m_Lock;
+    float m_HorseAccumulatedDirt = 0.0f;
 
     enum class HorseSampleType : int { Lead, Hitched };
 
@@ -28,7 +28,6 @@ class HorseManager {
     float GetHorseDistanceFromPlayer(Ped playerPed, Ped horsePed) noexcept;
     bool IsBeingLedByPlayer(Ped playerPed, Ped horsePed) noexcept;
     bool TestSampleThreshold(int samples, HorseSampleType sampleType) noexcept;
-	void ResetState() noexcept;
 
 public:
     void RecordSnapshot(Ped playerPed) noexcept;
@@ -44,6 +43,9 @@ public:
     [[nodiscard]] float GetHorseLeadReward(float hoursDelta) noexcept;
 
     [[nodiscard]] bool IsHorseDirty(Ped horsePed) noexcept;
+
+    [[nodiscard]] float GetHorseWeightModifier(Ped horsePed, CoreIndex core) noexcept;
+	[[nodiscard]] float GetMountedPlayerWeightStaminaModifier(Ped horsePed, Ped playerPed) noexcept;
     
     void ResetSnapshot() noexcept;
 };

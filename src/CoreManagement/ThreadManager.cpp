@@ -6,6 +6,7 @@
 #include "ThreadManager.h"
 #include "Config.h"
 #include "Logger.h"
+#include "SaveManager.h"
 
 ScriptThreadManager g_ThreadManager;
 
@@ -15,11 +16,13 @@ void ScriptThreadManager::Initialise() {
 
 	loggerThread = InitialiseLoggerThread();
     configThread = InitialiseConfigThread();
+	saveManagerThread = InitialiseSaveManagerThread();
 }
 
 void ScriptThreadManager::Shutdown(bool isGameExiting) {
     ShutdownLogger();
 	ShutdownConfig();
+    ShutdownSaveManager();
 
     // Wait for the thread to completely finish executing
     if (configThread.joinable()) {
@@ -40,5 +43,12 @@ void ScriptThreadManager::Shutdown(bool isGameExiting) {
         else {
             loggerThread.join(); // Safe to join during a reload because thread is fully responsive!
         }
+    }
+
+    if (saveManagerThread.joinable()) {
+        if (isGameExiting)
+            saveManagerThread.detach();
+        else
+            saveManagerThread.join(); // Safe to join during a reload because thread is fully responsive!
     }
 }

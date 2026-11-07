@@ -8,26 +8,45 @@
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="ThreadManager.cpp" />
     <ClCompile Include="TransientActivityMonitor.cpp" />
-    <ClCompile Include="MovementVelocityTracker.cpp" />
+    <ClCompile Include="PlayerTracker.cpp" />
     <ClCompile Include="HorseManager.cpp" />
     <ClCompile Include="InventoryManager.cpp" />
+    <ClCompile Include="Common.h" />
+    <ClCompile Include="Common.cpp" />
+    <ClCompile Include="SaveManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="script.h" />
-    <ClInclude Include="keyboard.h" />
-    <ClInclude Include="..\CoreSDK\inc\main.h" />
-    <ClInclude Include="..\CoreSDK\inc\enums.h" />
-    <ClInclude Include="..\CoreSDK\inc\natives.h" />
-    <ClInclude Include="..\CoreSDK\inc\types.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="ThreadManager.h" />
     <ClInclude Include="CMTypes.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="TransientActivityMonitor.h" />
-    <ClInclude Include="MovementVelocityTracker.h" />
+    <ClInclude Include="PlayerTracker.h" />
     <ClInclude Include="HorseManager.h" />
     <ClInclude Include="InventoryManager.h" />
+    <ClInclude Include="..\..\inc\enums.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="keyboard.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\magic_enum.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\main.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\script.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\natives.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="SaveManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">

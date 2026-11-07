@@ -7,26 +7,28 @@
 #include <string>
 #include <memory>
 #include <utility>
-#include "Logger.h"
 #include <thread>
+#include "Logger.h"
 
 extern const std::string VERSION;
 
 struct CoreConfigSettings {
-    int coreDrainTickIntervalMs = 10000;
-    int stateChangeTickIntervalMs = 500;
-    float restrictedStateChangeTickIntervalMultiplier = 1.0f;
+    int coreDrainTickIntervalMs = 60000;
+    int stateChangeTickIntervalMs = 1000;
+    float restrictedStateChangeTickIntervalMultiplier = 2.0f;
     int logLevelRaw = 1;
 
     LogLevel currentLogLevel = LogLevel::Standard;
 };
 
 struct GeneralConfigSettings {
-    int msPerInGameMinute = 2000;
+    int msPerInGameMinuteDay = 2000;
+    int msPerInGameMinuteNight = 2000;
     int nightStartHour = 20;
     int nightEndHour = 6;
 
     bool enableDuringMissions = false;
+    bool enableDuringRandomEvents = false;
     bool enableDuringMinigames = false;
 };
 
@@ -44,13 +46,18 @@ struct PlayerConfigSettings {
     float sprintStaminaMultiplier = 1.5f;
 
     float mountWalkStaminaMultiplier = 0.8f;
-    float mountTrotStaminaMultiplier = 1.0f;
-    float mountGallopStaminaMultiplier = 1.2f;
+    float mountTrotCanterStaminaMultiplier = 1.0f;
+    float mountGallopStaminaMultiplier = 1.25f;
 
-    float healthTimeSkipFloor = 15.0f;
-    float campedHealthFloor = 5.0f;
-    float campedStaminaFloor = 5.0f;
-    float campedDeadEyeFloor = 5.0f;
+    float healthTimeSkipFloor = 25.0f;
+
+    float campedHealthFloor = 15.0f;
+    float campedStaminaFloor = 15.0f;
+    float campedDeadEyeFloor = 15.0f;
+
+    float missionHealthFloor = 15.0f;
+    float missionStaminaFloor = 15.0f;
+    float missionDeadEyeFloor = 15.0f;
 };
 
 struct HorseConfigSettings {
@@ -58,12 +65,17 @@ struct HorseConfigSettings {
     float baseStaminaDecay = 5.5f;
 
     float grazeStaminaMultiplier = 0.7f;
-    float trotStaminaMultiplier = 1.3f;
-    float gallopStaminaMultiplier = 4.5f;
+    float trotStaminaMultiplier = 1.0f;
+    float canterStaminaMultiplier = 1.25f;
+    float gallopStaminaMultiplier = 3.5f;
 
-    float healthTimeSkipFloor = 15.0f;
-    float campedHealthFloor = 5.0f;
-    float campedStaminaFloor = 5.0f;
+    float healthTimeSkipFloor = 25.0f;
+
+    float campedHealthFloor = 15.0f;
+    float campedStaminaFloor = 15.0f;
+
+    float missionHealthFloor = 15.0f;
+    float missionStaminaFloor = 15.0f;
 };
 
 struct ConfigSnapshot {
@@ -108,4 +120,4 @@ void ShutdownConfig();
 
 void LoadConfiguration();
 
-bool ShouldConfigHotReload(bool enableHotReload);
+void EnableConfigHotReload(bool enableHotReload);

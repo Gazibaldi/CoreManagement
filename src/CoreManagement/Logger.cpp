@@ -27,7 +27,9 @@ struct DevLoggingCache {
     bool lastIsJailed = false;
     bool lastIsBathing = false;
     bool lastIsInMission = false;
-    bool lastIsInMinigame = false;
+    bool lastEnableStandardMissionDecay = false;
+    bool lastIsInMinigame = false;    
+    bool lastEnableStandardMinigameDecay = false;
     bool lastIsInTimeWarp = false;
 	bool lastIsInShop = false;
 };
@@ -44,17 +46,17 @@ std::atomic<bool> g_RunLogThread(false);
 std::condition_variable g_LogCV;
 std::mutex g_LogQueueMutex;
 
-void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
-    while (runFlag || !s_LogQueue.empty()) {
+void AsyncLogWriterWorker() {
+    while (g_RunLogThread || !s_LogQueue.empty()) {
         std::unique_lock<std::mutex> lock(g_LogQueueMutex);
 
         g_LogCV.wait_for(lock, std::chrono::milliseconds(2000), [&] {
-            return !s_LogQueue.empty() || !runFlag.load(std::memory_order_acquire);
+            return !s_LogQueue.empty() || !g_RunLogThread.load(std::memory_order_acquire);
             });
 
         // If we were woken up to shut down and the queue is completely empty, 
         // break instantly to skip the slow disk I/O operations entirely.
-        if (!runFlag.load(std::memory_order_acquire) && s_LogQueue.empty()) {
+        if (!g_RunLogThread.load(std::memory_order_acquire) && s_LogQueue.empty()) {
             break;
         }
 
@@ -72,7 +74,7 @@ void AsyncLogWriterWorker(std::atomic<bool>& runFlag) {
 
 [[nodiscard]] std::thread InitialiseLoggerThread() {
     g_RunLogThread.store(true, std::memory_order_release);
-    return std::thread(AsyncLogWriterWorker, std::ref(g_RunLogThread));
+    return std::thread(AsyncLogWriterWorker);
 }
 
 void ShutdownLogger() {
@@ -133,7 +135,9 @@ bool HasDevLogCacheChanged(const GameplayContext& ctx) {
 		ctx.isJailed != g_LogCache.lastIsJailed ||
 		ctx.isBathing != g_LogCache.lastIsBathing ||
         ctx.isInMission != g_LogCache.lastIsInMission ||
+        ctx.EnableStandardMissionDecay != g_LogCache.lastEnableStandardMissionDecay ||
         ctx.isInMinigame != g_LogCache.lastIsInMinigame ||
+        ctx.EnableStandardMinigameDecay != g_LogCache.lastEnableStandardMinigameDecay ||
         ctx.isInTimeWarp != g_LogCache.lastIsInTimeWarp ||
         ctx.isInShop != g_LogCache.lastIsInShop);
 }
@@ -145,7 +149,9 @@ void UpdateDevLogCache(const GameplayContext& ctx) {
 	g_LogCache.lastIsJailed = ctx.isJailed;
 	g_LogCache.lastIsBathing = ctx.isBathing;
 	g_LogCache.lastIsInMission = ctx.isInMission;
-	g_LogCache.lastIsInMinigame = ctx.isInMinigame;
+    g_LogCache.lastEnableStandardMissionDecay = ctx.EnableStandardMissionDecay;
+	g_LogCache.lastIsInMinigame = ctx.isInMinigame;    
+    g_LogCache.lastEnableStandardMinigameDecay = ctx.EnableStandardMinigameDecay;
 	g_LogCache.lastIsInTimeWarp = ctx.isInTimeWarp;
 	g_LogCache.lastIsInShop = ctx.isInShop;
 }
@@ -157,7 +163,9 @@ void ClearDevLogCache() {
 	g_LogCache.lastIsJailed = false;
 	g_LogCache.lastIsBathing = false;
 	g_LogCache.lastIsInMission = false;
-	g_LogCache.lastIsInMinigame = false;
+    g_LogCache.lastEnableStandardMissionDecay = false;
+	g_LogCache.lastIsInMinigame = false;    
+    g_LogCache.lastEnableStandardMinigameDecay = false;
 	g_LogCache.lastIsInTimeWarp = false;
 	g_LogCache.lastIsInShop = false;
 }

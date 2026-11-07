@@ -2,18 +2,12 @@
         Copyright © 2026 Gary Tweddle / Gazibaldi.This program is free software : you can redistribute it and /or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
 */
 
-#include "..\CoreSDK\inc\types.h"
-#include "..\CoreSDK\inc\natives.h"
+#include "..\..\inc\types.h"
+#include "..\..\inc\natives.h"
 #include "InventoryManager.h"
 #include "Logger.h"
 #include "CMTypes.h"
-
-Hash GetKey(const char* key) {
-    Hash hash = MISC::GET_HASH_KEY(key);
-    LOG_DEV("Precomputed hash for key '{}': {}", key, hash);
-
-    return hash;
-}
+#include "Common.h"
 
 void InventoryManager::ComputeHashes() noexcept {
     m_NullSlotHash = GetKey("SLOTID_NONE");
@@ -132,7 +126,8 @@ bool InventoryManager::DoesPlayerHaveItem(Hash itemHash, const std::string& item
     CombinedPlayerCoreModifiers modifiers{};
 
     for (const auto& passive : m_PlayerPassiveModifiers) {
-		LOG(LogLevel::Verbose, "Checking for player passive item: {} (hash: {})", passive.name, passive.itemHash);
+		LOG(LogLevel::Verbose, "Checking for player passive item: {}", passive.name);
+        LOG_DEV("Checking for player passive item: {} (hash: {})", passive.name, passive.itemHash);
         if (DoesPlayerHaveItem(passive.itemHash, std::string(passive.name))) {
             modifiers.totalHealthReduction += passive.healthCoreMod;
             modifiers.totalStaminaReduction += passive.staminaCoreMod;

@@ -1,0 +1,62 @@
+/*
+        Copyright © 2026 Gary Tweddle / Gazibaldi.This program is free software : you can redistribute it and /or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+*/
+
+#pragma once
+#include <array>
+#include "..\..\inc\types.h"
+#include "CMTypes.h"
+
+struct PlayerSaveState {
+    int LastSleptHours = -1;
+    bool LastSleptAtNight = false;
+
+    bool IsValid() const noexcept {
+        return LastSleptHours >= 0;
+    }
+};
+
+class PlayerTracker {
+    int m_PlayerSamples = 0;
+
+	// movement tracking for player on foot
+    float m_PlayerFootSum = 0.0f;
+    int m_PlayerFootSamples = 0;
+
+	// movement tracking for horse when player is mounted
+    float m_HorseSum = 0.0f;
+    int m_HorseSamples = 0;
+
+	float m_PlayerAccumulatedDirt = 0.0f;
+	int m_PlayerCampSamples = 0;
+
+	int m_PlayerDrunknessSum = 0;
+
+    std::array<Hash, 33> m_CampScenarios{};
+
+	// sleep tracking
+    int m_LastSleptHours = -1;
+    bool m_LastSleptAtNight = false;
+
+public:
+    void ComputeHashes() noexcept;
+    void RecordSnapshot(Ped playerPed) noexcept;
+    void RecordLastSleptDetails(bool sleptAtNight) noexcept;
+
+    [[nodiscard]] float GetPlayerOnFootSpeed() noexcept;
+    [[nodiscard]] float GetHorseAverageSpeed() noexcept;
+
+    [[nodiscard]] bool IsPlayerDirty(Ped playerPed) noexcept;
+
+    [[nodiscard]] bool IsPlayerAtCamp(Ped playerPed, bool rightNow, bool logOutcome = true) noexcept;
+
+	[[nodiscard]] float GetPlayerTiredness(Ped playerPed) noexcept;
+
+    [[nodiscard]] float GetPlayerWeightModifier(Ped playerPed, CoreIndex core) noexcept;
+    [[nodiscard]] float GetPlayerDrunknessStaminaModifier(Ped playerPed) noexcept;
+
+    [[nodiscard]] PlayerSaveState GetPlayerSaveState() const noexcept;
+	void SetPlayerSaveState(const PlayerSaveState& state) noexcept;
+
+    void ResetSnapshot(bool includeSleep = false) noexcept;
+};
