@@ -102,7 +102,7 @@ void TryLoadSaveState() {
 			if (g_CurrentLogLevel.load(std::memory_order_acquire) >= static_cast<int>(LogLevel::Verbose))
 			    LOG(LogLevel::Verbose, "Loaded player save state: LastSleptHours={}, LastSleptAtNight={}", loadedState.LastSleptHours, loadedState.LastSleptAtNight);
             else
-                LOG(LogLevel::Standard, "Loaded player save state");
+                LOG(LogLevel::Standard, "Loaded player save state.");
 		}
 		else {
 			LOG(LogLevel::Standard, "No valid player save state found in the save file.");
