@@ -824,12 +824,12 @@ bool IsSleepDuringTheNight(int elapsedHours, int nightStartHour, int nightEndHou
 void ApplyBatchTimeSkipDecay(
 	Ped playerPed, int elapsedMinutes, float startHealth, float startStamina, float startDeadEye, 
     float startHorseHealth, float startHorseStamina, bool processHorse,
-	const ConfigSnapshot& config, bool wasSleeping = false, bool wasInMinigame = false, bool wasInRandomEvent = false) {
+	const ConfigSnapshot& config, bool wasSleeping = false, bool wasInMinigame = false) {
 
     float elapsedHours = static_cast<float>(elapsedMinutes) / 60.0f;
 
-    if (wasInMinigame || wasInRandomEvent) {
-		LOG(LogLevel::Verbose, "Player is in a {}. Capping time skip to {} hours for core decay calculations.", wasInMinigame ? "minigame" : "random event", MINIGAME_TIMESKIP_MAX_HOURS);
+    if (wasInMinigame) {
+		LOG(LogLevel::Verbose, "Player is in a minigame. Capping time skip to {} hours for core decay calculations.", MINIGAME_TIMESKIP_MAX_HOURS);
 		elapsedHours = std::min(elapsedHours, MINIGAME_TIMESKIP_MAX_HOURS);
     }
     else if (elapsedHours > TIMESKIP_MAX_HOURS) {
@@ -1198,7 +1198,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         LOG(LogLevel::Verbose, "Exiting restricted state. Total elapsed game minutes: {}", elapsedMinutes);
 
         if (elapsedMinutes > 0) {
-            // Mini-games are table mini-games/jail
+			// Mini-games are table mini-games/jail
             if (g_State.wasSleepingDuringRestriction || g_State.wasInMinigameDuringRestriction) {
                 // Uses the HISTORICAL frozen values from the cache
                 LOG(LogLevel::Verbose, "Player was sleeping/in a minigame/jailed during restriction. Applying batch time skip decay.");
@@ -1207,9 +1207,9 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                     g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
                     g_State.cachedHorseHealth, g_State.cachedHorseStamina, (g_State.hadHorse && !g_State.wasInMinigameDuringRestriction),
                     config,
-                    g_State.wasSleepingDuringRestriction, g_State.wasInMinigameDuringRestriction, g_State.wasInRandomEventDuringRestriction);
+                    g_State.wasSleepingDuringRestriction, g_State.wasInMinigameDuringRestriction);
 
-				g_State.accumulatedTimeMs = 0;
+                g_State.accumulatedTimeMs = 0;
             }
             else if (g_State.restrictedBathingState != BathingState::NotBathing) {
                 // Uses the HISTORICAL frozen values from the cache
@@ -1219,7 +1219,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                     g_State.cachedHealth, g_State.cachedStamina, g_State.cachedDeadEye,
                     config);
 
-                g_State.accumulatedTimeMs = 0; 
+                g_State.accumulatedTimeMs = 0;
             }
             else if (g_State.wasInMissionDuringRestriction)
             {
@@ -1237,18 +1237,17 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
                 }
 
                 bool isDrainDue = IsDrainTickDue(config.CoreConfig.coreDrainTickIntervalMs);
+
                 LOG(LogLevel::Verbose, "Player exited a mission. Accumulated time before reset: {} ms. Is close to next tick: {}", g_State.accumulatedTimeMs, isDrainDue ? "true. Keeping accumulated time for next drain tick." : "false. Resetting accumulated time to 0.");
-                
-                if(!isDrainDue)
+
+                // If we are close to the next drain tick, we want to keep the accumulated time so that the next tick can process it correctly.
+                if (!isDrainDue)
                     g_State.accumulatedTimeMs = 0;
             }
             else {
                 LOG_DEV("Player was not sleeping, in a minigame, or in a mission during restriction. No batch decay applied.");
 
-                bool isDrainDue = IsDrainTickDue(config.CoreConfig.coreDrainTickIntervalMs);
-                LOG(LogLevel::Verbose, "Player exited a mission. Accumulated time before reset: {} ms. Is close to next tick: {}", g_State.accumulatedTimeMs, isDrainDue ? "true. Keeping accumulated time for next drain tick." : "false. Resetting accumulated time to 0.");
-
-                if (!isDrainDue)
+                if (!g_State.wasInRandomEventDuringRestriction)
                     g_State.accumulatedTimeMs = 0;
             }
         }
@@ -1258,6 +1257,7 @@ void HandleStateTransitions(Ped playerPed, const GameplayContext& ctx, int curre
         g_State.restrictedSleepingState = SleepingState::NotSleeping;
         g_State.wasInMinigameDuringRestriction = false;
 		g_State.wasInMissionDuringRestriction = false;
+		g_State.wasInRandomEventDuringRestriction = false;
         g_State.wasInTimeWarpDuringRestriction = false;
         
         // Reset the cached bathing state and money to prevent false positives on future bathing checks
