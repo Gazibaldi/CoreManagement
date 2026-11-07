@@ -65,8 +65,11 @@ void PlayerTracker::RecordSnapshot(Ped playerPed) noexcept {
 
     m_PlayerSamples++;
 
-    if (IsPlayerAtCamp(playerPed, true, false))
+    if (IsPlayerAtCamp(playerPed, true, false)) {
+		LOG_DEV("Player is at camp during this snapshot.");
         m_PlayerCampSamples++;
+    }
+        
 
     m_PlayerAccumulatedDirt += PED::_GET_PED_DIRT_LEVEL(playerPed, true);
 
@@ -152,7 +155,7 @@ void PlayerTracker::RecordLastSleptDetails(bool sleptAtNight) noexcept {
 
     bool isDirty = dirtLevel >= PLAYER_DIRT_THRESHOLD;
 
-    LOG_DEV("Checking if player is dirty. Dirt level: {:.4f}, Threshold: {}, IsDirty: {}", dirtLevel, PLAYER_DIRT_THRESHOLD, isDirty);
+    LOG_DEV("Checking if player is dirty. Dirt level: {:.4f}, AccumulatedDirt: {}, TotalSamples: {}, Threshold: {}, IsDirty: {}", dirtLevel, m_PlayerAccumulatedDirt, m_PlayerSamples, PLAYER_DIRT_THRESHOLD, isDirty);
 
     return isDirty;
 }
@@ -174,7 +177,7 @@ void PlayerTracker::RecordLastSleptDetails(bool sleptAtNight) noexcept {
             float averageCampTime = static_cast<float>(m_PlayerCampSamples / m_PlayerSamples);
 
             isAtCamp = averageCampTime >= PLAYER_CAMP_THRESHOLD;
-            LOG_DEV("Checking if player is at camp. Average camp time: {:.4f}, Threshold: {}, IsAtCamp: {}", averageCampTime, PLAYER_CAMP_THRESHOLD, isAtCamp);
+            LOG_DEV("Checking if player is at camp. Average camp time: {:.4f}, CampSamples: {}, TotalSamples: {}, Threshold: {}, IsAtCamp: {}", averageCampTime, m_PlayerCampSamples, m_PlayerSamples, PLAYER_CAMP_THRESHOLD, isAtCamp);
         }        
     }
 

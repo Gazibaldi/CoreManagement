@@ -331,15 +331,16 @@ GameplayContext EvaluateGameplayState(Ped playerPed, const ConfigSnapshot& confi
 	ctx.isInTimeWarp = (timeScale < VANILLA_GAME_TIME_SCALE);
 
 	// If the player is in a mission/random event/minigame/timewarp/shop, we don't reset the time scale as it may be intended to be changed during those events.
+	// We also don't reset the time scale if it is already at the maximum value, as that may be intended to be changed during those events.
 	// otherwise, we reset it back to the configured value to ensure the drain mechanics are consistent with the player's configuration.
-    if (timeScale != configuredTimeScale && !(isInMission || isInRandomEvent || isInMinigame || ctx.isInTimeWarp || ctx.isInShop)) {
+    if (timeScale != configuredTimeScale && !(isInMission || isInRandomEvent || isInMinigame || ctx.isInTimeWarp || ctx.isInShop || timeScale == MAX_GAME_TIME_SCALE)) {
         LOG(LogLevel::Standard, "Game time scale has changed to {} due to state change. Resetting to configured value: {}.", timeScale, configuredTimeScale);
 		SetGameTimeScale(configuredTimeScale);
     }
 
     if (ctx.isInShop) {
-        LOG(LogLevel::Verbose, "Player is shopping. Setting game time scale to cutscene time (9,999,999). Enjoy your browsing!");
-        SetGameTimeScale(9999999);
+        LOG(LogLevel::Verbose, "Player is shopping. Setting game time scale to infinite time ({}). Enjoy your browsing!", SHOPPING_TIME_SCALE);
+        SetGameTimeScale(SHOPPING_TIME_SCALE);
     }
 
     // camp stays out as we want a customized slowed decay in those cases
