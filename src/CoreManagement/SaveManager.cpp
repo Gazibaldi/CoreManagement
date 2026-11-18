@@ -115,8 +115,6 @@ void TryLoadSaveState() {
     EnableSaving(true);
 }
 
-
-
 [[nodiscard]] std::thread InitialiseSaveManagerThread() {
     g_RunSaveManagerThread.store(true, std::memory_order_release);
     return std::thread(AsyncSaveManagerWorker);

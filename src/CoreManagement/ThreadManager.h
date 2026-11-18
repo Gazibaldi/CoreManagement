@@ -5,17 +5,17 @@
 #pragma once
 #include <thread>
 
-class ScriptThreadManager {
+class ThreadManager {
     std::thread configThread;
     std::thread loggerThread;
 	std::thread saveManagerThread;
 public:
-    ScriptThreadManager() = default;
-    ~ScriptThreadManager() = default;
+    ThreadManager() = default;
+    ~ThreadManager() = default;
 
     void Initialise();
 
     void Shutdown(bool isGameExiting = false);
 };
 
-extern ScriptThreadManager g_ThreadManager;
+extern ThreadManager g_ThreadManager;

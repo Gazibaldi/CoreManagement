@@ -8,9 +8,9 @@
 #include "Logger.h"
 #include "SaveManager.h"
 
-ScriptThreadManager g_ThreadManager;
+ThreadManager g_ThreadManager;
 
-void ScriptThreadManager::Initialise() {
+void ThreadManager::Initialise() {
     // ALWAYS clean up any existing thread before starting a new one (reloads persist the global manager)
     Shutdown();
 
@@ -19,7 +19,7 @@ void ScriptThreadManager::Initialise() {
 	saveManagerThread = InitialiseSaveManagerThread();
 }
 
-void ScriptThreadManager::Shutdown(bool isGameExiting) {
+void ThreadManager::Shutdown(bool isGameExiting) {
     ShutdownLogger();
 	ShutdownConfig();
     ShutdownSaveManager();
